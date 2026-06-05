@@ -33,7 +33,7 @@
       "git_tag": "learn-agent-design-s3"
     },
     "S4": {
-      "name": "部署：GitHub Pages + 首页打磨 + 资料库/技能区",
+      "name": "部署 GitHub Pages（已完成）+ 首页打磨/资料库（可选）",
       "exit_criteria": "线上可访问，导航完整，配图克制达标",
       "git_tag": "learn-agent-design-s4"
     }
@@ -230,6 +230,30 @@
       "out_of_scope": "部署留 S4",
       "blocking": [
         "F07_module_a"
+      ]
+    },
+    {
+      "id": "F09_deploy",
+      "slice": "S4",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "curl -s -o /dev/null -w '%{http_code}' https://libaoming.github.io/agent-design-course/ | grep -q 200"
+      },
+      "verify_notes": "public 仓库 + Actions 自动部署，线上 HTTP 200 已验证（run 27000151884）",
+      "related": {
+        "specs": [],
+        "code": [
+          ".github/workflows/deploy.yml"
+        ],
+        "docs": [
+          "README.md"
+        ]
+      },
+      "affected": "上线发布",
+      "out_of_scope": "首页缘起文案/阅读时长/资料库区留后续",
+      "blocking": [
+        "F08_module_b"
       ]
     }
   ]

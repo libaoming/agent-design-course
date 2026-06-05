@@ -3,7 +3,12 @@
 > 每次 session 第一个读的文件。收尾必更新本文件。
 
 ## 一句话状态
-2026-06-05 **S1+S2+S3 ✅**：两个模块共 **12 讲** 全部就位（Module A 产品/能力设计 6 讲 + Module B 工程地基 6 讲），侧边栏导航 + Claude doc 风 + 代码块/表格/callout 全渲染，build+verify 全绿，截图核查通过。内容主体完成。下一步 S4（可选）：部署 GitHub Pages + 首页打磨 + 资料库/技能区。
+2026-06-05 **S1-S4 全 ✅ 已上线**：12 讲（Module A 6 + Module B 6），侧边栏 + Claude doc 风。GitHub Actions 自动部署 GitHub Pages 成功，线上 HTTP 200。**剩余可选**：首页缘起文案 / 每讲阅读时长 / 资料库·技能区。
+
+## 线上 / 仓库
+- 站点：https://libaoming.github.io/agent-design-course/
+- 仓库（public）：https://github.com/libaoming/agent-design-course
+- 部署：push main → GitHub Actions（.github/workflows/deploy.yml）自动 build + deploy，site/ 由 CI 生成不入库
 
 ## 预览方式
 - 本地：`cd site && python3 -m http.server 8765` → 浏览器开 `http://localhost:8765`

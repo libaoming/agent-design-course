@@ -17,6 +17,13 @@
 - （无）
 
 ## Session Log（倒序）
+### 2026-06-05（S4：上线 GitHub Pages）
+- 创建 public 仓库 github.com/libaoming/agent-design-course，git init+commit+push（main）。
+- GitHub Actions（.github/workflows/deploy.yml）自动 build+deploy，run 27000151884 成功（build 9s + deploy 10s）。
+- 线上 https://libaoming.github.io/agent-design-course/ HTTP 200，首页+讲义页抽查正常。
+- .gitignore 排除 site/ 与 .claude/settings.local.json；source 入库、产物 CI 生成。
+- 唯一警告：Actions 用 Node20（2026-06-16 后强制 Node24），后续可升级 action 版本。
+
 ### 2026-06-05（S3：Module B 完成）
 - **Module B 6 讲全部就位**：Harness 工程 / 上下文工程七维 / Gateway 工程 / 框架选型 / 评测与 Benchmark / 多 Agent 平台四阶段。
 - 同模式：并行派 6 个 general-purpose 子 agent 从 vault 概念页提炼讲义体草稿，主线定稿（去中文序号、加 frontmatter+nav、统一层级）。
