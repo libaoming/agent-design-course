@@ -351,9 +351,9 @@
       "status": "in_progress",
       "verify": {
         "type": "cmd",
-        "cmd": "填入 GC_CODE 后：curl -s https://CODE.goatcounter.com/counter/TOTAL.json 返回 count；首页含 learn-stats"
+        "cmd": "curl -s https://learn-agent-design.goatcounter.com/counter/TOTAL.json 返回 count（需先在 Settings 开 Allow visitor counts）；首页 learn-stats 显示数字"
       },
-      "verify_notes": "框架就位+空code优雅降级已验证；待用户注册 GoatCounter 给 code 填 GC_CODE 才端到端生效（故 in_progress）",
+      "verify_notes": "GC_CODE=learn-agent-design 已接入上线；全站 tracking 开始记录 PV/UV。首页「已有 N 人学过」待①用户验证邮箱②Settings 开 Allow visitor counts③有访问数据后自动显示（优雅降级中）",
       "related": {
         "specs": [],
         "code": [

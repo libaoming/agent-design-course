@@ -59,7 +59,7 @@ EXAMPLES_INTRO = (
 
 # 访问统计（GoatCounter）——goatcounter.com 注册后把站点 code 填进 GC_CODE（如 "learn-agent-design"）。
 # 留空 = 不渲染任何统计 UI / 不接入任何第三方脚本，站点照常工作。
-GC_CODE = ""
+GC_CODE = "learn-agent-design"
 
 def gc_tracking():
     return ('<script data-goatcounter="https://%s.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>' % GC_CODE) if GC_CODE else ""
