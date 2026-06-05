@@ -3,7 +3,7 @@
 > 每次 session 第一个读的文件。收尾必更新本文件。
 
 ## 一句话状态
-2026-06-05 **S1-S4 全 ✅ 已上线**：12 讲（Module A 6 + Module B 6），侧边栏 + Claude doc 风。GitHub Actions 自动部署 GitHub Pages 成功，线上 HTTP 200。**剩余可选**：首页缘起文案 / 每讲阅读时长 / 资料库·技能区。
+2026-06-05 **已上线 + 已补结构**：12 讲（Module A 6 + Module B 6）+ **3 篇实战示例**（Claude Code / Cursor / 垂直 AI-OS）。每个模块页加了**模块导语段**（定位/讲次编排/适合谁），新增独立**实战示例区**（用框架拆解真实产品）。侧边栏三区 + Claude doc 风。GitHub Actions 自动部署。**剩余可选**：更多实战示例 / 首页缘起 / 阅读时长。
 
 ## 线上 / 仓库
 - 站点：https://libaoming.github.io/agent-design-course/

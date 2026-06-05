@@ -17,6 +17,13 @@
 - （无）
 
 ## Session Log（倒序）
+### 2026-06-05（对齐学习体系：模块导语 + 实战示例区）
+- 用户指出课程站缺了他学习体系里的「模块介绍」和「示例介绍」（学习路径文档=阶段→L章节→Q&A 案例的结构）。
+- 加 **模块导语**：MODULES dict 加 intro 字段（定位/讲次编排/适合谁），module 页渲染成浅灰导语卡片。
+- 加 **实战示例区**（独立第三区，仿 walkinglabs projects）：build.py 重写支持 content/examples/ + 侧栏第三分组（绿色「例」徽章）+ examples.html 列表 + 详情页（复用讲义模板）。
+- 派 3 子 agent 从 vault syntheses 提炼实战示例：Claude Code（五层/透明度/上下文）、Cursor（上下文工程/diff 人在环）、垂直 AI-OS（Parrot+Lassie 对照，深井 vs 通吃）。
+- build：12 讲 + 3 示例，verify 全绿；截图核查 module-a 导语 + 侧栏三区到位。
+
 ### 2026-06-05（S4：上线 GitHub Pages）
 - 创建 public 仓库 github.com/libaoming/agent-design-course，git init+commit+push（main）。
 - GitHub Actions（.github/workflows/deploy.yml）自动 build+deploy，run 27000151884 成功（build 9s + deploy 10s）。

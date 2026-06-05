@@ -106,6 +106,14 @@ a:hover { text-decoration: underline; }
 .page-head h1 { font-size: 32px; margin: 0 0 10px; letter-spacing: -.01em; }
 .page-head .lead { color: var(--muted); margin: 0; font-size: 16px; }
 
+/* 模块导语 */
+.module-intro { font-size: 16px; color: var(--ink-soft); line-height: 1.85; margin: 0 0 8px; padding: 22px 24px; background: #fbfaf8; border: 1px solid var(--line); border-radius: var(--radius); }
+.module-intro p { margin: 0 0 12px; }
+.module-intro p:last-child { margin-bottom: 0; }
+.module-intro strong { color: var(--ink); }
+.list-head { font-size: 14px; font-weight: 700; color: var(--muted); letter-spacing: .04em; margin: 32px 0 14px; }
+.mod-badge.ex { background: #3f7a5a; }
+
 /* 讲次卡片（doc 风弱卡片） */
 .card-list { display: flex; flex-direction: column; gap: 10px; }
 .card {

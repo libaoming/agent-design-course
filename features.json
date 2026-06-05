@@ -255,6 +255,49 @@
       "blocking": [
         "F08_module_b"
       ]
+    },
+    {
+      "id": "F10_module_intro",
+      "slice": "S4",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && grep -q 'module-intro' site/module-a.html && grep -q 'module-intro' site/module-b.html"
+      },
+      "verify_notes": "每模块页顶部加导语段（定位/讲次编排/适合谁），截图核查渲染正常",
+      "related": {
+        "specs": [],
+        "code": [
+          "scripts/build.py"
+        ],
+        "docs": []
+      },
+      "affected": "模块页结构",
+      "out_of_scope": "",
+      "blocking": []
+    },
+    {
+      "id": "F11_examples",
+      "slice": "S4",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && test -f site/examples.html && ls content/examples/*.md | wc -l | grep -q 3"
+      },
+      "verify_notes": "独立实战示例区：Claude Code/Cursor/垂直AI-OS 3 篇，侧栏第三区+列表+详情，build+verify 全绿",
+      "related": {
+        "specs": [],
+        "code": [
+          "scripts/build.py",
+          "content/examples/"
+        ],
+        "docs": []
+      },
+      "affected": "新增实战示例区",
+      "out_of_scope": "更多示例后续补",
+      "blocking": [
+        "F10_module_intro"
+      ]
     }
   ]
 }

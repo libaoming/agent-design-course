@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""build.py — 把 content/**/*.md 渲染成 site/ 下的纯静态 HTML 多页站。
-左侧边栏导航 + 右侧本页目录，Claude Code 文档式调性。零三方依赖。"""
+"""build.py — content/**/*.md → site/ 纯静态多页站。
+左侧边栏导航（模块讲义 + 实战示例）+ 右侧 TOC，Claude Code 文档调性。零三方依赖。"""
 
 import os, re, shutil, html
 
@@ -12,130 +12,123 @@ SITE = os.path.join(ROOT, "site")
 
 SITE_TITLE = "Learn Agent Design"
 SITE_TAGLINE = "把 Agent 学习笔记，重写成一门可讲、可查、可分享的公开课"
+
 MODULES = {
-    "a": {"name": "Agent 产品与能力设计",
-          "desc": "以 L3 五维能力为主轴（任务路径 / 失败节点 / 错误恢复 / 透明度 / 边界行为），技术地基五层做底座。讲「怎么设计与评估一个 Agent」。"},
-    "b": {"name": "Agent 工程地基",
-          "desc": "Harness 工程、Gateway 工程、上下文工程七维、评测体系、框架选型。讲「怎么让 Agent 可靠地跑起来」。"},
+    "a": {
+        "name": "Agent 产品与能力设计",
+        "desc": "以 L3 五维能力为主轴，技术地基五层做底座。讲「怎么设计与评估一个 Agent」。",
+        "intro": (
+            "本模块回答一个问题：**怎么把一个 Agent 当成产品来设计和评估？**\n\n"
+            "主轴是评估一个 Agent 能力的五个维度——任务完成路径、失败节点、错误恢复、透明度、边界行为；"
+            "底座是理解 Agent 怎么跑起来的技术地基五层（Loop / Tool / Planning / Memory / Multi-Agent）。"
+            "学完你会拿到一套**可拆分、可埋点、可定 KPI** 的语言：把模糊的「这个 Agent 好不好用」拆成具体维度，逐项设计、逐项度量。\n\n"
+            "**讲次编排**：先用第 0 讲的五层架构建立底座（定位问题在哪一层），再沿五维逐讲展开——前四维层层递进（能不能做完 → 在哪失败 → 失败怎么恢复 → 过程透不透明），最后落到边界行为（该不该做）。\n\n"
+            "**适合**：想转型 / 进阶到 Agent 方向的产品经理、模型策略 PM，以及想要「产品评估视角」的工程师。"
+        ),
+    },
+    "b": {
+        "name": "Agent 工程地基",
+        "desc": "Harness、Gateway、上下文工程、评测、框架选型。讲「怎么让 Agent 可靠地跑起来」。",
+        "intro": (
+            "本模块回答另一个问题：**怎么让一个 Agent 在生产环境里可靠地跑起来？**\n\n"
+            "核心理念一句话——模型是司机，工程基础设施才是车。模型能力商品化之后，护城河上移到 Harness、上下文工程和数据飞轮。"
+            "本模块从 Harness 总纲出发，依次讲上下文工程（最稀缺的资源怎么管）、Gateway（生产底盘）、框架选型（别默认上 LangGraph）、评测体系（别拍脑袋迭代）、多 Agent 平台（按瓶颈而非想象演进）。\n\n"
+            "**讲次编排**：第 0 讲 Harness 是总纲（先修车再换司机），其后五讲分别对应一个工程子系统，每讲都遵循「不修这块会怎样 → 框架 → 怎么落地」。\n\n"
+            "**适合**：做 Agent 应用的工程师、独立开发者，以及想补「工程地基认知」的 PM。"
+        ),
+    },
 }
 
-# ----------------------------------------------------------------------------
-# frontmatter 解析（YAML 子集）
-# ----------------------------------------------------------------------------
+EXAMPLES_TITLE = "实战示例"
+EXAMPLES_INTRO = (
+    "光有框架还不够。这一区用前两个模块的框架，去**拆解真实的 Agent 产品**——"
+    "看抽象的五维、五层、Harness，在 Claude Code、Cursor 这些产品里到底长什么样。"
+    "每个示例都是一次「拿着透镜看真实世界」的练习：框架是怎么从一个真实产品里被验证、被修正的。"
+)
+
+# ---------------------------------------------------------------- frontmatter
 def parse_frontmatter(text):
     if not text.startswith("---"):
         return {}, text
     end = text.find("\n---", 3)
     if end == -1:
         return {}, text
-    block = text[3:end].strip("\n")
-    body = text[end + 4:].lstrip("\n")
+    block = text[3:end].strip("\n"); body = text[end + 4:].lstrip("\n")
     meta = {}
     for line in block.splitlines():
         if not line.strip() or ":" not in line:
             continue
-        key, val = line.split(":", 1)
-        key, val = key.strip(), val.strip()
-        if val.startswith("[") and val.endswith("]"):
-            meta[key] = [i.strip() for i in val[1:-1].split(",") if i.strip()]
-        else:
-            meta[key] = val
+        k, v = line.split(":", 1); k, v = k.strip(), v.strip()
+        meta[k] = [i.strip() for i in v[1:-1].split(",") if i.strip()] if (v.startswith("[") and v.endswith("]")) else v
     return meta, body
 
-# ----------------------------------------------------------------------------
-# 行内
-# ----------------------------------------------------------------------------
+# ---------------------------------------------------------------- inline
 def inline(text):
     codes = []
     def stash(m):
-        codes.append("<code>" + html.escape(m.group(1)) + "</code>")
-        return "\x00%d\x00" % (len(codes) - 1)
+        codes.append("<code>" + html.escape(m.group(1)) + "</code>"); return "\x00%d\x00" % (len(codes) - 1)
     text = re.sub(r"`([^`]+)`", stash, text)
     text = html.escape(text)
-    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)",
-                  lambda m: '<a href="%s">%s</a>' % (m.group(2), m.group(1)), text)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", lambda m: '<a href="%s">%s</a>' % (m.group(2), m.group(1)), text)
     text = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", text)
     text = re.sub(r"\x00(\d+)\x00", lambda m: codes[int(m.group(1))], text)
     return text
 
 def split_row(line):
     line = line.strip()
-    if line.startswith("|"):
-        line = line[1:]
-    if line.endswith("|"):
-        line = line[:-1]
+    if line.startswith("|"): line = line[1:]
+    if line.endswith("|"): line = line[:-1]
     return [c.strip() for c in line.split("|")]
 
-# ----------------------------------------------------------------------------
-# 块级 markdown → HTML，附带 h2 目录（TOC）收集
-# ----------------------------------------------------------------------------
+# ---------------------------------------------------------------- block md → html + toc
 def render_md(md):
-    lines = md.splitlines()
-    out, toc, i, n, sec = [], [], 0, len(lines), 0
+    lines = md.splitlines(); out, toc, i, n, sec = [], [], 0, len(lines), 0
     while i < n:
         line = lines[i]
         if line.startswith("```"):
             buf, i = [], i + 1
-            while i < n and not lines[i].startswith("```"):
-                buf.append(html.escape(lines[i])); i += 1
-            i += 1
-            out.append("<pre><code>" + "\n".join(buf) + "</code></pre>")
-            continue
-        if not line.strip():
-            i += 1; continue
+            while i < n and not lines[i].startswith("```"): buf.append(html.escape(lines[i])); i += 1
+            i += 1; out.append("<pre><code>" + "\n".join(buf) + "</code></pre>"); continue
+        if not line.strip(): i += 1; continue
         m = re.match(r"^(#{1,4})\s+(.*)$", line)
         if m:
             lvl = len(m.group(1)); txt = m.group(2).strip()
             if lvl == 2:
-                sec += 1; hid = "sec-%d" % sec
-                toc.append((txt, hid))
+                sec += 1; hid = "sec-%d" % sec; toc.append((txt, hid))
                 out.append('<h2 id="%s">%s</h2>' % (hid, inline(txt)))
             else:
                 out.append("<h%d>%s</h%d>" % (lvl, inline(txt), lvl))
             i += 1; continue
         if "|" in line and i + 1 < n and re.match(r"^\s*\|?[\s:?\-|]+\|?\s*$", lines[i + 1]) and "-" in lines[i + 1]:
             header = split_row(line); i += 2; body = []
-            while i < n and "|" in lines[i] and lines[i].strip():
-                body.append(split_row(lines[i])); i += 1
+            while i < n and "|" in lines[i] and lines[i].strip(): body.append(split_row(lines[i])); i += 1
             t = ["<table><thead><tr>"] + ["<th>%s</th>" % inline(c) for c in header] + ["</tr></thead><tbody>"]
-            for row in body:
-                t.append("<tr>" + "".join("<td>%s</td>" % inline(c) for c in row) + "</tr>")
-            t.append("</tbody></table>")
-            out.append("".join(t)); continue
+            for row in body: t.append("<tr>" + "".join("<td>%s</td>" % inline(c) for c in row) + "</tr>")
+            t.append("</tbody></table>"); out.append("".join(t)); continue
         if line.startswith(">"):
             buf = []
-            while i < n and lines[i].startswith(">"):
-                buf.append(lines[i].lstrip(">").strip()); i += 1
-            cls = ""
-            m2 = re.match(r"^\[!(\w+)\]\s*(.*)$", buf[0]) if buf else None
+            while i < n and lines[i].startswith(">"): buf.append(lines[i].lstrip(">").strip()); i += 1
+            cls = ""; m2 = re.match(r"^\[!(\w+)\]\s*(.*)$", buf[0]) if buf else None
             if m2:
                 cls = ' class="callout callout-%s"' % m2.group(1).lower(); rest = m2.group(2)
                 buf = ([rest] if rest else []) + buf[1:]
-            out.append("<blockquote%s><p>%s</p></blockquote>" % (cls, inline(" ".join(buf))))
-            continue
+            out.append("<blockquote%s><p>%s</p></blockquote>" % (cls, inline(" ".join(buf)))); continue
         if re.match(r"^\s*([-*]|\d+\.)\s+", line):
-            ordered = bool(re.match(r"^\s*\d+\.\s+", line))
-            tag = "ol" if ordered else "ul"
-            items, base_indent = [], None
+            ordered = bool(re.match(r"^\s*\d+\.\s+", line)); tag = "ol" if ordered else "ul"
+            items, base = [], None
             while i < n and re.match(r"^\s*([-*]|\d+\.)\s+", lines[i]):
                 indent = len(lines[i]) - len(lines[i].lstrip())
-                if base_indent is None:
-                    base_indent = indent
-                content = re.sub(r"^\s*([-*]|\d+\.)\s+", "", lines[i])
-                content = re.sub(r"^\[[ xX]\]\s+", "", content)
-                if indent > base_indent and items:
-                    items[-1].setdefault("sub", []).append(content)
-                else:
-                    items.append({"text": content, "sub": []})
+                if base is None: base = indent
+                c = re.sub(r"^\s*([-*]|\d+\.)\s+", "", lines[i]); c = re.sub(r"^\[[ xX]\]\s+", "", c)
+                if indent > base and items: items[-1].setdefault("sub", []).append(c)
+                else: items.append({"text": c, "sub": []})
                 i += 1
-            buf = ["<%s>" % tag]
+            b = ["<%s>" % tag]
             for it in items:
-                buf.append("<li>" + inline(it["text"]))
-                if it["sub"]:
-                    buf.append("<ul>" + "".join("<li>%s</li>" % inline(s) for s in it["sub"]) + "</ul>")
-                buf.append("</li>")
-            buf.append("</%s>" % tag)
-            out.append("".join(buf)); continue
+                b.append("<li>" + inline(it["text"]))
+                if it["sub"]: b.append("<ul>" + "".join("<li>%s</li>" % inline(s) for s in it["sub"]) + "</ul>")
+                b.append("</li>")
+            b.append("</%s>" % tag); out.append("".join(b)); continue
         buf = []
         while i < n and lines[i].strip() and not re.match(r"^(#{1,4}\s|>|```|\s*([-*]|\d+\.)\s)", lines[i]) \
                 and not ("|" in lines[i] and i + 1 < n and "-" in (lines[i + 1] if i + 1 < n else "") and re.match(r"^\s*\|?[\s:?\-|]+\|?\s*$", lines[i + 1])):
@@ -143,37 +136,42 @@ def render_md(md):
         out.append("<p>" + inline(" ".join(buf)) + "</p>")
     return "\n".join(out), toc
 
-# ----------------------------------------------------------------------------
-# 侧边栏 + 页面外壳
-# ----------------------------------------------------------------------------
-def sidebar(by_mod, prefix, active_slug="", active_mod="", home=False):
-    s = [f'<aside class="sidebar"><div class="sidebar-scroll">']
+# ---------------------------------------------------------------- sidebar / shell
+def sidebar(by_mod, examples, prefix, active_slug="", active_mod="", home=False):
+    s = ['<aside class="sidebar"><div class="sidebar-scroll">']
     s.append(f'<a class="sidebar-brand{" active" if home else ""}" href="{prefix}index.html"><span class="brand-dot"></span><span>{SITE_TITLE}</span></a>')
     s.append('<nav class="sidebar-nav">')
     for mod in ("a", "b"):
         amod = " active" if active_mod == mod else ""
-        s.append(f'<div class="nav-section">')
+        s.append('<div class="nav-section">')
         s.append(f'<a class="nav-section-title{amod}" href="{prefix}module-{mod}.html"><span class="mod-badge">{mod.upper()}</span>{html.escape(MODULES[mod]["name"])}</a>')
-        if by_mod[mod]:
-            s.append("<ul>")
-            for lec in by_mod[mod]:
-                act = " active" if lec["slug"] == active_slug else ""
-                label = html.escape(lec.get("nav", lec["title"]))
-                s.append(f'<li><a class="{act.strip()}" href="{prefix}module-{mod}/{lec["slug"]}.html">{label}</a></li>')
-            s.append("</ul>")
-        else:
-            s.append('<ul><li><span class="soon">筹备中</span></li></ul>')
-        s.append("</div>")
+        s.append("<ul>")
+        for lec in by_mod[mod]:
+            act = " active" if lec["slug"] == active_slug else ""
+            s.append(f'<li><a class="{act.strip()}" href="{prefix}module-{mod}/{lec["slug"]}.html">{html.escape(lec.get("nav", lec["title"]))}</a></li>')
+        s.append("</ul></div>")
+    # 实战示例区
+    aex = " active" if active_mod == "examples" else ""
+    s.append('<div class="nav-section">')
+    s.append(f'<a class="nav-section-title{aex}" href="{prefix}examples.html"><span class="mod-badge ex">例</span>{EXAMPLES_TITLE}</a>')
+    if examples:
+        s.append("<ul>")
+        for ex in examples:
+            act = " active" if ex["slug"] == active_slug else ""
+            s.append(f'<li><a class="{act.strip()}" href="{prefix}examples/{ex["slug"]}.html">{html.escape(ex.get("nav", ex["title"]))}</a></li>')
+        s.append("</ul>")
+    else:
+        s.append('<ul><li><span class="soon">筹备中</span></li></ul>')
+    s.append("</div>")
     s.append("</nav></div></aside>")
     return "".join(s)
 
-def shell(title, body, by_mod, prefix="", active_slug="", active_mod="", home=False, toc=None):
-    toc_html = ""
-    main_cls = "main-inner"
+def shell(title, body, by_mod, examples, prefix="", active_slug="", active_mod="", home=False, toc=None):
+    main_cls, toc_html = "main-inner", ""
     if toc:
         main_cls = "main-inner with-toc"
         items = "".join('<li><a href="#%s">%s</a></li>' % (hid, html.escape(t)) for t, hid in toc)
-        toc_html = f'<nav class="toc"><div class="toc-title">本讲目录</div><ul>{items}</ul></nav>'
+        toc_html = f'<nav class="toc"><div class="toc-title">本页目录</div><ul>{items}</ul></nav>'
     return f'''<!DOCTYPE html>
 <html lang="zh-CN"><head>
 <meta charset="utf-8">
@@ -182,7 +180,7 @@ def shell(title, body, by_mod, prefix="", active_slug="", active_mod="", home=Fa
 <link rel="stylesheet" href="{prefix}assets/orangebook.css">
 </head><body>
 <div class="layout">
-{sidebar(by_mod, prefix, active_slug, active_mod, home)}
+{sidebar(by_mod, examples, prefix, active_slug, active_mod, home)}
 <main class="main"><div class="{main_cls}">
 <div class="content">{body}</div>
 {toc_html}
@@ -190,26 +188,33 @@ def shell(title, body, by_mod, prefix="", active_slug="", active_mod="", home=Fa
 </div>
 </body></html>'''
 
-# ----------------------------------------------------------------------------
+# ---------------------------------------------------------------- collect
+def _collect_dir(path, default_mod=None):
+    items = []
+    if not os.path.isdir(path):
+        return items
+    for fn in os.listdir(path):
+        if not fn.endswith(".md") or fn.startswith("_"):
+            continue
+        with open(os.path.join(path, fn), encoding="utf-8") as f:
+            meta, body = parse_frontmatter(f.read())
+        if not meta.get("title"):
+            continue
+        if default_mod:
+            meta["module"] = meta.get("module", default_mod)
+        meta["order"] = int(meta.get("order", 999))
+        meta["_body"] = body
+        items.append(meta)
+    items.sort(key=lambda x: x["order"])
+    return items
+
 def collect():
     lectures = []
     for mod in ("a", "b"):
-        d = os.path.join(CONTENT, "module-" + mod)
-        if not os.path.isdir(d):
-            continue
-        for fn in os.listdir(d):
-            if not fn.endswith(".md"):
-                continue
-            with open(os.path.join(d, fn), encoding="utf-8") as f:
-                meta, body = parse_frontmatter(f.read())
-            if not meta.get("title"):
-                continue
-            meta["module"] = meta.get("module", mod)
-            meta["order"] = int(meta.get("order", 999))
-            meta["_body"] = body
-            lectures.append(meta)
+        lectures += _collect_dir(os.path.join(CONTENT, "module-" + mod), default_mod=mod)
     lectures.sort(key=lambda x: (x["module"], x["order"]))
-    return lectures
+    examples = _collect_dir(os.path.join(CONTENT, "examples"))
+    return lectures, examples
 
 def lecture_card(lec, prefix=""):
     mod = lec["module"]
@@ -219,20 +224,54 @@ def lecture_card(lec, prefix=""):
       <p>{html.escape(lec.get('summary',''))}</p>
     </a>'''
 
+def example_card(ex, prefix=""):
+    tgt = html.escape(ex.get("target", "")) if ex.get("target") else ""
+    badge = f'<span class="card-no">{tgt}</span>' if tgt else '<span class="card-no">实战示例</span>'
+    return f'''<a class="card" href="{prefix}examples/{ex['slug']}.html">
+      {badge}
+      <h3>{html.escape(ex['title'])}</h3>
+      <p>{html.escape(ex.get('summary',''))}</p>
+    </a>'''
+
 def write(relpath, content):
-    full = os.path.join(SITE, relpath)
-    os.makedirs(os.path.dirname(full), exist_ok=True)
+    full = os.path.join(SITE, relpath); os.makedirs(os.path.dirname(full), exist_ok=True)
     with open(full, "w", encoding="utf-8") as f:
         f.write(content)
 
-# ----------------------------------------------------------------------------
-def build():
-    if os.path.isdir(SITE):
-        shutil.rmtree(SITE)
-    os.makedirs(SITE)
-    shutil.copytree(ASSETS, os.path.join(SITE, "assets"))
+def article_page(item, kind, siblings, by_mod, examples):
+    """渲染讲义页 / 示例详情页（同模板）。kind: 'lecture' | 'example'"""
+    pos = siblings.index(item)
+    prev_it = siblings[pos - 1] if pos > 0 else None
+    next_it = siblings[pos + 1] if pos < len(siblings) - 1 else None
+    body_html, toc = render_md(item["_body"])
+    summary = html.escape(item.get("summary", ""))
+    if kind == "lecture":
+        mod = item["module"]
+        crumb = f'<a href="../index.html">首页</a><span>/</span><a href="../module-{mod}.html">{html.escape(MODULES[mod]["name"])}</a>'
+        meta_line = f'Module {mod.upper()} · 第 {item["order"]} 讲'
+        active_mod = mod; subdir = "module-%s" % mod
+    else:
+        crumb = f'<a href="../index.html">首页</a><span>/</span><a href="../examples.html">{EXAMPLES_TITLE}</a>'
+        meta_line = "实战示例" + (f' · 拆解对象：{html.escape(item["target"])}' if item.get("target") else "")
+        active_mod = "examples"; subdir = "examples"
+    art = ['<article class="lecture">', f'<div class="breadcrumb">{crumb}</div>', f'<h1>{html.escape(item["title"])}</h1>']
+    if summary:
+        art.append(f'<p class="summary">{summary}</p>')
+    art.append(f'<p class="meta">{meta_line}</p>')
+    art.append(body_html)
+    pager = ['<div class="pager">']
+    pager.append(f'<a class="prev" href="{prev_it["slug"]}.html"><span class="dir">← 上一篇</span><span class="ttl">{html.escape(prev_it.get("nav", prev_it["title"]))}</span></a>' if prev_it else '<span class="spacer"></span>')
+    pager.append(f'<a class="next" href="{next_it["slug"]}.html"><span class="dir">下一篇 →</span><span class="ttl">{html.escape(next_it.get("nav", next_it["title"]))}</span></a>' if next_it else '<span class="spacer"></span>')
+    pager.append("</div>"); art.append("".join(pager)); art.append("</article>")
+    write(os.path.join(subdir, item["slug"] + ".html"),
+          shell(item["title"], "\n".join(art), by_mod, examples, prefix="../", active_slug=item["slug"], active_mod=active_mod, toc=toc))
 
-    lectures = collect()
+# ---------------------------------------------------------------- build
+def build():
+    if os.path.isdir(SITE): shutil.rmtree(SITE)
+    os.makedirs(SITE); shutil.copytree(ASSETS, os.path.join(SITE, "assets"))
+
+    lectures, examples = collect()
     by_mod = {"a": [], "b": []}
     for lec in lectures:
         by_mod[lec["module"]].append(lec)
@@ -247,52 +286,56 @@ def build():
         info = MODULES[mod]; count = len(by_mod[mod])
         home.append(f'<h2 class="home-sec"><span class="mod-badge">{mod.upper()}</span>{html.escape(info["name"])}<span class="sec-count">{count} 讲</span></h2>')
         home.append(f'<p class="home-desc">{html.escape(info["desc"])}</p>')
-        if by_mod[mod]:
-            home.append('<div class="card-list">')
-            for lec in by_mod[mod]:
-                home.append(lecture_card(lec, prefix=""))
-            home.append("</div>")
-        else:
-            home.append('<p class="soon-note">本模块讲次筹备中。</p>')
-    write("index.html", shell(SITE_TITLE, "\n".join(home), by_mod, prefix="", home=True))
+        home.append('<div class="card-list">')
+        for lec in by_mod[mod]:
+            home.append(lecture_card(lec, prefix=""))
+        home.append("</div>")
+    home.append(f'<h2 class="home-sec"><span class="mod-badge ex">例</span>{EXAMPLES_TITLE}<span class="sec-count">{len(examples)} 篇</span></h2>')
+    home.append(f'<p class="home-desc">{html.escape("用框架拆解真实 Agent 产品")}</p>')
+    if examples:
+        home.append('<div class="card-list">')
+        for ex in examples:
+            home.append(example_card(ex, prefix=""))
+        home.append("</div>")
+    else:
+        home.append('<p class="soon-note">实战示例筹备中。</p>')
+    write("index.html", shell(SITE_TITLE, "\n".join(home), by_mod, examples, prefix="", home=True))
 
-    # 模块页
+    # 模块页（含模块导语）
     for mod in ("a", "b"):
         info = MODULES[mod]
+        intro_html, _ = render_md(info.get("intro", ""))
         page = [f'<div class="page-head"><span class="mod-badge big">{mod.upper()}</span><h1>{html.escape(info["name"])}</h1><p class="lead">{html.escape(info["desc"])}</p></div>']
-        if by_mod[mod]:
-            page.append('<div class="card-list">')
-            for lec in by_mod[mod]:
-                page.append(lecture_card(lec, prefix=""))
-            page.append("</div>")
-        else:
-            page.append('<p class="soon-note">本模块讲次筹备中，敬请期待。</p>')
-        write("module-%s.html" % mod, shell(info["name"], "\n".join(page), by_mod, prefix="", active_mod=mod))
+        if intro_html:
+            page.append(f'<div class="module-intro">{intro_html}</div>')
+        page.append('<h2 class="list-head">讲次</h2><div class="card-list">')
+        for lec in by_mod[mod]:
+            page.append(lecture_card(lec, prefix=""))
+        page.append("</div>")
+        write("module-%s.html" % mod, shell(info["name"], "\n".join(page), by_mod, examples, prefix="", active_mod=mod))
 
-    # 讲义页
+    # 实战示例列表页
+    intro_html, _ = render_md(EXAMPLES_INTRO)
+    exp = [f'<div class="page-head"><span class="mod-badge big ex">例</span><h1>{EXAMPLES_TITLE}</h1></div>',
+           f'<div class="module-intro">{intro_html}</div>']
+    if examples:
+        exp.append('<h2 class="list-head">示例</h2><div class="card-list">')
+        for ex in examples:
+            exp.append(example_card(ex, prefix=""))
+        exp.append("</div>")
+    else:
+        exp.append('<p class="soon-note">实战示例筹备中，敬请期待。</p>')
+    write("examples.html", shell(EXAMPLES_TITLE, "\n".join(exp), by_mod, examples, prefix="", active_mod="examples"))
+
+    # 讲义详情
     for lec in lectures:
-        mod = lec["module"]; siblings = by_mod[mod]; pos = siblings.index(lec)
-        prev_lec = siblings[pos - 1] if pos > 0 else None
-        next_lec = siblings[pos + 1] if pos < len(siblings) - 1 else None
-        body_html, toc = render_md(lec["_body"])
-        summary = html.escape(lec.get("summary", ""))
-        art = [f'<article class="lecture">',
-               f'<div class="breadcrumb"><a href="../index.html">首页</a><span>/</span><a href="../module-{mod}.html">{html.escape(MODULES[mod]["name"])}</a></div>',
-               f'<h1>{html.escape(lec["title"])}</h1>']
-        if summary:
-            art.append(f'<p class="summary">{summary}</p>')
-        art.append(f'<p class="meta">Module {mod.upper()} · 第 {lec["order"]} 讲</p>')
-        art.append(body_html)
-        pager = ['<div class="pager">']
-        pager.append(f'<a class="prev" href="{prev_lec["slug"]}.html"><span class="dir">← 上一讲</span><span class="ttl">{html.escape(prev_lec.get("nav", prev_lec["title"]))}</span></a>' if prev_lec else '<span class="spacer"></span>')
-        pager.append(f'<a class="next" href="{next_lec["slug"]}.html"><span class="dir">下一讲 →</span><span class="ttl">{html.escape(next_lec.get("nav", next_lec["title"]))}</span></a>' if next_lec else '<span class="spacer"></span>')
-        pager.append("</div>")
-        art.append("".join(pager)); art.append("</article>")
-        write(os.path.join("module-%s" % mod, lec["slug"] + ".html"),
-              shell(lec["title"], "\n".join(art), by_mod, prefix="../", active_slug=lec["slug"], active_mod=mod, toc=toc))
+        article_page(lec, "lecture", by_mod[lec["module"]], by_mod, examples)
+    # 示例详情
+    for ex in examples:
+        article_page(ex, "example", examples, by_mod, examples)
 
-    print("build done: %d lectures, site/ ready" % len(lectures))
-    return len(lectures)
+    print("build done: %d lectures + %d examples, site/ ready" % (len(lectures), len(examples)))
+    return len(lectures), len(examples)
 
 if __name__ == "__main__":
     build()
