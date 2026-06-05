@@ -1,0 +1,236 @@
+{
+  "$schema_version": "0.1",
+  "milestone": "M1",
+  "project": "learn-agent-design",
+  "updated": "2026-06-05",
+  "owner": "baomingli",
+  "convention": {
+    "status": [
+      "pending",
+      "in_progress",
+      "failing",
+      "passing"
+    ],
+    "default_status": "failing",
+    "rule": "build 产出正确 HTML 且过检查清单才能改 passing；草稿写完只到 in_progress",
+    "verifier_gate": "verify 字段为空 = 不准开工。每讲的成功信号 = build 产出对应 HTML + 关键标题出现 + 全文无 emoji + 导航可达。",
+    "context_fields": "每个 feature 填 related/affected/out_of_scope，让 subagent 秒判读哪些不读哪些"
+  },
+  "slices": {
+    "S1": {
+      "name": "骨架跑通：视觉系统 + build 脚本 + 第1讲样板端到端",
+      "exit_criteria": "python3 scripts/build.py 无报错产出 site/index.html + 至少一篇讲义 HTML；浏览器打开能看到橙皮书风渲染 + 顶部模块导航可点达；全站无 emoji",
+      "git_tag": "learn-agent-design-s1"
+    },
+    "S2": {
+      "name": "Module A 讲义填充（L3 五维 + 技术地基五层）",
+      "exit_criteria": "Module A 全部讲义按讲义体写完并 build 通过",
+      "git_tag": "learn-agent-design-s2"
+    },
+    "S3": {
+      "name": "Module B 讲义填充（Harness/Gateway/上下文/评测/框架）",
+      "exit_criteria": "Module B 全部讲义写完并 build 通过",
+      "git_tag": "learn-agent-design-s3"
+    },
+    "S4": {
+      "name": "部署：GitHub Pages + 首页打磨 + 资料库/技能区",
+      "exit_criteria": "线上可访问，导航完整，配图克制达标",
+      "git_tag": "learn-agent-design-s4"
+    }
+  },
+  "features": [
+    {
+      "id": "F01_content_schema",
+      "slice": "S1",
+      "status": "passing",
+      "verify": {
+        "type": "doc",
+        "path": "SPEC.md#讲义文件-schema"
+      },
+      "verify_notes": "SPEC.md 已定义 frontmatter 字段 + 讲义体结构约定",
+      "related": {
+        "specs": [
+          "SPEC.md"
+        ],
+        "code": [],
+        "docs": [
+          "CLAUDE.md#内容约定"
+        ]
+      },
+      "affected": "所有讲义文件的格式、build 脚本如何解析",
+      "out_of_scope": "不做所见即所得编辑器、不做 CMS",
+      "blocking": []
+    },
+    {
+      "id": "F02_visual_system",
+      "slice": "S1",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "test -f assets/orangebook.css && ! grep -lP '[\\x{1F300}-\\x{1FAFF}]' assets/orangebook.css"
+      },
+      "verify_notes": "orangebook.css 就位，verify 第5项无 emoji 通过",
+      "related": {
+        "specs": [
+          "SPEC.md#视觉系统"
+        ],
+        "code": [
+          "assets/orangebook.css"
+        ],
+        "docs": []
+      },
+      "affected": "全站视觉：配色/排版/卡片/导航/讲义正文样式",
+      "out_of_scope": "不引入 Tailwind/前端框架；纯手写 CSS；不做暗黑模式（S1）",
+      "blocking": []
+    },
+    {
+      "id": "F03_build_script",
+      "slice": "S1",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && test -f site/index.html"
+      },
+      "verify_notes": "build.py 产出 site/index.html，幂等",
+      "related": {
+        "specs": [
+          "SPEC.md#构建脚本"
+        ],
+        "code": [
+          "scripts/build.py"
+        ],
+        "docs": [
+          "architecture.md"
+        ]
+      },
+      "affected": "markdown→HTML 渲染、导航生成、模板套用、site/ 产物",
+      "out_of_scope": "不做增量构建、不做热重载、不做搜索（S1）",
+      "blocking": [
+        "F01_content_schema"
+      ]
+    },
+    {
+      "id": "F04_site_skeleton",
+      "slice": "S1",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && grep -q '侧边栏\\|sidebar' site/index.html"
+      },
+      "verify_notes": "改侧边栏布局+Claude doc 调性；首页双模块经 badge+模块名呈现",
+      "related": {
+        "specs": [
+          "SPEC.md#页面类型"
+        ],
+        "code": [
+          "scripts/build.py",
+          "assets/orangebook.css"
+        ],
+        "docs": []
+      },
+      "affected": "首页（课程总览 + 双模块卡片）、讲义页模板、顶部导航",
+      "out_of_scope": "资料库/技能区页面留到 S4",
+      "blocking": [
+        "F02_visual_system",
+        "F03_build_script"
+      ]
+    },
+    {
+      "id": "F05_first_lecture",
+      "slice": "S1",
+      "status": "passing",
+      "verify": {
+        "type": "fixture",
+        "path": "fixtures/first-lecture/"
+      },
+      "verify_notes": "透明度讲（脱敏）写成讲义体，9 个期望标题全命中",
+      "related": {
+        "specs": [
+          "SPEC.md#讲义文件-schema"
+        ],
+        "code": [
+          "content/module-a/"
+        ],
+        "docs": []
+      },
+      "affected": "第1讲样板内容（问题驱动讲义体），同时充当 build 脚本的 fixture",
+      "out_of_scope": "其余讲次留到 S2/S3",
+      "blocking": [
+        "F01_content_schema"
+      ]
+    },
+    {
+      "id": "F06_e2e_verify",
+      "slice": "S1",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "bash scripts/verify.sh"
+      },
+      "verify_notes": "scripts/verify.sh 6 项全绿",
+      "related": {
+        "specs": [],
+        "code": [
+          "scripts/verify.sh"
+        ],
+        "docs": [
+          "M1/AGENTS.md"
+        ]
+      },
+      "affected": "端到端检查：build 通过 + 关键标题 + 无 emoji + 链接可达",
+      "out_of_scope": "不做视觉回归测试/截图比对（S1）",
+      "blocking": [
+        "F04_site_skeleton",
+        "F05_first_lecture"
+      ]
+    },
+    {
+      "id": "F07_module_a",
+      "slice": "S2",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "bash scripts/verify.sh && ls content/module-a/*.md | wc -l | grep -q 6"
+      },
+      "verify_notes": "Module A 6 讲（五层+五维）build+verify 全绿；子 agent 提炼+主线定稿",
+      "related": {
+        "specs": [
+          "SPEC.md#讲义文件-schema"
+        ],
+        "code": [
+          "content/module-a/"
+        ],
+        "docs": []
+      },
+      "affected": "Module A 全部讲义内容",
+      "out_of_scope": "Module B 留 S3",
+      "blocking": [
+        "F06_e2e_verify"
+      ]
+    },
+    {
+      "id": "F08_module_b",
+      "slice": "S3",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "bash scripts/verify.sh && ls content/module-b/*.md | wc -l | grep -q 6"
+      },
+      "verify_notes": "Module B 6 讲(Harness/上下文工程/Gateway/框架选型/评测/多Agent平台)build+verify 全绿；代码块+callout-warning 渲染经截图核查",
+      "related": {
+        "specs": [
+          "SPEC.md"
+        ],
+        "code": [
+          "content/module-b/"
+        ],
+        "docs": []
+      },
+      "affected": "Module B 全部讲义",
+      "out_of_scope": "部署留 S4",
+      "blocking": [
+        "F07_module_a"
+      ]
+    }
+  ]
+}
