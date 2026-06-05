@@ -3,7 +3,7 @@
 > 每次 session 第一个读的文件。收尾必更新本文件。
 
 ## 一句话状态
-2026-06-05 **已上线 + 已补结构**：12 讲（Module A 6 + Module B 6）+ **3 篇实战示例**（Claude Code / Cursor / 垂直 AI-OS）。每个模块页加了**模块导语段**（定位/讲次编排/适合谁），新增独立**实战示例区**（用框架拆解真实产品）。侧边栏三区 + Claude doc 风。GitHub Actions 自动部署。**剩余可选**：更多实战示例 / 首页缘起 / 阅读时长。
+2026-06-05 **已上线**：3 讲义模块共 **19 讲**（A 产品/能力 6 + B 工程地基 6 + **C Harness 工程 7**）+ 3 篇实战示例。Module C 融合 walkinglabs《Harness Engineering》框架 + 本项目自己的实战方法论（自指：这门课本身就是用这套方法做的）。侧栏四区 + 模块导语 + Claude doc 风。**进行中**：配图——用户要「多放图」，参考某 X 文章图片风格（风格待确认）。
 
 ## 线上 / 仓库
 - 站点：https://libaoming.github.io/agent-design-course/

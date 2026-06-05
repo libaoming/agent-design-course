@@ -17,6 +17,13 @@
 - （无）
 
 ## Session Log（倒序）
+### 2026-06-05（Module C · Harness 工程 7 讲）
+- 用户要把 walkinglabs《Harness Engineering》作为第三个讲义模块放进来，取向=融合作者实战方法论，精选核心 7 讲。
+- build.py 加 MODULES["c"] + 4 处循环 ("a","b")→("a","b","c") + by_mod 加 c。
+- 派 7 子 agent 融合写作：每个 prompt 自包含 walkinglabs 该讲框架要点 + 让子 agent 读**本项目自己的 harness 文件**（CLAUDE.md/STATUS/features.json/三件套/verify.sh，活样本）+ 用户方法论 memory。自指效果强。
+- 7 讲：为何仍失败/Harness是什么(五子系统×四层防御对照)/仓库即事实源/指令拆分/跨会话连续/边界与featurelist/端到端与交接。build 19讲+3示例全绿。
+- **配图需求待办**：用户要「内容多放图」，参考 X 文章 https://x.com/AnatoliKopadze/status/2057813254617858078 风格——需先确认风格再做（与之前「配图克制」设定有张力）。
+
 ### 2026-06-05（对齐学习体系：模块导语 + 实战示例区）
 - 用户指出课程站缺了他学习体系里的「模块介绍」和「示例介绍」（学习路径文档=阶段→L章节→Q&A 案例的结构）。
 - 加 **模块导语**：MODULES dict 加 intro 字段（定位/讲次编排/适合谁），module 页渲染成浅灰导语卡片。

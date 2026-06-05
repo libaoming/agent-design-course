@@ -37,6 +37,17 @@ MODULES = {
             "**适合**：做 Agent 应用的工程师、独立开发者，以及想补「工程地基认知」的 PM。"
         ),
     },
+    "c": {
+        "name": "Harness 工程",
+        "desc": "让 Agent 可靠地跑完长任务的工程方法论。以 walkinglabs《Harness Engineering》为骨架，融合一套真实项目里跑出来的实战做法。",
+        "intro": (
+            "本模块回答最后一个问题：**怎么让一个 Agent 可靠地跑完一个需要很多步、跨很多次会话的长任务？**\n\n"
+            "核心命题是——模型能力是常数，能不能交付是 harness 的函数。同一个模型，裸跑失败，套上完整 harness 就成功；成功率能从两成爬到接近满分，而模型一行没动。"
+            "本模块以 walkinglabs《Harness Engineering》的框架为骨架，融合一套在真实项目里跑出来的实战方法论：features.json 单一事实源、STATUS + 里程碑三件套、线性切片、fixture 先于代码、4 层防御体系、上下文隔离子 agent。\n\n"
+            "**讲次编排**：先立靶（为什么能力强的 Agent 仍失败）→ 给定义（harness 到底是什么）→ 逐个子系统展开（仓库即事实源 / 指令拆分 / 跨会话连续 / 边界与 feature list / 端到端验证与干净交接）。\n\n"
+            "**适合**：要让 Agent 干真活、跑长任务的工程师和 PM——其实你正在读的这门课，本身就是用这套方法论做出来的。"
+        ),
+    },
 }
 
 EXAMPLES_TITLE = "实战示例"
@@ -141,7 +152,7 @@ def sidebar(by_mod, examples, prefix, active_slug="", active_mod="", home=False)
     s = ['<aside class="sidebar"><div class="sidebar-scroll">']
     s.append(f'<a class="sidebar-brand{" active" if home else ""}" href="{prefix}index.html"><span class="brand-dot"></span><span>{SITE_TITLE}</span></a>')
     s.append('<nav class="sidebar-nav">')
-    for mod in ("a", "b"):
+    for mod in ("a", "b", "c"):
         amod = " active" if active_mod == mod else ""
         s.append('<div class="nav-section">')
         s.append(f'<a class="nav-section-title{amod}" href="{prefix}module-{mod}.html"><span class="mod-badge">{mod.upper()}</span>{html.escape(MODULES[mod]["name"])}</a>')
@@ -210,7 +221,7 @@ def _collect_dir(path, default_mod=None):
 
 def collect():
     lectures = []
-    for mod in ("a", "b"):
+    for mod in ("a", "b", "c"):
         lectures += _collect_dir(os.path.join(CONTENT, "module-" + mod), default_mod=mod)
     lectures.sort(key=lambda x: (x["module"], x["order"]))
     examples = _collect_dir(os.path.join(CONTENT, "examples"))
@@ -272,7 +283,7 @@ def build():
     os.makedirs(SITE); shutil.copytree(ASSETS, os.path.join(SITE, "assets"))
 
     lectures, examples = collect()
-    by_mod = {"a": [], "b": []}
+    by_mod = {"a": [], "b": [], "c": []}
     for lec in lectures:
         by_mod[lec["module"]].append(lec)
 
@@ -282,7 +293,7 @@ def build():
       <h1>学会<em>设计</em>与<em>工程化</em>一个 Agent</h1>
       <p class="lead">{html.escape(SITE_TAGLINE)}。两条主线：把 Agent 当产品来设计，把 Agent 当系统来交付。</p>
     </div>''']
-    for mod in ("a", "b"):
+    for mod in ("a", "b", "c"):
         info = MODULES[mod]; count = len(by_mod[mod])
         home.append(f'<h2 class="home-sec"><span class="mod-badge">{mod.upper()}</span>{html.escape(info["name"])}<span class="sec-count">{count} 讲</span></h2>')
         home.append(f'<p class="home-desc">{html.escape(info["desc"])}</p>')
@@ -302,7 +313,7 @@ def build():
     write("index.html", shell(SITE_TITLE, "\n".join(home), by_mod, examples, prefix="", home=True))
 
     # 模块页（含模块导语）
-    for mod in ("a", "b"):
+    for mod in ("a", "b", "c"):
         info = MODULES[mod]
         intro_html, _ = render_md(info.get("intro", ""))
         page = [f'<div class="page-head"><span class="mod-badge big">{mod.upper()}</span><h1>{html.escape(info["name"])}</h1><p class="lead">{html.escape(info["desc"])}</p></div>']

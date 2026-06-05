@@ -28,7 +28,7 @@
       "git_tag": "learn-agent-design-s2"
     },
     "S3": {
-      "name": "Module B 讲义填充（Harness/Gateway/上下文/评测/框架）",
+      "name": "Module B + Module C 讲义填充",
       "exit_criteria": "Module B 全部讲义写完并 build 通过",
       "git_tag": "learn-agent-design-s3"
     },
@@ -297,6 +297,29 @@
       "out_of_scope": "更多示例后续补",
       "blocking": [
         "F10_module_intro"
+      ]
+    },
+    {
+      "id": "F12_module_c",
+      "slice": "S3",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "bash scripts/verify.sh && ls content/module-c/*.md | wc -l | grep -q 7"
+      },
+      "verify_notes": "Module C Harness 工程 7 讲，融合 walkinglabs 框架+本项目活样本+用户方法论；build 19讲全绿",
+      "related": {
+        "specs": [],
+        "code": [
+          "content/module-c/",
+          "scripts/build.py"
+        ],
+        "docs": []
+      },
+      "affected": "新增 Module C 讲义模块",
+      "out_of_scope": "配图待确认风格后另做",
+      "blocking": [
+        "F08_module_b"
       ]
     }
   ]
