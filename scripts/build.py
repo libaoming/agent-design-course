@@ -53,7 +53,7 @@ MODULES = {
         "desc": "Google《Agentic Design Patterns》21 个核心模式的中文精炼。一本「遇到这类问题用哪个套路」的模式食谱，补全前三个模块的盲区。",
         "intro": (
             "前三个模块分别按「能力维度」「工程地基」「harness 方法论」切；本模块换一把刀——按 **21 个可复用的实现模式**切，是一本「遇到这类问题，用哪个套路」的食谱。\n\n"
-            "来源是 Google 的《Agentic Design Patterns》（Antonio Gulli），这里取其中文精炼（参考 xindoo 的翻译项目）。21 个模式可归成 6 组：基础执行 / 质量与安全 / 记忆与知识 / 协作与互联 / 控制与治理 / 推理与探索。\n\n"
+            "来源是 Google 的《Agentic Design Patterns》（Antonio Gulli），这里取其中文精炼，参考 [xindoo 的中文翻译项目](https://github.com/xindoo/agentic-design-patterns)。21 个模式可归成 6 组：基础执行 / 质量与安全 / 记忆与知识 / 协作与互联 / 控制与治理 / 推理与探索。\n\n"
             "**讲次编排**：第 0 讲是**全景地图**——把 21 个模式一次铺开、归组、并标注「本课前三模块讲过没」；其后几讲**只深入前三模块的盲区模式**（反思、学习与适应、知识检索 RAG、智能体间通信 A2A、推理技术、优先级与探索），不重复已讲的工具/规划/记忆/异常/安全/评测。\n\n"
             "**适合**：想要一份「招式速查」的人——知道遇到某类问题，业界有哪些成型套路可选。"
         ),
@@ -78,11 +78,10 @@ def stats_block():
     if not GC_CODE:
         return ""
     return ('<div class="learn-stats" id="learnStats" hidden>'
-            '<span class="dot"></span>已有 <strong id="gcU">·</strong> 人学过本课程 · <span id="gcV">·</span> 次阅读</div>'
+            '<span class="dot"></span>已有 <strong id="gcU">·</strong> 人学过本课程</div>'
             '<script>fetch("https://%s.goatcounter.com/counter/TOTAL.json")'
             '.then(function(r){return r.ok?r.json():Promise.reject()})'
             '.then(function(d){document.getElementById("gcU").textContent=d.count_unique;'
-            'document.getElementById("gcV").textContent=d.count;'
             'document.getElementById("learnStats").hidden=false})'
             '.catch(function(){})</script>') % GC_CODE
 

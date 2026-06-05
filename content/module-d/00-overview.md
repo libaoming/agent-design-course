@@ -72,3 +72,12 @@ source_notes: [Agentic Design Patterns]
 ## 收口
 
 > 21 个模式不是 21 道要背的题，是一张「遇到这类问题，业界有哪个现成套路」的索引地图。会查，比会背重要；而那 6 类本课没讲的盲区，就是这张地图接下来要带你走的路。
+
+## 参考来源
+
+本模块的 21 个模式框架来自以下材料，深入学习建议读原文：
+
+- 原书：《Agentic Design Patterns》，Antonio Gulli（Google）
+- 中文翻译项目（xindoo）：[github.com/xindoo/agentic-design-patterns](https://github.com/xindoo/agentic-design-patterns)
+
+本模块是在该框架基础上的精炼与「对照本课」改写，模式的命名与归类参考原书，讲解与本课呼应部分为原创。
