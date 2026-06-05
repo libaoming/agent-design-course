@@ -3,7 +3,7 @@
 > 每次 session 第一个读的文件。收尾必更新本文件。
 
 ## 一句话状态
-2026-06-05 **已上线**：3 讲义模块共 **19 讲**（A 产品/能力 6 + B 工程地基 6 + **C Harness 工程 7**）+ 3 篇实战示例。Module C 融合 walkinglabs《Harness Engineering》框架 + 本项目自己的实战方法论（自指：这门课本身就是用这套方法做的）。侧栏四区 + 模块导语 + Claude doc 风。**已配 14 张轻手绘风 SVG 框架图**（feTurbulence 滤镜做手绘抖动）覆盖几乎每讲：A 6 讲全有图 + B 5 讲（Harness/上下文稳定易变/Gateway/框架光谱/多Agent）+ C 3 讲（指令文件柜/feature状态机/三层校验）。build.py 支持 `![]()` 语法。**统计已上线 ✅**：GoatCounter（code=learn-agent-design，需在 Settings 开 Allow visitor counts，已开）接入，全站 PV/UV tracking + 首页绿点胶囊「已有 N 人学过本课程 · M 次阅读」（截图核查 3 人/3 阅读已亮，真实数据不造假）。**Module D 进行中**：build.py 支持第四模块；第 0 讲「21 模式全景地图」（21 行索引大表 + 6 组归类 + 标注本课覆盖✅🟡❌）已上线。**待写**：6 类盲区模式深入讲（反思 / 学习与适应 / RAG / A2A / 推理技术 / 优先级与探索），计划合并成 4-5 讲，派子 agent 从 xindoo 仓库章节提炼。
+2026-06-05 **已上线**：3 讲义模块共 **19 讲**（A 产品/能力 6 + B 工程地基 6 + **C Harness 工程 7**）+ 3 篇实战示例。Module C 融合 walkinglabs《Harness Engineering》框架 + 本项目自己的实战方法论（自指：这门课本身就是用这套方法做的）。侧栏四区 + 模块导语 + Claude doc 风。**已配 14 张轻手绘风 SVG 框架图**（feTurbulence 滤镜做手绘抖动）覆盖几乎每讲：A 6 讲全有图 + B 5 讲（Harness/上下文稳定易变/Gateway/框架光谱/多Agent）+ C 3 讲（指令文件柜/feature状态机/三层校验）。build.py 支持 `![]()` 语法。**统计已上线 ✅**：GoatCounter（code=learn-agent-design，需在 Settings 开 Allow visitor counts，已开）接入，全站 PV/UV tracking + 首页绿点胶囊「已有 N 人学过本课程 · M 次阅读」（截图核查 3 人/3 阅读已亮，真实数据不造假）。**Module D 完成 ✅**：5 讲（全景地图 + 反思推理 / 学习RAG / A2A / 优先级探索 4 类盲区深入），每讲都对照本课呼应（织进整门课，不孤立罗列）。**全站现状**：4 讲义模块共 **24 讲**（A6+B6+C7+D5）+ 3 实战示例 + 14 张框架图 + 每页访问统计。**剩余可选**：Module D 配图（21模式地图/状态机类）/ 资料库·技能区 / 首页缘起文案。
 
 ## 线上 / 仓库
 - 站点：https://libaoming.github.io/agent-design-course/
