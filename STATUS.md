@@ -3,7 +3,7 @@
 > 每次 session 第一个读的文件。收尾必更新本文件。
 
 ## 一句话状态
-2026-06-05 **已上线**：3 讲义模块共 **19 讲**（A 产品/能力 6 + B 工程地基 6 + **C Harness 工程 7**）+ 3 篇实战示例。Module C 融合 walkinglabs《Harness Engineering》框架 + 本项目自己的实战方法论（自指：这门课本身就是用这套方法做的）。侧栏四区 + 模块导语 + Claude doc 风。**已配 14 张轻手绘风 SVG 框架图**（feTurbulence 滤镜做手绘抖动）覆盖几乎每讲：A 6 讲全有图 + B 5 讲（Harness/上下文稳定易变/Gateway/框架光谱/多Agent）+ C 3 讲（指令文件柜/feature状态机/三层校验）。build.py 支持 `![]()` 语法。**排队中**：① 统计上线——框架已就位（GoatCounter tracking + 首页「已有 N 人学过本课程」用真实 UV，空 GC_CODE 优雅降级），**待用户注册 GoatCounter 给 code，填入 build.py 的 GC_CODE 即生效** ② Module D「21 设计模式」（已确认，融合取向，做完图后启动）。
+2026-06-05 **已上线**：3 讲义模块共 **19 讲**（A 产品/能力 6 + B 工程地基 6 + **C Harness 工程 7**）+ 3 篇实战示例。Module C 融合 walkinglabs《Harness Engineering》框架 + 本项目自己的实战方法论（自指：这门课本身就是用这套方法做的）。侧栏四区 + 模块导语 + Claude doc 风。**已配 14 张轻手绘风 SVG 框架图**（feTurbulence 滤镜做手绘抖动）覆盖几乎每讲：A 6 讲全有图 + B 5 讲（Harness/上下文稳定易变/Gateway/框架光谱/多Agent）+ C 3 讲（指令文件柜/feature状态机/三层校验）。build.py 支持 `![]()` 语法。**统计已上线 ✅**：GoatCounter（code=learn-agent-design，需在 Settings 开 Allow visitor counts，已开）接入，全站 PV/UV tracking + 首页绿点胶囊「已有 N 人学过本课程 · M 次阅读」（截图核查 3 人/3 阅读已亮，真实数据不造假）。**排队中**：Module D「21 设计模式」（已确认，融合取向，未开工）。
 
 ## 线上 / 仓库
 - 站点：https://libaoming.github.io/agent-design-course/
