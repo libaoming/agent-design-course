@@ -371,12 +371,12 @@
     {
       "id": "F15_module_d",
       "slice": "S3",
-      "status": "in_progress",
+      "status": "passing",
       "verify": {
         "type": "cmd",
-        "cmd": "bash scripts/verify.sh && ls content/module-d/*.md | wc -l"
+        "cmd": "bash scripts/verify.sh && ls content/module-d/*.md | wc -l | grep -q 5"
       },
-      "verify_notes": "第0讲全景地图已上线；6类盲区深入讲待写（in_progress）",
+      "verify_notes": "Module D 5 讲：全景地图 + 4 类盲区深入讲（反思推理/学习RAG/A2A/优先级探索），每讲对照本课呼应，build 全绿",
       "related": {
         "specs": [],
         "code": [
