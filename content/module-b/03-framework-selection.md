@@ -27,6 +27,8 @@ source_notes: [Agent-框架选型]
 
 常见选项不是平行的四个品牌，而是覆盖「复杂度光谱」不同段位的工具。
 
+![框架选型复杂度光谱：裸 SDK → LangChain → LangGraph → AutoGen，按需求复杂度匹配](../assets/diagrams/framework-selection.svg)
+
 | 框架 | 核心抽象 | 适用场景 | 取舍 |
 |------|---------|---------|------|
 | 裸 SDK | 无（自己调模型） | 简单单步 Agent | 最透明、最可控；但复杂流转要全手搓 |

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 290" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="15" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+  <rect x="0" y="0" width="720" height="290" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">上下文 = 稳定块 + 易变块（决定缓存命中与成本）</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">两块混在一起 → prompt cache 全失效 → 一通对话把 token 全价重写</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6">
+    <rect x="40" y="82" width="470" height="92" rx="8" fill="#ffffff"/>
+    <rect x="40" y="190" width="470" height="62" rx="8" fill="#fdf6f1"/>
+  </g>
+  <text x="60" y="112" font-size="14" font-weight="700" fill="#1a1a19">稳定块</text>
+  <text x="60" y="136" font-size="12" fill="#6b6b64">人设 + 工具定义 + 阶段指令</text>
+  <text x="60" y="156" font-size="12" fill="#6b6b64">整通对话不变</text>
+  <text x="60" y="218" font-size="14" font-weight="700" fill="#1a1a19">易变块</text>
+  <text x="60" y="240" font-size="12" fill="#6b6b64">runtime 状态 / 已采集字段 / 下一步提示——每轮都在变</text>
+  <g font-size="12.5" font-weight="700">
+    <text x="532" y="134" fill="#3f7a5a">✓ 命中 cache</text>
+    <text x="532" y="226" fill="#C15F3C">✗ 每轮重写</text>
+  </g>
+  <text x="532" y="152" font-size="11" fill="#9a9a92">省 80%+ 成本</text>
+</svg>

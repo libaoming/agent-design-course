@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="13" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+  <rect x="0" y="0" width="720" height="320" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">遇到边界时的 4 种行为：A &lt; B &lt; C &lt; D</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">从差到好的台阶——假装完成最该死，预防层拦截最优</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6" fill="none">
+    <rect x="34" y="214" width="150" height="58" rx="8" fill="#ffffff"/>
+    <rect x="208" y="176" width="150" height="58" rx="8" fill="#fdf6f1"/>
+    <rect x="382" y="138" width="150" height="58" rx="8" fill="#ffffff"/>
+    <rect x="556" y="100" width="150" height="58" rx="8" fill="#fdf6f1"/>
+    <path d="M186 224 L206 206 M206 206 L197 209 M206 206 L203 215" stroke="#C15F3C"/>
+    <path d="M360 186 L380 168 M380 168 L371 171 M380 168 L377 177" stroke="#C15F3C"/>
+    <path d="M534 148 L554 130 M554 130 L545 133 M554 130 L551 139" stroke="#C15F3C"/>
+  </g>
+  <g font-size="13.5" font-weight="700" fill="#1a1a19" text-anchor="middle">
+    <text x="109" y="240">A 假装完成</text>
+    <text x="283" y="202">B 粗暴报错</text>
+    <text x="457" y="164">C 主动说明</text>
+    <text x="631" y="126">D 预防层拦截</text>
+  </g>
+  <g font-size="11" fill="#6b6b64" text-anchor="middle">
+    <text x="109" y="259">最差·伪装做到了</text>
+    <text x="283" y="221">次差·暴露细节</text>
+    <text x="457" y="183">标准·诚实友好</text>
+    <text x="631" y="145">最优·入口就拦下</text>
+  </g>
+  <text x="34" y="300" font-size="11.5" fill="#C15F3C" font-weight="700">合规场景翻转：</text>
+  <text x="150" y="300" font-size="11.5" fill="#5b6370">产物会进下游决策时，宁可硬报错（B）也别友好说明（C）——B &gt; C</text>
+</svg>
