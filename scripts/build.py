@@ -101,6 +101,12 @@ def render_md(md):
             while i < n and not lines[i].startswith("```"): buf.append(html.escape(lines[i])); i += 1
             i += 1; out.append("<pre><code>" + "\n".join(buf) + "</code></pre>"); continue
         if not line.strip(): i += 1; continue
+        mi = re.match(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$", line)
+        if mi:
+            alt, src = mi.group(1), mi.group(2)
+            cap = ('<figcaption>%s</figcaption>' % inline(alt)) if alt else ""
+            out.append('<figure class="diagram"><img src="%s" alt="%s">%s</figure>' % (src, html.escape(alt), cap))
+            i += 1; continue
         m = re.match(r"^(#{1,4})\s+(.*)$", line)
         if m:
             lvl = len(m.group(1)); txt = m.group(2).strip()

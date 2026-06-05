@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-6%" y="-6%" width="112%" height="112%"><feTurbulence type="fractalNoise" baseFrequency="0.013" numOctaves="2" seed="5" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.3"/></filter></defs>
+  <rect x="0" y="0" width="720" height="400" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">Harness 五子系统：模型之外的那辆「车」</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">模型负责「想」，五子系统让它在真实领域里跑得起来</text>
+  <g filter="url(#rough)" stroke="#C15F3C" stroke-width="1.3" fill="none">
+    <path d="M360 138 L360 95"/><path d="M412 175 L470 150"/><path d="M405 240 L452 290"/><path d="M315 240 L268 290"/><path d="M308 175 L250 150"/>
+  </g>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.7">
+    <circle cx="360" cy="200" r="52" fill="#fdf6f1"/>
+    <rect x="298" y="58" width="124" height="40" rx="8" fill="#ffffff"/>
+    <rect x="470" y="130" width="124" height="40" rx="8" fill="#ffffff"/>
+    <rect x="408" y="290" width="124" height="40" rx="8" fill="#ffffff"/>
+    <rect x="188" y="290" width="124" height="40" rx="8" fill="#ffffff"/>
+    <rect x="126" y="130" width="124" height="40" rx="8" fill="#ffffff"/>
+  </g>
+  <text x="360" y="196" font-size="14" font-weight="700" fill="#C15F3C" text-anchor="middle">模型</text>
+  <text x="360" y="214" font-size="11" fill="#6b6b64" text-anchor="middle">Agency</text>
+  <g font-size="13" font-weight="700" fill="#1a1a19" text-anchor="middle">
+    <text x="360" y="83">① Instructions 指令</text>
+    <text x="532" y="155">② Tools 工具</text>
+    <text x="470" y="315">③ Environment 环境</text>
+    <text x="250" y="315">④ State 状态</text>
+    <text x="188" y="155">⑤ Feedback 反馈</text>
+  </g>
+  <text x="360" y="378" font-size="11.5" fill="#9a9a92" text-anchor="middle">缺一个子系统，就有一类失败模式——State 和 Feedback 最先决定生死</text>
+</svg>

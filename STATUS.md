@@ -3,7 +3,7 @@
 > 每次 session 第一个读的文件。收尾必更新本文件。
 
 ## 一句话状态
-2026-06-05 **已上线**：3 讲义模块共 **19 讲**（A 产品/能力 6 + B 工程地基 6 + **C Harness 工程 7**）+ 3 篇实战示例。Module C 融合 walkinglabs《Harness Engineering》框架 + 本项目自己的实战方法论（自指：这门课本身就是用这套方法做的）。侧栏四区 + 模块导语 + Claude doc 风。**进行中**：配图——用户要「多放图」，参考某 X 文章图片风格（风格待确认）。
+2026-06-05 **已上线**：3 讲义模块共 **19 讲**（A 产品/能力 6 + B 工程地基 6 + **C Harness 工程 7**）+ 3 篇实战示例。Module C 融合 walkinglabs《Harness Engineering》框架 + 本项目自己的实战方法论（自指：这门课本身就是用这套方法做的）。侧栏四区 + 模块导语 + Claude doc 风。**已配图**：8 张轻手绘风 SVG 框架图（feTurbulence 滤镜做手绘抖动）嵌入核心讲——五层架构/任务路径/失败节点/错误恢复/透明度三层（A）+ Harness 五子系统/多Agent四阶段（B）+ feature 状态机（C）。build.py 支持 `![]()` 图片语法。**剩余可选**：补边界4×4/三层校验等图 / 首页缘起 / 阅读时长。
 
 ## 线上 / 仓库
 - 站点：https://libaoming.github.io/agent-design-course/

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="11" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+  <rect x="0" y="0" width="720" height="250" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">feature 状态机：通过验证是唯一的升级路径</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">agent 不能自己改状态；passing 由验证器盖章，且不可逆</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6" fill="none">
+    <rect x="34" y="96" width="128" height="44" rx="8" fill="#ffffff"/>
+    <rect x="232" y="96" width="128" height="44" rx="8" fill="#fdf6f1"/>
+    <rect x="232" y="180" width="128" height="44" rx="8" fill="#ffffff"/>
+    <rect x="540" y="92" width="148" height="52" rx="9" fill="#fdf6f1"/>
+    <rect x="546" y="98" width="136" height="40" rx="6" fill="none"/>
+    <path d="M164 118 L230 118 M230 118 L221 113 M230 118 L221 123" stroke="#C15F3C"/>
+    <path d="M362 118 L538 118 M538 118 L529 113 M538 118 L529 123" stroke="#C15F3C"/>
+    <path d="M290 142 L290 178 M290 178 L285 170 M290 178 L295 170" stroke="#6b7280"/>
+    <path d="M304 178 L304 142 M304 142 L299 150 M304 142 L309 150" stroke="#6b7280"/>
+  </g>
+  <g font-size="13" font-weight="700" fill="#1a1a19" text-anchor="middle">
+    <text x="98" y="123">not_started</text>
+    <text x="296" y="123">active</text>
+    <text x="296" y="207">blocked</text>
+    <text x="614" y="123">passing</text>
+  </g>
+  <text x="450" y="108" font-size="11" font-weight="700" fill="#C15F3C" text-anchor="middle">verify 通过</text>
+  <text x="614" y="160" font-size="10.5" fill="#9a9a92" text-anchor="middle">终态 · 不可逆</text>
+  <text x="360" y="240" font-size="11" fill="#9a9a92" text-anchor="middle">verify 字段为空 = 不准开工；草稿写完只到 in_progress，验证通过才 passing</text>
+</svg>

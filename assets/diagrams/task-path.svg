@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 210" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="9" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+  <rect x="0" y="0" width="760" height="210" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">任务完成路径 = 四个可观测阶段</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">把「接到需求」到「产出结果」之间那段黑盒，拆成四段亮的</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6" fill="none">
+    <rect x="28" y="82" width="150" height="56" rx="8" fill="#ffffff"/>
+    <rect x="213" y="82" width="150" height="56" rx="8" fill="#fdf6f1"/>
+    <rect x="398" y="82" width="150" height="56" rx="8" fill="#ffffff"/>
+    <rect x="583" y="82" width="150" height="56" rx="8" fill="#fdf6f1"/>
+    <path d="M180 110 L211 110 M211 110 L203 105 M211 110 L203 115" stroke="#C15F3C"/>
+    <path d="M365 110 L396 110 M396 110 L388 105 M396 110 L388 115" stroke="#C15F3C"/>
+    <path d="M550 110 L581 110 M581 110 L573 105 M581 110 L573 115" stroke="#C15F3C"/>
+  </g>
+  <g font-size="14" font-weight="700" fill="#1a1a19" text-anchor="middle">
+    <text x="103" y="108">理解需求</text>
+    <text x="288" y="108">规划拆解</text>
+    <text x="473" y="108">执行推进</text>
+    <text x="658" y="108">收敛交付</text>
+  </g>
+  <g font-size="11" fill="#6b6b64" text-anchor="middle">
+    <text x="103" y="128">复述 / 认边界</text>
+    <text x="288" y="128">拆步 / 排依赖</text>
+    <text x="473" y="128">逐步自检</text>
+    <text x="658" y="128">对标 / 不越界</text>
+  </g>
+  <g font-size="11" fill="#9a9a92" text-anchor="middle">
+    <text x="103" y="172">漏隐含约束</text>
+    <text x="288" y="172">糊成一团</text>
+    <text x="473" y="172">错了不自知</text>
+    <text x="658" y="172">越界 / 假完成</text>
+  </g>
+  <text x="28" y="172" font-size="11" font-weight="700" fill="#C15F3C">失败风险↓</text>
+</svg>

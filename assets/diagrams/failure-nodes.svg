@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+  <rect x="0" y="0" width="760" height="300" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">一次任务 = 一条四节点流水线</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">失败只可能发生在四个节点之一（按节点切，天然 MECE）</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6" fill="none">
+    <rect x="28" y="92" width="150" height="72" rx="8" fill="#ffffff"/>
+    <rect x="213" y="92" width="150" height="72" rx="8" fill="#fdf6f1"/>
+    <rect x="398" y="92" width="150" height="72" rx="8" fill="#ffffff"/>
+    <rect x="583" y="92" width="150" height="72" rx="8" fill="#fdf6f1"/>
+    <path d="M180 128 L211 128 M211 128 L203 123 M211 128 L203 133" stroke="#C15F3C"/>
+    <path d="M365 128 L396 128 M396 128 L388 123 M396 128 L388 133" stroke="#C15F3C"/>
+    <path d="M550 128 L581 128 M581 128 L573 123 M581 128 L573 133" stroke="#C15F3C"/>
+    <rect x="28" y="206" width="705" height="54" rx="8" stroke-dasharray="5 4" fill="none"/>
+  </g>
+  <g font-size="13.5" font-weight="700" fill="#1a1a19" text-anchor="middle">
+    <text x="103" y="122">A 输入理解</text>
+    <text x="288" y="122">B 工具调用</text>
+    <text x="473" y="122">C 推理</text>
+    <text x="658" y="122">D 输出格式</text>
+  </g>
+  <g font-size="11" fill="#6b6b64" text-anchor="middle">
+    <text x="103" y="144">没听清 / 意图错</text>
+    <text x="288" y="144">超时 / 调错工具</text>
+    <text x="473" y="144">字段对调 / 幻觉</text>
+    <text x="658" y="144">JSON 不合法</text>
+  </g>
+  <text x="48" y="232" font-size="12.5" font-weight="700" fill="#C15F3C">回滚（正交维度）</text>
+  <text x="172" y="232" font-size="12" fill="#5b6370">失败后清理副作用——不属于四节点，单独统计占比</text>
+</svg>

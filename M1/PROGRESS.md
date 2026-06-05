@@ -17,6 +17,12 @@
 - （无）
 
 ## Session Log（倒序）
+### 2026-06-05（配图：8 张手绘风 SVG 框架图）
+- 用户要「多放图」，参考 X 文章 Anatoli「Claude Can Do All of This」的手绘线框示意图风格（chrome 截图确认=浅底+黑墨手绘线+标注+箭头+强调色）。
+- 方案：内联/独立 SVG + `feTurbulence`+`feDisplacementMap` 滤镜做轻手绘抖动；零依赖、矢量、橙皮书配色统一。先做 1 张样板（五层架构）经用户确认风格=「就这个，轻手绘线框」+ 范围=核心讲精选约 8-10 张。
+- build.py 加 `![alt](src)` 图片语法 → `<figure class="diagram">`；CSS 加 figure/diagram 样式。
+- 画 8 张并嵌入：five-layers/task-path/failure-nodes/error-recovery/transparency（A）+ harness/multi-agent-platform（B）+ feature-state-machine（C）。截图核查 Harness 环绕图（最难布局）文字无压线、布局均衡。build+verify 全绿。
+
 ### 2026-06-05（Module C · Harness 工程 7 讲）
 - 用户要把 walkinglabs《Harness Engineering》作为第三个讲义模块放进来，取向=融合作者实战方法论，精选核心 7 讲。
 - build.py 加 MODULES["c"] + 4 处循环 ("a","b")→("a","b","c") + by_mod 加 c。

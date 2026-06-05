@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 470" font-family="-apple-system, 'PingFang SC', sans-serif">
+  <defs>
+    <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="760" height="470" rx="14" fill="#fbfaf8"/>
+  <text x="60" y="42" font-size="20" font-weight="700" fill="#1a1a19">Agent 技术地基五层</text>
+  <text x="60" y="64" font-size="13" fill="#6b6b64">下层不稳，上层全废——定位问题先问「塌的是哪一层」</text>
+
+  <!-- 逐级叠加箭头 -->
+  <g filter="url(#rough)" stroke="#C15F3C" stroke-width="1.6" fill="none">
+    <path d="M40 430 L40 110"/>
+    <path d="M40 110 L34 124 M40 110 L46 124"/>
+  </g>
+  <text x="22" y="280" font-size="12" fill="#C15F3C" transform="rotate(-90 22 280)">自下而上逐级叠加</text>
+
+  <!-- 五层（L1 底 → L5 顶） -->
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6">
+    <rect x="64" y="386" width="540" height="52" rx="8" fill="#ffffff"/>
+    <rect x="64" y="326" width="540" height="52" rx="8" fill="#fdf6f1"/>
+    <rect x="64" y="266" width="540" height="52" rx="8" fill="#ffffff"/>
+    <rect x="64" y="206" width="540" height="52" rx="8" fill="#fdf6f1"/>
+    <rect x="64" y="146" width="540" height="52" rx="8" fill="#ffffff"/>
+    <!-- MCP 横切竖条 -->
+    <path d="M626 150 L626 434" stroke="#C15F3C" stroke-width="1.6" fill="none"/>
+    <path d="M626 150 C636 150 636 150 642 156 M626 434 C636 434 636 434 642 428" stroke="#C15F3C" fill="none"/>
+  </g>
+
+  <g font-size="15" font-weight="700" fill="#1a1a19">
+    <text x="84" y="417">L1 · Agent Loop</text>
+    <text x="84" y="357">L2 · Tool Use</text>
+    <text x="84" y="297">L3 · Planning</text>
+    <text x="84" y="237">L4 · 长期记忆</text>
+    <text x="84" y="177">L5 · Multi-Agent</text>
+  </g>
+  <g font-size="12.5" fill="#5b6370">
+    <text x="300" y="417">思考→行动→观察的循环</text>
+    <text x="300" y="357">name / description / schema</text>
+    <text x="300" y="297">五种工作流编排</text>
+    <text x="300" y="237">该记的记住，不该想的别想起</text>
+    <text x="300" y="177">协作 / 通信 / 错误三级处理</text>
+  </g>
+
+  <text x="650" y="288" font-size="12" font-weight="700" fill="#C15F3C" transform="rotate(-90 650 288)">MCP 横切</text>
+  <text x="672" y="288" font-size="11" fill="#9a9a92" transform="rotate(-90 672 288)">工具接入标准</text>
+</svg>

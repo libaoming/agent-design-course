@@ -73,6 +73,8 @@ WIP=1 要能执行，得先有个可被机器读取的任务清单。这就是 f
 not_started → active → blocked ⇄ active → passing
 ```
 
+![feature 状态机：not_started→active⇄blocked，active 经 verify 通过才升 passing（终态·不可逆）](../assets/diagrams/feature-state-machine.svg)
+
 两条铁律：**通过验证是升到 passing 的唯一路径**——agent 不能自己把状态改成 passing，必须由验证器跑完 verify 命令、拿到可执行的成功证据才升级；**passing 不可逆**——一旦通过就锁定，避免「做完了又被改回去」的反复横跳。这条状态机就是 WIP=1 的执行机制：只要存在 active 任务且它没到 passing，调度器就不会产出新的 active。
 
 完成的证据必须可执行：「代码看起来没问题」不是证据，「`curl` 返回 201」才是证据。判定标准是——换个人、换台机器、原样跑一遍，结果稳定。

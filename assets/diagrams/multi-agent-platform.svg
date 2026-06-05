@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 240" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="8" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+  <rect x="0" y="0" width="760" height="240" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">多 Agent 平台：按瓶颈而非想象，分四阶段长出来</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">每阶段只解锁当下瓶颈所需的能力，门槛到了才进下一阶段</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6" fill="none">
+    <rect x="28" y="110" width="150" height="64" rx="8" fill="#ffffff"/>
+    <rect x="213" y="110" width="150" height="64" rx="8" fill="#fdf6f1"/>
+    <rect x="398" y="110" width="150" height="64" rx="8" fill="#ffffff"/>
+    <rect x="583" y="110" width="150" height="64" rx="8" fill="#fdf6f1"/>
+    <path d="M180 142 L211 142 M211 142 L203 137 M211 142 L203 147" stroke="#C15F3C"/>
+    <path d="M365 142 L396 142 M396 142 L388 137 M396 142 L388 147" stroke="#C15F3C"/>
+    <path d="M550 142 L581 142 M581 142 L573 137 M581 142 L573 147" stroke="#C15F3C"/>
+  </g>
+  <g font-size="13.5" font-weight="700" fill="#1a1a19" text-anchor="middle">
+    <text x="103" y="138">A 多实例化</text>
+    <text x="288" y="138">B 路由层</text>
+    <text x="473" y="138">C 多租户隔离</text>
+    <text x="658" y="138">D 模板库</text>
+  </g>
+  <g font-size="10.5" fill="#6b6b64" text-anchor="middle">
+    <text x="103" y="158">多 Agent 并存</text>
+    <text x="288" y="158">交接成本付清</text>
+    <text x="473" y="158">聚合/合规付清</text>
+    <text x="658" y="158">拷模板改配置</text>
+  </g>
+  <g font-size="10.5" fill="#C15F3C" text-anchor="middle">
+    <text x="195" y="100">有第二个业务</text>
+    <text x="380" y="100">手工切流量成瓶颈</text>
+    <text x="565" y="100">要对外 / 合规</text>
+  </g>
+  <text x="380" y="212" font-size="11" fill="#9a9a92" text-anchor="middle">底层链路 / runtime / 后处理跨阶段复用；人设·话术·合规各自定制</text>
+</svg>

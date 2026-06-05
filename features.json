@@ -321,6 +321,29 @@
       "blocking": [
         "F08_module_b"
       ]
+    },
+    {
+      "id": "F13_diagrams",
+      "slice": "S4",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && ls site/assets/diagrams/*.svg | wc -l | grep -q 8"
+      },
+      "verify_notes": "8 张轻手绘风 SVG 框架图嵌入核心讲，build.py 支持图片语法，截图核查环绕图无压线",
+      "related": {
+        "specs": [],
+        "code": [
+          "assets/diagrams/",
+          "scripts/build.py"
+        ],
+        "docs": []
+      },
+      "affected": "核心讲配图",
+      "out_of_scope": "边界4×4/三层校验等图后续可补",
+      "blocking": [
+        "F12_module_c"
+      ]
     }
   ]
 }

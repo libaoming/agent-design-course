@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="2" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+  <rect x="0" y="0" width="720" height="300" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">透明度的三层 MECE</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">按「谁看 + 看到什么粒度」切——相互独立、不可替代</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6">
+    <rect x="120" y="80" width="500" height="56" rx="8" fill="#ffffff"/>
+    <rect x="120" y="148" width="500" height="56" rx="8" fill="#fdf6f1"/>
+    <rect x="120" y="216" width="500" height="56" rx="8" fill="#ffffff"/>
+    <path d="M104 80 C92 80 92 80 88 90 L88 262 C92 272 92 272 104 272" stroke="#C15F3C" stroke-width="1.6" fill="none"/>
+  </g>
+  <g font-size="14" font-weight="700" fill="#1a1a19">
+    <text x="140" y="113">L1 · UI 透明度</text>
+    <text x="140" y="181">L2 · 日志透明度</text>
+    <text x="140" y="249">L3 · 审计透明度</text>
+  </g>
+  <g font-size="11.5" fill="#6b6b64">
+    <text x="350" y="105">终端用户 · 运行时</text>
+    <text x="350" y="122">抽象、过滤后</text>
+    <text x="350" y="173">PM / 工程 · 全量</text>
+    <text x="350" y="190">结构化、可覆盖</text>
+    <text x="350" y="241">合规 / 监管 · 事后</text>
+    <text x="350" y="258">关键快照、不可篡改</text>
+  </g>
+  <text x="70" y="176" font-size="11.5" font-weight="700" fill="#C15F3C" transform="rotate(-90 70 176)">透明度三层</text>
+</svg>

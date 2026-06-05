@@ -35,6 +35,8 @@ source_notes: [Agent-Harness工程]
 
 它由五个子系统构成。下面用一个通用的「语音外呼 Agent」（自动给客户打电话、查资料、记录结果）作为落地物的例子：
 
+![Harness 五子系统：模型 Agency 居中，Instructions/Tools/Environment/State/Feedback 五子系统环绕](../assets/diagrams/harness.svg)
+
 | 子系统 | 解决什么问题 | 典型落地物 |
 |--------|-------------|-----------|
 | Tools（工具） | 模型光会想不会做，得有执行动作的手 | 语音识别、语音合成、CRM 查询、挂机接口 |
