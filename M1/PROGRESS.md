@@ -17,6 +17,15 @@
 - （无）
 
 ## Session Log（倒序）
+### 2026-06-05（收尾：Module D 完整 + 配图 + 统计调整 + 根站简历）
+- Module D 补齐 4 类盲区深入讲（反思推理/学习RAG/A2A/优先级探索），每讲对照本课呼应；派 4 子 agent 写。共 5 讲。
+- Module D 配图 4 张（反思循环/RAG五步/A2A三编排/优先级四象限），全站图增至 18 张。
+- 统计**每页显示**（讲义页右栏 TOC 下 / 模块页底 / 首页 hero）；修绿点与文字重叠 bug（block 下 gap 失效→改 dot margin-right）；按用户要求**去掉「次阅读」只留「已有 N 人学过」**，保持全站 TOTAL。
+- Module D 加**参考来源**（模块导语 + 总览讲末尾，链 github.com/xindoo/agentic-design-patterns）。
+- 答清统计原理（全站 TOTAL / localhost 不计 / 缓存延迟 / 8h session 去重）。
+- 关联：libaoming.github.io 根站 2017 旧简历 → 换成跳转课程站的占位页（PUT index.html，commit 897dbf1a；另一仓库 libaoming/libaoming.github.io）。
+- **本 session 收尾**：features.json 15 feature 全 passing；STATUS「下次入口」已更正（原误留 S3 Module B）。主体交付完成。
+
 ### 2026-06-05（Module D「21 设计模式」开工 + 统计上线）
 - **统计闭环**：用户注册 GoatCounter（code=learn-agent-design）+ 开 Allow visitor counts + 填 GC_CODE 上线。截图核查首页绿点胶囊「已有 3 人学过 · 3 次阅读」已亮（真实 UV）。讲清 GoatCounter 去重=hash(IP+UA+每日盐)、不存IP不用cookie、8h session、隐私友好偏保守。F14 passing。
 - **Module D 开工**：用户选「独立 Module D 21 设计模式」（源 Google Agentic Design Patterns / xindoo 中文）。定位=按「21 可复用实现模式」切，补前三模块盲区，不重复已讲。build.py 加 MODULES["d"] + 循环 ("a","b","c","d") + by_mod。

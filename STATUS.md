@@ -2,8 +2,9 @@
 
 > 每次 session 第一个读的文件。收尾必更新本文件。
 
-## 一句话状态
-2026-06-05 **已上线**：3 讲义模块共 **19 讲**（A 产品/能力 6 + B 工程地基 6 + **C Harness 工程 7**）+ 3 篇实战示例。Module C 融合 walkinglabs《Harness Engineering》框架 + 本项目自己的实战方法论（自指：这门课本身就是用这套方法做的）。侧栏四区 + 模块导语 + Claude doc 风。**已配 14 张轻手绘风 SVG 框架图**（feTurbulence 滤镜做手绘抖动）覆盖几乎每讲：A 6 讲全有图 + B 5 讲（Harness/上下文稳定易变/Gateway/框架光谱/多Agent）+ C 3 讲（指令文件柜/feature状态机/三层校验）。build.py 支持 `![]()` 语法。**统计已上线 ✅**：GoatCounter（code=learn-agent-design，需在 Settings 开 Allow visitor counts，已开）接入，全站 PV/UV tracking + 首页绿点胶囊「已有 N 人学过本课程 · M 次阅读」（截图核查 3 人/3 阅读已亮，真实数据不造假）。**Module D 完成 ✅**：5 讲（全景地图 + 反思推理 / 学习RAG / A2A / 优先级探索 4 类盲区深入），每讲都对照本课呼应（织进整门课，不孤立罗列）。**全站现状**：4 讲义模块共 **24 讲**（A6+B6+C7+D5）+ 3 实战示例 + **18 张框架图**（含 Module D 4 张：反思循环/RAG五步/A2A三编排/优先级四象限）+ 每页访问统计（保持全站 TOTAL）。**剩余可选**：资料库·技能区（放 harness-kit）/ 首页缘起文案 / 每讲阅读时长。
+## 一句话状态（2026-06-05 主体完成并上线）
+**4 讲义模块 24 讲**（A 产品能力 6 / B 工程地基 6 / C Harness 工程 7 / D 设计模式 5）+ 3 实战示例 + **18 张轻手绘 SVG 框架图** + 每页「已有 N 人学过本课程」统计（GoatCounter，已去掉「次阅读」只留人数，全站 TOTAL）。侧栏四区导航 + 模块导语 + Claude doc 风 + GitHub Actions 自动部署。Module C 融合 walkinglabs + 本项目实战方法论（自指）；Module D 源 Google《Agentic Design Patterns》/xindoo 仓库，含参考来源、每讲对照本课呼应。features.json 全 passing。
+关联：libaoming.github.io 根站 2017 旧简历已换成跳转课程站的占位页（另一仓库 libaoming/libaoming.github.io，旧源码在 git 历史可恢复）。
 
 ## 线上 / 仓库
 - 站点：https://libaoming.github.io/agent-design-course/
@@ -16,9 +17,17 @@
 - 全量验证：`bash scripts/verify.sh`
 
 ## 下次入口
-1. 读本文件 → 读 `M1/PROGRESS.md`
-2. 跑 `bash M1/init.sh` 确认环境（需 python3）
-3. 当前应做：**S3 — Module B 工程地基讲义**。候选讲：Harness 工程 / Gateway 工程 / 上下文工程七维 / 评测体系与 Benchmark / 框架选型 / 多Agent平台四阶段。vault 概念页齐全（concepts/Agent-Harness工程.md、Agent-Gateway工程.md、Agent上下文引擎-七维拆解透镜.md、Agent-评测体系与Benchmark.md、Agent-框架选型.md、多Agent平台架构四阶段模式.md）。派子 agent 提炼草稿，主线定稿，写入 content/module-b/NN-slug.md，build + verify。
+1. 读本文件 → 读 `M1/PROGRESS.md`（倒序 Session Log 看全程）
+2. 跑 `bash scripts/verify.sh` 确认环境与 build 全绿
+3. **主体已完成，可视为交付**。剩余纯可选（没有也是完整作品）：
+   - ① 资料库·技能区（仿 walkinglabs /resources /skills，放 [[project_harness_kit_oss]] 模板）
+   - ② 首页「课程缘起」文案（强化 Build in Public）
+   - ③ 每讲阅读时长
+   - ④ GitHub Actions 升级 Node20→Node24（2026-06-16 后强制，到时升 action 版本）
+   - ⑤ 配套发布推文（橙研所拆解调性）
+- 改内容/视觉流程：编辑 content/*.md 或 assets/orangebook.css → `python3 scripts/build.py` → `bash scripts/verify.sh` → commit push（Actions 自动部署）
+- 新讲义图：写 SVG 到 assets/diagrams/（feTurbulence 手绘滤镜 + 陶土橙），markdown 里 `![alt](../assets/diagrams/x.svg)` 引用
+- 加新模块：build.py 的 MODULES dict + 4 处 `("a","b","c","d")` 循环 + by_mod
 
 ## 关键技术事实
 - 技术栈：Python 3 标准库写 `scripts/build.py`（markdown→HTML，零三方依赖优先；若用 markdown 库需 requirements.txt）
