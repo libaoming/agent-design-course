@@ -57,6 +57,25 @@ EXAMPLES_INTRO = (
     "每个示例都是一次「拿着透镜看真实世界」的练习：框架是怎么从一个真实产品里被验证、被修正的。"
 )
 
+# 访问统计（GoatCounter）——goatcounter.com 注册后把站点 code 填进 GC_CODE（如 "learn-agent-design"）。
+# 留空 = 不渲染任何统计 UI / 不接入任何第三方脚本，站点照常工作。
+GC_CODE = ""
+
+def gc_tracking():
+    return ('<script data-goatcounter="https://%s.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>' % GC_CODE) if GC_CODE else ""
+
+def stats_block():
+    if not GC_CODE:
+        return ""
+    return ('<div class="learn-stats" id="learnStats" hidden>'
+            '<span class="dot"></span>已有 <strong id="gcU">·</strong> 人学过本课程 · <span id="gcV">·</span> 次阅读</div>'
+            '<script>fetch("https://%s.goatcounter.com/counter/TOTAL.json")'
+            '.then(function(r){return r.ok?r.json():Promise.reject()})'
+            '.then(function(d){document.getElementById("gcU").textContent=d.count_unique;'
+            'document.getElementById("gcV").textContent=d.count;'
+            'document.getElementById("learnStats").hidden=false})'
+            '.catch(function(){})</script>') % GC_CODE
+
 # ---------------------------------------------------------------- frontmatter
 def parse_frontmatter(text):
     if not text.startswith("---"):
@@ -195,6 +214,7 @@ def shell(title, body, by_mod, examples, prefix="", active_slug="", active_mod="
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(title)}</title>
 <link rel="stylesheet" href="{prefix}assets/orangebook.css">
+{gc_tracking()}
 </head><body>
 <div class="layout">
 {sidebar(by_mod, examples, prefix, active_slug, active_mod, home)}
@@ -298,6 +318,7 @@ def build():
       <span class="eyebrow">A Course on Building Agents</span>
       <h1>学会<em>设计</em>与<em>工程化</em>一个 Agent</h1>
       <p class="lead">{html.escape(SITE_TAGLINE)}。两条主线：把 Agent 当产品来设计，把 Agent 当系统来交付。</p>
+      {stats_block()}
     </div>''']
     for mod in ("a", "b", "c"):
         info = MODULES[mod]; count = len(by_mod[mod])

@@ -344,6 +344,29 @@
       "blocking": [
         "F12_module_c"
       ]
+    },
+    {
+      "id": "F14_stats",
+      "slice": "S4",
+      "status": "in_progress",
+      "verify": {
+        "type": "cmd",
+        "cmd": "填入 GC_CODE 后：curl -s https://CODE.goatcounter.com/counter/TOTAL.json 返回 count；首页含 learn-stats"
+      },
+      "verify_notes": "框架就位+空code优雅降级已验证；待用户注册 GoatCounter 给 code 填 GC_CODE 才端到端生效（故 in_progress）",
+      "related": {
+        "specs": [],
+        "code": [
+          "scripts/build.py",
+          "assets/orangebook.css"
+        ],
+        "docs": []
+      },
+      "affected": "首页访问统计「已有 N 人学过」",
+      "out_of_scope": "实时在线人数（纯静态做不了，不造假）",
+      "blocking": [
+        "F13_diagrams"
+      ]
     }
   ]
 }

@@ -95,6 +95,9 @@ a:hover { text-decoration: underline; }
 .hero h1 { font-size: 38px; line-height: 1.22; margin: 0 0 16px; letter-spacing: -.015em; font-weight: 700; }
 .hero h1 em { font-style: normal; color: var(--brand); }
 .hero .lead { font-size: 18px; color: var(--muted); margin: 0; max-width: 620px; }
+.learn-stats { margin-top: 20px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); background: var(--brand-soft); border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; }
+.learn-stats .dot { width: 8px; height: 8px; border-radius: 50%; background: #3f7a5a; box-shadow: 0 0 0 3px rgba(63,122,90,.18); display: inline-block; }
+.learn-stats strong { color: var(--brand-ink); font-weight: 700; }
 .home-sec { display: flex; align-items: center; gap: 10px; font-size: 20px; margin: 40px 0 8px; }
 .home-sec .sec-count { margin-left: auto; font-size: 13px; color: var(--faint); font-weight: 500; }
 .home-desc { color: var(--muted); margin: 0 0 18px; font-size: 15px; }

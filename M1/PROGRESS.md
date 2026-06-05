@@ -17,6 +17,12 @@
 - （无）
 
 ## Session Log（倒序）
+### 2026-06-05（再补 6 图 + 访问统计框架）
+- 补图至 14 张：边界4模式台阶/上下文稳定易变/Gateway五职责/框架光谱/指令文件柜/三层校验。截图核查台阶图无压线。覆盖几乎每讲。
+- **访问统计**：用户要「多少人看过/正在学习」。交底=纯静态做不了真实时在线，不造假。定方案：GoatCounter（隐私友好，用户注册1次）+「正在学习」用真实近似「已有 N 人学过」(累计 UV)。
+- build.py 加 GC_CODE 变量 + gc_tracking()（PV 统计 script）+ stats_block()（首页 hero 显示「已有 N 人学过 · M 次阅读」，fetch GoatCounter /counter/TOTAL.json）。**空 GC_CODE 优雅降级**：不渲染任何统计 UI、不接第三方脚本（已验证 0 命中）。CSS 加 .learn-stats 胶囊样式（绿点 + 橙底）。
+- **待用户做**：注册 goatcounter.com（邮箱 libaoming2@gmail.com）→ Settings 勾「Allow adding visitor counts」→ 把 site code 给我填入 GC_CODE。
+
 ### 2026-06-05（配图：8 张手绘风 SVG 框架图）
 - 用户要「多放图」，参考 X 文章 Anatoli「Claude Can Do All of This」的手绘线框示意图风格（chrome 截图确认=浅底+黑墨手绘线+标注+箭头+强调色）。
 - 方案：内联/独立 SVG + `feTurbulence`+`feDisplacementMap` 滤镜做轻手绘抖动；零依赖、矢量、橙皮书配色统一。先做 1 张样板（五层架构）经用户确认风格=「就这个，轻手绘线框」+ 范围=核心讲精选约 8-10 张。
