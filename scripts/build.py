@@ -48,6 +48,16 @@ MODULES = {
             "**适合**：要让 Agent 干真活、跑长任务的工程师和 PM——其实你正在读的这门课，本身就是用这套方法论做出来的。"
         ),
     },
+    "d": {
+        "name": "Agent 设计模式（21 式）",
+        "desc": "Google《Agentic Design Patterns》21 个核心模式的中文精炼。一本「遇到这类问题用哪个套路」的模式食谱，补全前三个模块的盲区。",
+        "intro": (
+            "前三个模块分别按「能力维度」「工程地基」「harness 方法论」切；本模块换一把刀——按 **21 个可复用的实现模式**切，是一本「遇到这类问题，用哪个套路」的食谱。\n\n"
+            "来源是 Google 的《Agentic Design Patterns》（Antonio Gulli），这里取其中文精炼（参考 xindoo 的翻译项目）。21 个模式可归成 6 组：基础执行 / 质量与安全 / 记忆与知识 / 协作与互联 / 控制与治理 / 推理与探索。\n\n"
+            "**讲次编排**：第 0 讲是**全景地图**——把 21 个模式一次铺开、归组、并标注「本课前三模块讲过没」；其后几讲**只深入前三模块的盲区模式**（反思、学习与适应、知识检索 RAG、智能体间通信 A2A、推理技术、优先级与探索），不重复已讲的工具/规划/记忆/异常/安全/评测。\n\n"
+            "**适合**：想要一份「招式速查」的人——知道遇到某类问题，业界有哪些成型套路可选。"
+        ),
+    },
 }
 
 EXAMPLES_TITLE = "实战示例"
@@ -177,7 +187,7 @@ def sidebar(by_mod, examples, prefix, active_slug="", active_mod="", home=False)
     s = ['<aside class="sidebar"><div class="sidebar-scroll">']
     s.append(f'<a class="sidebar-brand{" active" if home else ""}" href="{prefix}index.html"><span class="brand-dot"></span><span>{SITE_TITLE}</span></a>')
     s.append('<nav class="sidebar-nav">')
-    for mod in ("a", "b", "c"):
+    for mod in ("a", "b", "c", "d"):
         amod = " active" if active_mod == mod else ""
         s.append('<div class="nav-section">')
         s.append(f'<a class="nav-section-title{amod}" href="{prefix}module-{mod}.html"><span class="mod-badge">{mod.upper()}</span>{html.escape(MODULES[mod]["name"])}</a>')
@@ -247,7 +257,7 @@ def _collect_dir(path, default_mod=None):
 
 def collect():
     lectures = []
-    for mod in ("a", "b", "c"):
+    for mod in ("a", "b", "c", "d"):
         lectures += _collect_dir(os.path.join(CONTENT, "module-" + mod), default_mod=mod)
     lectures.sort(key=lambda x: (x["module"], x["order"]))
     examples = _collect_dir(os.path.join(CONTENT, "examples"))
@@ -309,7 +319,7 @@ def build():
     os.makedirs(SITE); shutil.copytree(ASSETS, os.path.join(SITE, "assets"))
 
     lectures, examples = collect()
-    by_mod = {"a": [], "b": [], "c": []}
+    by_mod = {"a": [], "b": [], "c": [], "d": []}
     for lec in lectures:
         by_mod[lec["module"]].append(lec)
 
@@ -320,7 +330,7 @@ def build():
       <p class="lead">{html.escape(SITE_TAGLINE)}。两条主线：把 Agent 当产品来设计，把 Agent 当系统来交付。</p>
       {stats_block()}
     </div>''']
-    for mod in ("a", "b", "c"):
+    for mod in ("a", "b", "c", "d"):
         info = MODULES[mod]; count = len(by_mod[mod])
         home.append(f'<h2 class="home-sec"><span class="mod-badge">{mod.upper()}</span>{html.escape(info["name"])}<span class="sec-count">{count} 讲</span></h2>')
         home.append(f'<p class="home-desc">{html.escape(info["desc"])}</p>')
@@ -340,7 +350,7 @@ def build():
     write("index.html", shell(SITE_TITLE, "\n".join(home), by_mod, examples, prefix="", home=True))
 
     # 模块页（含模块导语）
-    for mod in ("a", "b", "c"):
+    for mod in ("a", "b", "c", "d"):
         info = MODULES[mod]
         intro_html, _ = render_md(info.get("intro", ""))
         page = [f'<div class="page-head"><span class="mod-badge big">{mod.upper()}</span><h1>{html.escape(info["name"])}</h1><p class="lead">{html.escape(info["desc"])}</p></div>']

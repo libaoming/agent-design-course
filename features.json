@@ -28,7 +28,7 @@
       "git_tag": "learn-agent-design-s2"
     },
     "S3": {
-      "name": "Module B + Module C 讲义填充",
+      "name": "Module B + C + D 讲义填充",
       "exit_criteria": "Module B 全部讲义写完并 build 通过",
       "git_tag": "learn-agent-design-s3"
     },
@@ -366,6 +366,29 @@
       "out_of_scope": "实时在线人数（纯静态做不了，不造假）",
       "blocking": [
         "F13_diagrams"
+      ]
+    },
+    {
+      "id": "F15_module_d",
+      "slice": "S3",
+      "status": "in_progress",
+      "verify": {
+        "type": "cmd",
+        "cmd": "bash scripts/verify.sh && ls content/module-d/*.md | wc -l"
+      },
+      "verify_notes": "第0讲全景地图已上线；6类盲区深入讲待写（in_progress）",
+      "related": {
+        "specs": [],
+        "code": [
+          "content/module-d/",
+          "scripts/build.py"
+        ],
+        "docs": []
+      },
+      "affected": "新增 Module D 设计模式模块",
+      "out_of_scope": "不重复 A/B/C 已讲的模式",
+      "blocking": [
+        "F12_module_c"
       ]
     }
   ]

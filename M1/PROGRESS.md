@@ -17,6 +17,12 @@
 - （无）
 
 ## Session Log（倒序）
+### 2026-06-05（Module D「21 设计模式」开工 + 统计上线）
+- **统计闭环**：用户注册 GoatCounter（code=learn-agent-design）+ 开 Allow visitor counts + 填 GC_CODE 上线。截图核查首页绿点胶囊「已有 3 人学过 · 3 次阅读」已亮（真实 UV）。讲清 GoatCounter 去重=hash(IP+UA+每日盐)、不存IP不用cookie、8h session、隐私友好偏保守。F14 passing。
+- **Module D 开工**：用户选「独立 Module D 21 设计模式」（源 Google Agentic Design Patterns / xindoo 中文）。定位=按「21 可复用实现模式」切，补前三模块盲区，不重复已讲。build.py 加 MODULES["d"] + 循环 ("a","b","c","d") + by_mod。
+- 第 0 讲「21 模式全景地图」已写（21 行索引大表 + 6 组 + ✅🟡❌ 标注本课覆盖；本身是 Module D 的目录+路线图）。build 通过侧栏含第四模块。
+- **下一步**：派子 agent 从 xindoo 仓库章节提炼 6 类盲区深入讲（反思/学习适应/RAG/A2A/推理/优先级探索），合并 4-5 讲。
+
 ### 2026-06-05（再补 6 图 + 访问统计框架）
 - 补图至 14 张：边界4模式台阶/上下文稳定易变/Gateway五职责/框架光谱/指令文件柜/三层校验。截图核查台阶图无压线。覆盖几乎每讲。
 - **访问统计**：用户要「多少人看过/正在学习」。交底=纯静态做不了真实时在线，不造假。定方案：GoatCounter（隐私友好，用户注册1次）+「正在学习」用真实近似「已有 N 人学过」(累计 UV)。
