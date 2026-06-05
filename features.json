@@ -353,7 +353,7 @@
         "type": "cmd",
         "cmd": "curl -s https://learn-agent-design.goatcounter.com/counter/TOTAL.json 返回 200+count；首页 learn-stats 显示数字"
       },
-      "verify_notes": "端到端通过：counter 接口 200 返回 {count_unique:3,count:3}，截图核查首页绿点胶囊「已有 3 人学过 · 3 次阅读」已亮（真实数据）",
+      "verify_notes": "端到端通过：counter 接口 200 返回 {count_unique:3,count:3}，截图核查首页绿点胶囊「已有 3 人学过 · 3 次阅读」已亮（真实数据）；每页显示：讲义页右栏TOC下/模块页内容底/首页hero，截图核查讲义页右栏胶囊已亮",
       "related": {
         "specs": [],
         "code": [

@@ -88,6 +88,10 @@ a:hover { text-decoration: underline; }
 .toc ul { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--line); }
 .toc li a { display: block; padding: 5px 0 5px 14px; margin-left: -1px; color: var(--muted); border-left: 2px solid transparent; line-height: 1.45; }
 .toc li a:hover { color: var(--brand-ink); border-left-color: var(--brand); text-decoration: none; }
+/* 右栏 TOC 下方的统计（紧凑、可换行） */
+.toc .learn-stats { display: block; margin: 26px 0 0; font-size: 12px; line-height: 1.7; padding: 9px 13px; }
+/* 模块页/列表页内容底部的统计 */
+.content > .learn-stats { margin-top: 36px; }
 
 /* ============ 首页 ============ */
 .hero { padding: 18px 0 36px; border-bottom: 1px solid var(--line-soft); margin-bottom: 16px; }

@@ -213,11 +213,13 @@ def sidebar(by_mod, examples, prefix, active_slug="", active_mod="", home=False)
     return "".join(s)
 
 def shell(title, body, by_mod, examples, prefix="", active_slug="", active_mod="", home=False, toc=None):
-    main_cls, toc_html = "main-inner", ""
+    main_cls, toc_html, stats_in_content = "main-inner", "", ""
     if toc:
         main_cls = "main-inner with-toc"
         items = "".join('<li><a href="#%s">%s</a></li>' % (hid, html.escape(t)) for t, hid in toc)
-        toc_html = f'<nav class="toc"><div class="toc-title">本页目录</div><ul>{items}</ul></nav>'
+        toc_html = f'<nav class="toc"><div class="toc-title">本页目录</div><ul>{items}</ul>{stats_block()}</nav>'
+    elif not home:
+        stats_in_content = stats_block()
     return f'''<!DOCTYPE html>
 <html lang="zh-CN"><head>
 <meta charset="utf-8">
@@ -229,7 +231,7 @@ def shell(title, body, by_mod, examples, prefix="", active_slug="", active_mod="
 <div class="layout">
 {sidebar(by_mod, examples, prefix, active_slug, active_mod, home)}
 <main class="main"><div class="{main_cls}">
-<div class="content">{body}</div>
+<div class="content">{body}{stats_in_content}</div>
 {toc_html}
 </div></main>
 </div>
