@@ -328,9 +328,9 @@
       "status": "passing",
       "verify": {
         "type": "cmd",
-        "cmd": "python3 scripts/build.py && ls site/assets/diagrams/*.svg | wc -l | grep -q 14"
+        "cmd": "python3 scripts/build.py && ls site/assets/diagrams/*.svg | wc -l | grep -q 18"
       },
-      "verify_notes": "14 张轻手绘风 SVG 框架图覆盖几乎每讲；截图核查环绕图+台阶图无压线",
+      "verify_notes": "18 张轻手绘风框架图覆盖四模块；截图核查环绕图/台阶图/A2A三编排图均无压线",
       "related": {
         "specs": [],
         "code": [

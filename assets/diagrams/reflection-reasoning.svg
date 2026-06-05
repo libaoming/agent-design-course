@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 280" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="31" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+  <rect x="0" y="0" width="720" height="280" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">反思 = 生成 → 批评 → 修订的循环</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">Generator-Critic：把输出当草稿，自己挑错、定向改一遍（≠ 换种子重试）</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6" fill="none">
+    <rect x="48" y="100" width="160" height="58" rx="8" fill="#ffffff"/>
+    <rect x="280" y="100" width="160" height="58" rx="8" fill="#fdf6f1"/>
+    <rect x="512" y="100" width="160" height="58" rx="8" fill="#ffffff"/>
+    <path d="M210 129 L278 129 M278 129 L269 124 M278 129 L269 134" stroke="#C15F3C"/>
+    <path d="M442 129 L510 129 M510 129 L501 124 M510 129 L501 134" stroke="#C15F3C"/>
+    <path d="M592 158 C592 215 360 215 360 162 M360 162 L355 172 M360 162 L365 172" stroke="#6b7280"/>
+  </g>
+  <g font-size="14" font-weight="700" fill="#1a1a19" text-anchor="middle">
+    <text x="128" y="126">Generate 生成</text>
+    <text x="360" y="126">Critique 批评</text>
+    <text x="592" y="126">Refine 修订</text>
+  </g>
+  <g font-size="11" fill="#6b6b64" text-anchor="middle">
+    <text x="128" y="146">产出草稿（非终稿）</text>
+    <text x="360" y="146">换视角挑具体错</text>
+    <text x="592" y="146">带批评定向改</text>
+  </g>
+  <text x="360" y="232" font-size="11.5" fill="#6b7280" text-anchor="middle">不够好 → 带着批评再来一轮（设轮数上限 / 不再变好就停）</text>
+  <text x="592" y="190" font-size="11" font-weight="700" fill="#3f7a5a" text-anchor="middle">够好 → 停</text>
+</svg>

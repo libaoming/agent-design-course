@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 250" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="33" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2"/></filter></defs>
+  <rect x="0" y="0" width="760" height="250" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">RAG：检索增强生成的五步</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">前三步离线建库（一次性），后两步在线查询（每次请求）</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.5" fill="none">
+    <rect x="20" y="110" width="120" height="56" rx="7" fill="#ffffff"/>
+    <rect x="168" y="110" width="120" height="56" rx="7" fill="#ffffff"/>
+    <rect x="316" y="110" width="120" height="56" rx="7" fill="#ffffff"/>
+    <rect x="464" y="110" width="120" height="56" rx="7" fill="#fdf6f1"/>
+    <rect x="612" y="110" width="128" height="56" rx="7" fill="#fdf6f1"/>
+    <path d="M140 138 L166 138 M166 138 L158 134 M166 138 L158 142" stroke="#C15F3C"/>
+    <path d="M288 138 L314 138 M314 138 L306 134 M314 138 L306 142" stroke="#C15F3C"/>
+    <path d="M436 138 L462 138 M462 138 L454 134 M462 138 L454 142" stroke="#C15F3C"/>
+    <path d="M584 138 L610 138 M610 138 L602 134 M610 138 L602 142" stroke="#C15F3C"/>
+    <path d="M20 92 L436 92" stroke="#9a9a92" stroke-dasharray="4 3"/>
+    <path d="M464 92 L740 92" stroke="#C15F3C" stroke-dasharray="4 3"/>
+  </g>
+  <g font-size="13" font-weight="700" fill="#1a1a19" text-anchor="middle">
+    <text x="80" y="135">① 切分</text>
+    <text x="228" y="135">② Embedding</text>
+    <text x="376" y="135">③ 向量库</text>
+    <text x="524" y="135">④ 检索 Top-K</text>
+    <text x="676" y="135">⑤ 注入+生成</text>
+  </g>
+  <g font-size="10" fill="#6b6b64" text-anchor="middle">
+    <text x="80" y="154">按语义边界</text>
+    <text x="228" y="154">算成向量</text>
+    <text x="376" y="154">建索引</text>
+    <text x="524" y="154">召回 vs 精确</text>
+    <text x="676" y="154">引用溯源</text>
+  </g>
+  <text x="228" y="84" font-size="11" fill="#9a9a92" text-anchor="middle">离线建库（一次性 / 定期）</text>
+  <text x="602" y="84" font-size="11" font-weight="700" fill="#C15F3C" text-anchor="middle">在线查询（每次请求）</text>
+  <text x="380" y="210" font-size="11" fill="#9a9a92" text-anchor="middle">解决：知识截止 / 私有领域知识 / 减少幻觉（答案有据可依）</text>
+</svg>

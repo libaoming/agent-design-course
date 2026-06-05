@@ -25,6 +25,8 @@ source_notes: [Agentic Design Patterns]
 
 反思的核心结构叫 **Generator-Critic（生成器-批评者）**。一句话：让同一个（或另一个）模型，先当作者，再当审稿人。标准循环是三步，可以多轮：
 
+![反思的 Generator-Critic 循环：生成草稿 → 批评挑错 → 定向修订，不够好带批评再来一轮，够好则停](../assets/diagrams/reflection-reasoning.svg)
+
 1. **Generate（生成）**：产出第一版输出。这一版被明确定性为「草稿」，而不是终稿。
 2. **Critique（批评）**：换一个视角审视草稿——哪里不对、哪里没覆盖、哪里能更好。批评要具体、可执行，不能只说「写得不好」。
 3. **Refine（修订）**：带着批评意见，定向修改草稿，产出第二版。
