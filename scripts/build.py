@@ -237,6 +237,7 @@ def shell(title, body, by_mod, examples, prefix="", active_slug="", active_mod="
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(title)}</title>
+<link rel="icon" type="image/svg+xml" href="{prefix}assets/favicon.svg">
 <link rel="stylesheet" href="{prefix}assets/orangebook.css">
 {gc_tracking()}
 </head><body>
