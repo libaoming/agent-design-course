@@ -12,6 +12,8 @@ SITE = os.path.join(ROOT, "site")
 
 SITE_TITLE = "构建 AI Agent"
 SITE_TAGLINE = "从能力设计到生产交付，一门问题驱动的 AI Agent 工程公开课"
+# 自定义域名（GitHub Pages）：build 时写入 site/CNAME，确保 Actions 部署不丢自定义域名。留空则不写。
+SITE_DOMAIN = "chengyansuo.com"
 
 MODULES = {
     "a": {
@@ -393,6 +395,10 @@ def build():
     # 示例详情
     for ex in examples:
         article_page(ex, "example", examples, by_mod, examples)
+
+    # GitHub Pages 自定义域名：Actions artifact 部署模式必须把 CNAME 放进产物，否则部署会清掉自定义域名
+    if SITE_DOMAIN:
+        write("CNAME", SITE_DOMAIN + "\n")
 
     print("build done: %d lectures + %d examples, site/ ready" % (len(lectures), len(examples)))
     return len(lectures), len(examples)
