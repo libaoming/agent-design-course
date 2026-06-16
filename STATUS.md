@@ -11,8 +11,9 @@
 关联：libaoming.github.io 根站 2017 旧简历已换成跳转课程站的占位页（另一仓库 libaoming/libaoming.github.io，旧源码在 git 历史可恢复）。
 
 ## 线上 / 仓库
-- 站点：https://libaoming.github.io/agent-design-course/
-- 仓库（public）：https://github.com/libaoming/agent-design-course
+- 站点（主域名）：https://chengyansuo.com/（2026-06-16 购入并接 GitHub Pages，CNAME 由 build.py 的 SITE_DOMAIN 常量写入 site/CNAME；GNAME 注册，apex 4 条 A 记录→GitHub IP + www CNAME→libaoming.github.io）
+- 站点（旧地址，自动跳转新域名）：https://libaoming.github.io/agent-design-course/
+- 仓库（public）：https://github.com/libaoming/agent-design-course（仓库名未改，仅站内文案升级为「构建 AI Agent」）
 - 部署：push main → GitHub Actions（.github/workflows/deploy.yml）自动 build + deploy，site/ 由 CI 生成不入库
 
 ## 预览方式
