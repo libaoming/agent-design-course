@@ -58,6 +58,17 @@ MODULES = {
             "**适合**：想要一份「招式速查」的人——知道遇到某类问题，业界有哪些成型套路可选。"
         ),
     },
+    "e": {
+        "name": "Context Engineering 上下文工程",
+        "desc": "模型每轮实际看到的上下文怎么拼、怎么省、怎么验。以 7 层次为主轴，把 CE 从「读过方法论」练成「能拆、能埋点、能算账」。",
+        "intro": (
+            "本模块回答一个被严重低估的问题：**模型这一轮，到底看到了什么 token？是谁替你决定的？**\n\n"
+            "你写的那段 prompt，从来不是模型实际收到的全部。框架默认值、对话历史、注入的记忆、工具 schema 都会被悄悄拼进去——这些「你以为没塞、实际塞了」的 token，就是上下文里的**暗物质**。Context Engineering（CE）不是把 system prompt 写长写细（那还是 Prompt Engineering），而是**优化模型每一轮看到的整坨上下文怎么装配**。\n\n"
+            "主轴是 **7 层次**：把模型每轮的上下文拆成系统提示、指令、结构化 IO、工具、记忆、历史等层，外加 cache 与可观测两道横切。学完你会拿到一套能力——**让 7 层 100% 可见，再用一张 CONTEXT.md 把「设计账本」和「运行期对账单」对上，差额就是要排查的暗物质**。\n\n"
+            "**讲次编排**：第 0 讲先建总览框架（7 层次 + 暗物质 + CE/PE/Harness 辨析），其后逐层深入——提示与指令、结构化 IO 与工具、记忆与 RAG、历史与压缩，最后两道横切（cache 工程、可观测与评估）收口。\n\n"
+            "**适合**：要把 LLM agent 做稳、做省、做得可验证的工程师与 PM——尤其是被「换了更强的模型还是不稳」「token 成本算不清」困住的人。"
+        ),
+    },
 }
 
 EXAMPLES_TITLE = "实战示例"
@@ -186,7 +197,7 @@ def sidebar(by_mod, examples, prefix, active_slug="", active_mod="", home=False)
     s = ['<aside class="sidebar"><div class="sidebar-scroll">']
     s.append(f'<a class="sidebar-brand{" active" if home else ""}" href="{prefix}index.html"><span class="brand-dot"></span><span>{SITE_TITLE}</span></a>')
     s.append('<nav class="sidebar-nav">')
-    for mod in ("a", "b", "c", "d"):
+    for mod in MODULES:
         amod = " active" if active_mod == mod else ""
         s.append('<div class="nav-section">')
         s.append(f'<a class="nav-section-title{amod}" href="{prefix}module-{mod}.html"><span class="mod-badge">{mod.upper()}</span>{html.escape(MODULES[mod]["name"])}</a>')
@@ -258,7 +269,7 @@ def _collect_dir(path, default_mod=None):
 
 def collect():
     lectures = []
-    for mod in ("a", "b", "c", "d"):
+    for mod in MODULES:
         lectures += _collect_dir(os.path.join(CONTENT, "module-" + mod), default_mod=mod)
     lectures.sort(key=lambda x: (x["module"], x["order"]))
     examples = _collect_dir(os.path.join(CONTENT, "examples"))
@@ -320,7 +331,7 @@ def build():
     os.makedirs(SITE); shutil.copytree(ASSETS, os.path.join(SITE, "assets"))
 
     lectures, examples = collect()
-    by_mod = {"a": [], "b": [], "c": [], "d": []}
+    by_mod = {m: [] for m in MODULES}
     for lec in lectures:
         by_mod[lec["module"]].append(lec)
 
@@ -331,7 +342,7 @@ def build():
       <p class="lead">{html.escape(SITE_TAGLINE)}。两条主线：把 Agent 当产品来设计，把 Agent 当系统来交付。</p>
       {stats_block()}
     </div>''']
-    for mod in ("a", "b", "c", "d"):
+    for mod in MODULES:
         info = MODULES[mod]; count = len(by_mod[mod])
         home.append(f'<h2 class="home-sec"><span class="mod-badge">{mod.upper()}</span>{html.escape(info["name"])}<span class="sec-count">{count} 讲</span></h2>')
         home.append(f'<p class="home-desc">{html.escape(info["desc"])}</p>')
@@ -351,7 +362,7 @@ def build():
     write("index.html", shell(SITE_TITLE, "\n".join(home), by_mod, examples, prefix="", home=True))
 
     # 模块页（含模块导语）
-    for mod in ("a", "b", "c", "d"):
+    for mod in MODULES:
         info = MODULES[mod]
         intro_html, _ = render_md(info.get("intro", ""))
         page = [f'<div class="page-head"><span class="mod-badge big">{mod.upper()}</span><h1>{html.escape(info["name"])}</h1><p class="lead">{html.escape(info["desc"])}</p></div>']

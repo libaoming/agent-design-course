@@ -390,6 +390,159 @@
       "blocking": [
         "F12_module_c"
       ]
+    },
+    {
+      "id": "E00_ce_overview",
+      "slice": "S5",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && test -f site/module-e/context-engineering-overview.html && grep -qF '七层' site/module-e/context-engineering-overview.html && grep -qF '暗物质' site/module-e/context-engineering-overview.html && ! grep -riE '妙招|豆包|ECS|livekit|doubao|评级|元训练' site/module-e/"
+      },
+      "verify_notes": "Module E 第0讲 CE 总览：七层次表 + 暗物质 + CE/PE/Harness 辨析，五段式 build 全绿，脱敏闸门零命中",
+      "related": {
+        "specs": [],
+        "code": [
+          "content/module-e/00-context-engineering-overview.md",
+          "scripts/build.py"
+        ],
+        "docs": []
+      },
+      "affected": "新增 Module E 上下文工程模块骨架（build.py MODULES + 循环改 for mod in MODULES）+ 总览讲",
+      "out_of_scope": "不含 U2-U7 各层深入讲（E01-E06）；不暴露私人项目实现",
+      "blocking": []
+    },
+    {
+      "id": "E01_prompt_instruction",
+      "slice": "S5",
+      "status": "pending",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && test -f site/module-e/prompt-instruction-layers.html && bash scripts/verify.sh"
+      },
+      "verify_notes": "Module E 第1讲（源 U2 提示与指令层 L1-L2）：system prompt 拼装 + 动态指令注入 + 暗物质，脱敏改写，build 全绿",
+      "related": {
+        "specs": [],
+        "code": [
+          "content/module-e/01-prompt-instruction-layers.md"
+        ],
+        "docs": []
+      },
+      "affected": "Module E 第1讲",
+      "out_of_scope": "不暴露私人项目代码行号/供应商名",
+      "blocking": [
+        "E00_ce_overview"
+      ]
+    },
+    {
+      "id": "E02_structured_io_tools",
+      "slice": "S5",
+      "status": "pending",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && test -f site/module-e/structured-io-and-tools.html && bash scripts/verify.sh"
+      },
+      "verify_notes": "Module E 第2讲（源 U3 结构化 IO 与工具 L4-L5）：schema vs 人话、eager/deferred，脱敏改写",
+      "related": {
+        "specs": [],
+        "code": [
+          "content/module-e/02-structured-io-and-tools.md"
+        ],
+        "docs": []
+      },
+      "affected": "Module E 第2讲",
+      "out_of_scope": "不暴露私人项目代码行号/供应商名",
+      "blocking": [
+        "E00_ce_overview"
+      ]
+    },
+    {
+      "id": "E03_memory_rag",
+      "slice": "S5",
+      "status": "pending",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && test -f site/module-e/memory-and-rag.html && bash scripts/verify.sh"
+      },
+      "verify_notes": "Module E 第3讲（源 U4 RAG 与记忆 L6）：何时注入哪条记忆、避免重复灌、七维透镜，脱敏改写",
+      "related": {
+        "specs": [],
+        "code": [
+          "content/module-e/03-memory-and-rag.md"
+        ],
+        "docs": []
+      },
+      "affected": "Module E 第3讲",
+      "out_of_scope": "不暴露私人项目代码行号/供应商名",
+      "blocking": [
+        "E00_ce_overview"
+      ]
+    },
+    {
+      "id": "E04_history_compaction",
+      "slice": "S5",
+      "status": "pending",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && test -f site/module-e/history-and-compaction.html && bash scripts/verify.sh"
+      },
+      "verify_notes": "Module E 第4讲（源 U5 状态历史与压缩 L7）：history 托管模式、压缩水位线、曲线判读，脱敏改写",
+      "related": {
+        "specs": [],
+        "code": [
+          "content/module-e/04-history-and-compaction.md"
+        ],
+        "docs": []
+      },
+      "affected": "Module E 第4讲",
+      "out_of_scope": "不暴露私人项目代码行号/供应商名",
+      "blocking": [
+        "E00_ce_overview"
+      ]
+    },
+    {
+      "id": "E05_cache_engineering",
+      "slice": "S5",
+      "status": "pending",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && test -f site/module-e/cache-engineering.html && bash scripts/verify.sh"
+      },
+      "verify_notes": "Module E 第5讲（源 U6 Cache 工程，横切）：前缀匹配、stable/volatile 双 block、模型阈值、经济学，脱敏改写",
+      "related": {
+        "specs": [],
+        "code": [
+          "content/module-e/05-cache-engineering.md"
+        ],
+        "docs": []
+      },
+      "affected": "Module E 第5讲",
+      "out_of_scope": "不暴露私人项目代码行号/供应商名",
+      "blocking": [
+        "E00_ce_overview"
+      ]
+    },
+    {
+      "id": "E06_observability_eval",
+      "slice": "S5",
+      "status": "pending",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && test -f site/module-e/observability-and-eval.html && bash scripts/verify.sh"
+      },
+      "verify_notes": "Module E 第6讲（源 U7 可观测与评估，横切收口）：usage 字段、三层观测、4 维评估、p95，脱敏改写",
+      "related": {
+        "specs": [],
+        "code": [
+          "content/module-e/06-observability-and-eval.md"
+        ],
+        "docs": []
+      },
+      "affected": "Module E 第6讲（模块收口）",
+      "out_of_scope": "不暴露私人项目代码行号/供应商名",
+      "blocking": [
+        "E00_ce_overview"
+      ]
     }
   ]
 }
