@@ -415,7 +415,7 @@
     {
       "id": "E01_prompt_instruction",
       "slice": "S5",
-      "status": "pending",
+      "status": "passing",
       "verify": {
         "type": "cmd",
         "cmd": "python3 scripts/build.py && test -f site/module-e/prompt-instruction-layers.html && bash scripts/verify.sh"
@@ -437,7 +437,7 @@
     {
       "id": "E02_structured_io_tools",
       "slice": "S5",
-      "status": "pending",
+      "status": "passing",
       "verify": {
         "type": "cmd",
         "cmd": "python3 scripts/build.py && test -f site/module-e/structured-io-and-tools.html && bash scripts/verify.sh"
@@ -459,7 +459,7 @@
     {
       "id": "E03_memory_rag",
       "slice": "S5",
-      "status": "pending",
+      "status": "passing",
       "verify": {
         "type": "cmd",
         "cmd": "python3 scripts/build.py && test -f site/module-e/memory-and-rag.html && bash scripts/verify.sh"
@@ -481,7 +481,7 @@
     {
       "id": "E04_history_compaction",
       "slice": "S5",
-      "status": "pending",
+      "status": "passing",
       "verify": {
         "type": "cmd",
         "cmd": "python3 scripts/build.py && test -f site/module-e/history-and-compaction.html && bash scripts/verify.sh"
@@ -503,7 +503,7 @@
     {
       "id": "E05_cache_engineering",
       "slice": "S5",
-      "status": "pending",
+      "status": "passing",
       "verify": {
         "type": "cmd",
         "cmd": "python3 scripts/build.py && test -f site/module-e/cache-engineering.html && bash scripts/verify.sh"
@@ -525,7 +525,7 @@
     {
       "id": "E06_observability_eval",
       "slice": "S5",
-      "status": "pending",
+      "status": "passing",
       "verify": {
         "type": "cmd",
         "cmd": "python3 scripts/build.py && test -f site/module-e/observability-and-eval.html && bash scripts/verify.sh"
