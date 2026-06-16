@@ -1,6 +1,6 @@
 # CLAUDE.md — learn-agent-design
 
-> 把本地 Obsidian wiki 的 Agent 学习材料，重写成 walkinglabs 式「问题驱动讲义体」的公开课。纯静态 HTML 多页 + 轻构建脚本，橙研所橙皮书风，可推 GitHub Pages。Build in Public 作品（配合公众号「橙研所」）。
+> 把本地 Obsidian wiki 的 Agent 学习材料，重写成 walkinglabs 式「问题驱动讲义体」的公开课——对外定位「构建 AI Agent / AI Agent 工程公开课」。纯静态 HTML 多页 + 轻构建脚本，橙研所橙皮书风，可推 GitHub Pages。Build in Public 作品（配合公众号「橙研所」）。
 
 本项目采用 harness 方法论 + 4 层防御体系（Anthropic "Effective Harnesses for Long-Running Agents" + 得物 Harness 工程实践）。
 

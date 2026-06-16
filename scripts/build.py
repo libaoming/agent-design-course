@@ -10,8 +10,8 @@ CONTENT = os.path.join(ROOT, "content")
 ASSETS = os.path.join(ROOT, "assets")
 SITE = os.path.join(ROOT, "site")
 
-SITE_TITLE = "Learn Agent Design"
-SITE_TAGLINE = "把 Agent 学习笔记，重写成一门可讲、可查、可分享的公开课"
+SITE_TITLE = "构建 AI Agent"
+SITE_TAGLINE = "从能力设计到生产交付，一门问题驱动的 AI Agent 工程公开课"
 
 MODULES = {
     "a": {
@@ -338,7 +338,7 @@ def build():
     # 首页
     home = [f'''<div class="hero">
       <span class="eyebrow">A Course on Building Agents</span>
-      <h1>学会<em>设计</em>与<em>工程化</em>一个 Agent</h1>
+      <h1>学会<em>设计</em>与<em>工程化</em>一个 AI Agent</h1>
       <p class="lead">{html.escape(SITE_TAGLINE)}。两条主线：把 Agent 当产品来设计，把 Agent 当系统来交付。</p>
       {stats_block()}
     </div>''']
