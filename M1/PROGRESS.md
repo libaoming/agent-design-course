@@ -17,6 +17,12 @@
 - （无）
 
 ## Session Log（倒序）
+### 2026-06-17（首页加微信收款码赞赏卡片）
+- 发现上一轮遗留半成品：build.py 有 +21 行未提交改动（`SUPPORT` 字典 + `support_block()`，首页接入），但 CSS 缺失、图片不存在。
+- 补齐 `.support-card / .support-head / .support-title / .support-note / .support-qr` CSS（96×96 二维码，对齐 author-card 橙皮风，移动端换行）。
+- 复制微信收款码（¥36，Dereck，302KB）到 `assets/wechat-pay.png`，build copytree 自动带入 `site/`。
+- build/verify FAIL=0 全绿，commit 4e4809b（三文件：build.py + orangebook.css + wechat-pay.png）。
+
 ### 2026-06-05（收尾：Module D 完整 + 配图 + 统计调整 + 根站简历）
 - Module D 补齐 4 类盲区深入讲（反思推理/学习RAG/A2A/优先级探索），每讲对照本课呼应；派 4 子 agent 写。共 5 讲。
 - Module D 配图 4 张（反思循环/RAG五步/A2A三编排/优先级四象限），全站图增至 18 张。
