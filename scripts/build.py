@@ -54,14 +54,18 @@ SUPPORT = {
 }
 
 def support_block(prefix=""):
-    # prefix 修正图片相对路径：首页 ""，讲义/示例页 "../"。compact=侧栏紧凑版。
-    return ('<div class="support-card">'
-            '<div class="support-head">'
-            '<span class="support-title">%s</span>'
-            '<p class="support-note">%s</p>'
-            '</div>'
-            '<div class="support-qr"><img src="%s%s" alt="%s" loading="lazy"></div>'
-            '</div>') % (
+    return (
+        '<button class="support-btn" onclick="document.getElementById(\'support-modal\').style.display=\'flex\'">'
+        '%s'
+        '</button>'
+        '<div id="support-modal" class="support-modal" onclick="if(event.target===this)this.style.display=\'none\'">'
+        '<div class="support-modal-box">'
+        '<button class="support-modal-close" onclick="document.getElementById(\'support-modal\').style.display=\'none\'">&#215;</button>'
+        '<p class="support-modal-note">%s</p>'
+        '<img src="%s%s" alt="%s">'
+        '</div>'
+        '</div>'
+    ) % (
         html.escape(SUPPORT["title"]), html.escape(SUPPORT["note"]),
         prefix, SUPPORT["img"], html.escape(SUPPORT["alt"]))
 
