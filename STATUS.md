@@ -47,4 +47,4 @@
 - 脏活隔离子 agent：`.claude/agents/learn-agent-design-ops.md`（批量读 vault 笔记重写讲义）
 
 ## 踩坑清单
-- （随项目积累）
+- **跨 session 工具返回污染（2026-06-17）**：多个 Claude Code session 并发运行时，工具（Bash/Read）的返回结果出现重复行、隐藏 Unicode 双向控制字符（U+202E 等）、以及假的「Wasted call / file unchanged / file does not exist」拦截。**根因（经 Explore 子 agent 调查更正）**：全局 `~/.claude/settings.json` 里**没有任何 PostToolUse hook**；曾怀疑的两个 async Stop/SessionEnd hook（`ccclub sync --silent`、`sync-memory-to-obsidian.py`）在当前配置下**都不向 stdout 打印**（前者 silent 禁 console.log，后者无 --verbose），故**不是**串流来源——"async hook 嫌疑"已被否定。真正根因更可能在 **harness 自身**：多 session 并发时共享的转录缓冲区 / 流处理，**非配置可改项**。**有效缓解**：① 别让多个 session 同时频繁结束回合；② 完全退出进程重开（`/exit`，不是 /clear）。**注**：禁用那两个 async hook 只解决"共享文件被并发无锁写坏"这个*另一个*问题（写 Obsidian vault / ccclub JSON / 日志均无锁），与本串流无关；禁用影响很小（仅失去 ccclub 排行榜同步 + Obsidian 记忆镜像，记忆本体仍在 `~/.claude/.../memory/`）。**铁律：在此环境写任何文件，写完立刻 `git diff` 校验，发现污染（重复/隐藏字符）立即 `git checkout -- <file>` 回滚，绝不留下被污染的文件。**
