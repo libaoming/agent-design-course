@@ -45,6 +45,26 @@ def author_block():
         html.escape(AUTHOR["avatar"]), html.escape(AUTHOR["by"]),
         html.escape(AUTHOR["name"]), html.escape(AUTHOR["bio"]), "".join(links))
 
+# 微信收款码（赞赏 / 请作者喝杯咖啡）。img 是整张微信官方收款海报，卡片外框走克制橙皮书风。
+SUPPORT = {
+    "title": "请作者喝杯咖啡",
+    "note": "讲义对你有用的话，微信扫码赞赏一杯。备注一句话，我会很开心。",
+    "img": "assets/wechat-pay.png",
+    "alt": "微信收款码 · 橙研所",
+}
+
+def support_block(prefix=""):
+    # prefix 修正图片相对路径：首页 ""，讲义/示例页 "../"。compact=侧栏紧凑版。
+    return ('<div class="support-card">'
+            '<div class="support-head">'
+            '<span class="support-title">%s</span>'
+            '<p class="support-note">%s</p>'
+            '</div>'
+            '<div class="support-qr"><img src="%s%s" alt="%s" loading="lazy"></div>'
+            '</div>') % (
+        html.escape(SUPPORT["title"]), html.escape(SUPPORT["note"]),
+        prefix, SUPPORT["img"], html.escape(SUPPORT["alt"]))
+
 MODULES = {
     "a": {
         "name": "Agent 产品与能力设计",
@@ -417,6 +437,7 @@ def build():
       {stats_block()}
     </div>''']
     home.append(author_block())
+    home.append(support_block(""))
     for mod in MODULES:
         info = MODULES[mod]; count = len(by_mod[mod])
         home.append(f'<h2 class="home-sec"><span class="mod-badge">{mod.upper()}</span>{html.escape(info["name"])}<span class="sec-count">{count} 讲</span></h2>')
