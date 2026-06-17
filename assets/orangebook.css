@@ -248,7 +248,7 @@ a:hover { text-decoration: underline; }
 .support-title { font-size: 15px; font-weight: 700; color: var(--ink); }
 .support-note { font-size: 13.5px; color: var(--muted); margin: 3px 0 0; line-height: 1.55; }
 .support-qr {
-  flex-shrink: 0; width: 96px; height: 96px; border-radius: 10px; overflow: hidden;
+  flex-shrink: 0; width: 200px; height: 200px; border-radius: 10px; overflow: hidden;
   border: 1px solid var(--line); background: #fff;
 }
 .support-qr img { width: 100%; height: 100%; object-fit: contain; display: block; }
