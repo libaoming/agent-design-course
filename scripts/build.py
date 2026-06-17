@@ -15,6 +15,36 @@ SITE_TAGLINE = "从能力设计到生产交付，一门问题驱动的 AI Agent 
 # 自定义域名（GitHub Pages）：build 时写入 site/CNAME，确保 Actions 部署不丢自定义域名。留空则不写。
 SITE_DOMAIN = "chengyansuo.com"
 
+# 作者 / 引流条（Build in Public）。links 里 url 为空 = 渲染成文字标签（如微信公众号没外链）。
+# TODO（待用户补）：X / 即刻 / 小红书的真实链接，补进 AUTHOR["links"] 即可。
+AUTHOR = {
+    "name": "橙研所",
+    "by": "作者",
+    "avatar": "橙",
+    "bio": "AI 产品经理 · Build in Public。这门课配合公众号「橙研所」边做边写，把 Agent 学习笔记重写成讲义体。",
+    "links": [
+        ("GitHub", "https://github.com/libaoming"),
+        ("公众号 · 橙研所", ""),
+    ],
+}
+
+def author_block():
+    links = []
+    for label, url in AUTHOR["links"]:
+        if url:
+            links.append('<a href="%s" target="_blank" rel="noopener">%s</a>' % (url, html.escape(label)))
+        else:
+            links.append('<span class="lk">%s</span>' % html.escape(label))
+    return ('<div class="author-card">'
+            '<span class="author-avatar">%s</span>'
+            '<span class="author-meta">'
+            '<span class="author-name"><span class="by">%s</span>%s</span>'
+            '<p class="author-bio">%s</p>'
+            '<span class="author-links">%s</span>'
+            '</span></div>') % (
+        html.escape(AUTHOR["avatar"]), html.escape(AUTHOR["by"]),
+        html.escape(AUTHOR["name"]), html.escape(AUTHOR["bio"]), "".join(links))
+
 MODULES = {
     "a": {
         "name": "Agent 产品与能力设计",
@@ -84,6 +114,10 @@ EXAMPLES_INTRO = (
 # 留空 = 不渲染任何统计 UI / 不接入任何第三方脚本，站点照常工作。
 GC_CODE = "learn-agent-design"
 
+# 主题切换：head 防闪烁（body 渲染前读 localStorage 设 data-theme）+ body 末尾点击切换逻辑
+THEME_HEAD_JS = '<script>(function(){try{var t=localStorage.getItem("cys-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>'
+THEME_BODY_JS = '<script>document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("#themeToggle");if(!b)return;var d=document.documentElement,c=d.getAttribute("data-theme");var sys=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;var n=c?(c==="dark"?"light":"dark"):(sys?"light":"dark");d.setAttribute("data-theme",n);try{localStorage.setItem("cys-theme",n);}catch(e){}});</script>'
+
 def gc_tracking():
     return ('<script data-goatcounter="https://%s.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>' % GC_CODE) if GC_CODE else ""
 
@@ -113,6 +147,13 @@ def parse_frontmatter(text):
         k, v = line.split(":", 1); k, v = k.strip(), v.strip()
         meta[k] = [i.strip() for i in v[1:-1].split(",") if i.strip()] if (v.startswith("[") and v.endswith("]")) else v
     return meta, body
+
+# ---------------------------------------------------------------- 阅读时长估算
+def estimate_minutes(body):
+    text = re.sub(r"[#>*`\-\|\[\]\(\)!]", "", body)
+    cjk = len(re.findall(r"[一-鿿]", text))
+    words = len(re.findall(r"[A-Za-z0-9]+", text))
+    return max(1, round(cjk / 400.0 + words / 200.0))
 
 # ---------------------------------------------------------------- inline
 def inline(text):
@@ -198,6 +239,7 @@ def render_md(md):
 def sidebar(by_mod, examples, prefix, active_slug="", active_mod="", home=False):
     s = ['<aside class="sidebar"><div class="sidebar-scroll">']
     s.append(f'<a class="sidebar-brand{" active" if home else ""}" href="{prefix}index.html"><span class="brand-dot"></span><span>{SITE_TITLE}</span></a>')
+    s.append('<button class="theme-toggle" id="themeToggle" type="button" aria-label="切换深色模式" title="切换深色模式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>')
     s.append('<nav class="sidebar-nav">')
     for mod in MODULES:
         amod = " active" if active_mod == mod else ""
@@ -221,7 +263,11 @@ def sidebar(by_mod, examples, prefix, active_slug="", active_mod="", home=False)
     else:
         s.append('<ul><li><span class="soon">筹备中</span></li></ul>')
     s.append("</div>")
-    s.append("</nav></div></aside>")
+    s.append("</nav>")
+    s.append('<div class="sidebar-foot"><span class="sf-name">%s</span> · Build in Public<br>'
+             '公众号「橙研所」 · <a href="https://github.com/libaoming" target="_blank" rel="noopener">GitHub</a></div>'
+             % html.escape(AUTHOR["name"]))
+    s.append("</div></aside>")
     return "".join(s)
 
 def shell(title, body, by_mod, examples, prefix="", active_slug="", active_mod="", home=False, toc=None):
@@ -238,6 +284,7 @@ def shell(title, body, by_mod, examples, prefix="", active_slug="", active_mod="
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(title)}</title>
 <link rel="icon" type="image/svg+xml" href="{prefix}assets/favicon.svg">
+{THEME_HEAD_JS}
 <link rel="stylesheet" href="{prefix}assets/orangebook.css">
 {gc_tracking()}
 </head><body>
@@ -248,6 +295,7 @@ def shell(title, body, by_mod, examples, prefix="", active_slug="", active_mod="
 {toc_html}
 </div></main>
 </div>
+{THEME_BODY_JS}
 </body></html>'''
 
 # ---------------------------------------------------------------- collect
@@ -266,6 +314,7 @@ def _collect_dir(path, default_mod=None):
             meta["module"] = meta.get("module", default_mod)
         meta["order"] = int(meta.get("order", 999))
         meta["_body"] = body
+        meta["minutes"] = estimate_minutes(body)
         items.append(meta)
     items.sort(key=lambda x: x["order"])
     return items
@@ -278,21 +327,38 @@ def collect():
     examples = _collect_dir(os.path.join(CONTENT, "examples"))
     return lectures, examples
 
+def card_tags(item):
+    parts = []
+    lv = item.get("level", "")
+    if lv:
+        parts.append('<span class="tag-pill tag-level">%s</span>' % html.escape(lv))
+    if item.get("minutes"):
+        parts.append('<span class="tag-pill tag-time">约 %d 分钟</span>' % item["minutes"])
+    return ('<span class="card-tags">%s</span>' % "".join(parts)) if parts else ""
+
 def lecture_card(lec, prefix=""):
     mod = lec["module"]
     return f'''<a class="card" href="{prefix}module-{mod}/{lec['slug']}.html">
+      <span class="card-thumb thumb-{mod}"><span class="thumb-badge">{mod.upper()}</span><span class="thumb-no">{lec['order']}</span></span>
+      <span class="card-body">
       <span class="card-no">第 {lec['order']} 讲</span>
       <h3>{html.escape(lec['title'])}</h3>
       <p>{html.escape(lec.get('summary',''))}</p>
+      {card_tags(lec)}
+      </span>
     </a>'''
 
-def example_card(ex, prefix=""):
+def example_card(ex, prefix="", idx=0):
     tgt = html.escape(ex.get("target", "")) if ex.get("target") else ""
     badge = f'<span class="card-no">{tgt}</span>' if tgt else '<span class="card-no">实战示例</span>'
     return f'''<a class="card" href="{prefix}examples/{ex['slug']}.html">
+      <span class="card-thumb thumb-ex"><span class="thumb-badge">例</span><span class="thumb-no">{idx + 1}</span></span>
+      <span class="card-body">
       {badge}
       <h3>{html.escape(ex['title'])}</h3>
       <p>{html.escape(ex.get('summary',''))}</p>
+      {card_tags(ex)}
+      </span>
     </a>'''
 
 def write(relpath, content):
@@ -319,7 +385,12 @@ def article_page(item, kind, siblings, by_mod, examples):
     art = ['<article class="lecture">', f'<div class="breadcrumb">{crumb}</div>', f'<h1>{html.escape(item["title"])}</h1>']
     if summary:
         art.append(f'<p class="summary">{summary}</p>')
-    art.append(f'<p class="meta">{meta_line}</p>')
+    badges = ""
+    if item.get("level"):
+        badges += '<span class="tag-pill tag-level">%s</span>' % html.escape(item["level"])
+    if item.get("minutes"):
+        badges += '<span class="tag-pill tag-time">约 %d 分钟</span>' % item["minutes"]
+    art.append(f'<p class="meta">{meta_line}{badges}</p>')
     art.append(body_html)
     pager = ['<div class="pager">']
     pager.append(f'<a class="prev" href="{prev_it["slug"]}.html"><span class="dir">← 上一篇</span><span class="ttl">{html.escape(prev_it.get("nav", prev_it["title"]))}</span></a>' if prev_it else '<span class="spacer"></span>')
@@ -345,6 +416,7 @@ def build():
       <p class="lead">{html.escape(SITE_TAGLINE)}。两条主线：把 Agent 当产品来设计，把 Agent 当系统来交付。</p>
       {stats_block()}
     </div>''']
+    home.append(author_block())
     for mod in MODULES:
         info = MODULES[mod]; count = len(by_mod[mod])
         home.append(f'<h2 class="home-sec"><span class="mod-badge">{mod.upper()}</span>{html.escape(info["name"])}<span class="sec-count">{count} 讲</span></h2>')
@@ -357,8 +429,8 @@ def build():
     home.append(f'<p class="home-desc">{html.escape("用框架拆解真实 Agent 产品")}</p>')
     if examples:
         home.append('<div class="card-list">')
-        for ex in examples:
-            home.append(example_card(ex, prefix=""))
+        for i, ex in enumerate(examples):
+            home.append(example_card(ex, prefix="", idx=i))
         home.append("</div>")
     else:
         home.append('<p class="soon-note">实战示例筹备中。</p>')
@@ -383,8 +455,8 @@ def build():
            f'<div class="module-intro">{intro_html}</div>']
     if examples:
         exp.append('<h2 class="list-head">示例</h2><div class="card-list">')
-        for ex in examples:
-            exp.append(example_card(ex, prefix=""))
+        for i, ex in enumerate(examples):
+            exp.append(example_card(ex, prefix="", idx=i))
         exp.append("</div>")
     else:
         exp.append('<p class="soon-note">实战示例筹备中，敬请期待。</p>')
