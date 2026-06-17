@@ -438,10 +438,9 @@ def build():
       <span class="eyebrow">A Course on Building Agents</span>
       <h1>学会<em>设计</em>与<em>工程化</em>一个 AI Agent</h1>
       <p class="lead">{html.escape(SITE_TAGLINE)}。两条主线：把 Agent 当产品来设计，把 Agent 当系统来交付。</p>
-      {stats_block()}
+      <div class="hero-actions">{stats_block()}{support_block("")}</div>
     </div>''']
     home.append(author_block())
-    home.append(support_block(""))
     for mod in MODULES:
         info = MODULES[mod]; count = len(by_mod[mod])
         home.append(f'<h2 class="home-sec"><span class="mod-badge">{mod.upper()}</span>{html.escape(info["name"])}<span class="sec-count">{count} 讲</span></h2>')
