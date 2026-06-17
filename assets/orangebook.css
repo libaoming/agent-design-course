@@ -154,7 +154,7 @@ a:hover { text-decoration: underline; }
 .learn-stats strong { color: var(--brand-ink); font-weight: 700; }
 .hero-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
 .hero-actions .learn-stats { margin-top: 0; }
-.hero-actions .support-btn { margin: 0; }
+.hero-actions .support-btn { margin: 0; font-size: 14px; padding: 7px 16px; }
 .home-sec { display: flex; align-items: center; gap: 10px; font-size: 20px; margin: 40px 0 8px; }
 .home-sec .sec-count { margin-left: auto; font-size: 13px; color: var(--faint); font-weight: 500; }
 .home-desc { color: var(--muted); margin: 0 0 18px; font-size: 15px; }
