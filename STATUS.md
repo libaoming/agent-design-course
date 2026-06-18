@@ -10,6 +10,23 @@
 > 早期状态（2026-06-05 主体完成）：4 模块 24 讲全 passing，Module C 融合 walkinglabs + 本项目实战方法论（自指），Module D 源 Google《Agentic Design Patterns》/xindoo 仓库。
 关联：libaoming.github.io 根站 2017 旧简历已换成跳转课程站的占位页（另一仓库 libaoming/libaoming.github.io，旧源码在 git 历史可恢复）。
 
+## 🚧 进行中（2026-06-18）：英文版 i18n + 国内备案排期
+
+**背景**：站点托管 GitHub Pages，国内访问长期被污染/限速。确定方向 = **出海·面向英文开发者**（GitHub Pages 对海外无障碍），做英文版；国内访问问题单独走备案另排。
+
+**① 英文版 i18n（进行中）**——决策已定：
+- URL：`/en/` 子目录（中文留根 `chengyansuo.com/`，英文 `chengyansuo.com/en/`）。GitHub Pages 单仓库唯一干净方案。
+- build.py：UI 串抽成 `STRINGS[lang]` 字典，`build()` 跑两遍（zh→根 / en→/en/），侧栏加语言切换器，`<html lang>` 跟随。
+- 内容：每篇 `NN-slug.md` 配兄弟文件 `NN-slug.en.md`（自带英文 frontmatter，译 title/nav/summary + 正文）；`collect()` 找 `.en.md`，缺失则该语言跳过该讲（允许渐进翻译）。
+- 范围：**全量 34 篇**（31 讲 + 3 实战），译文派子 agent 并行（L4 隔离）。
+- ⚠️ 遗留待办：`assets/diagrams/*.svg` 18 张框架图**内嵌中文**，英文版暂沿用中文图，后续需出英文版 SVG（独立一波）。
+
+**② 国内备案（待办·排期，需用户本人办）**：
+- 目的：让国内读者也能访问 chengyansuo.com（与英文版正交，解的是「国内打不开」）。
+- 路径：买国内云服务器/静态托管（腾讯云 COS / 阿里云 OSS + CDN）→ 域名实名认证 → **工信部 ICP 备案**（云厂商代提交，周期约 2-3 周）→ 把静态产物 `site/` 同步上去（或国内镜像）。
+- 现状：**未启动**。GNAME 注册的 chengyansuo.com 需先做域名实名。备案是用户本人走云厂商流程，Claude 不能代办，此处仅记录排期。
+- 备选（免备案缓解）：Cloudflare 代理 / Vercel，能改善但国内仍不稳，备案才是根治。
+
 ## 线上 / 仓库
 - 站点（主域名）：https://chengyansuo.com/（2026-06-16 购入并接 GitHub Pages，CNAME 由 build.py 的 SITE_DOMAIN 常量写入 site/CNAME；GNAME 注册，apex 4 条 A 记录→GitHub IP + www CNAME→libaoming.github.io）
 - 站点（旧地址，自动跳转新域名）：https://libaoming.github.io/agent-design-course/
