@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="13" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+  <rect x="0" y="0" width="720" height="320" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">4 behaviors at a boundary: A &lt; B &lt; C &lt; D</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">Worst to best — faking success is the deadliest, blocking at the gate is optimal</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6" fill="none">
+    <rect x="34" y="214" width="150" height="58" rx="8" fill="#ffffff"/>
+    <rect x="208" y="176" width="150" height="58" rx="8" fill="#fdf6f1"/>
+    <rect x="382" y="138" width="150" height="58" rx="8" fill="#ffffff"/>
+    <rect x="556" y="100" width="150" height="58" rx="8" fill="#fdf6f1"/>
+    <path d="M186 224 L206 206 M206 206 L197 209 M206 206 L203 215" stroke="#C15F3C"/>
+    <path d="M360 186 L380 168 M380 168 L371 171 M380 168 L377 177" stroke="#C15F3C"/>
+    <path d="M534 148 L554 130 M554 130 L545 133 M554 130 L551 139" stroke="#C15F3C"/>
+  </g>
+  <g font-size="13.5" font-weight="700" fill="#1a1a19" text-anchor="middle">
+    <text x="109" y="240">A Fake success</text>
+    <text x="283" y="202">B Raw error</text>
+    <text x="457" y="164">C Explain proactively</text>
+    <text x="631" y="126">D Block at gate</text>
+  </g>
+  <g font-size="11" fill="#6b6b64" text-anchor="middle">
+    <text x="109" y="259">Worst · pretends it worked</text>
+    <text x="283" y="221">Bad · leaks internals</text>
+    <text x="457" y="183">Standard · honest, friendly</text>
+    <text x="631" y="145">Best · stopped at the door</text>
+  </g>
+  <text x="34" y="300" font-size="11.5" fill="#C15F3C" font-weight="700">Compliance flip:</text>
+  <text x="150" y="300" font-size="11.5" fill="#5b6370">When output feeds a downstream decision, hard-fail (B) beats a friendly note (C) — B &gt; C</text>
+</svg>

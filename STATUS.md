@@ -19,7 +19,7 @@
 - build.py：UI 串抽成 `STRINGS[lang]` 字典，`build()` 跑两遍（zh→根 / en→/en/），侧栏加语言切换器，`<html lang>` 跟随。
 - 内容：每篇 `NN-slug.md` 配兄弟文件 `NN-slug.en.md`（自带英文 frontmatter，译 title/nav/summary + 正文）；`collect()` 找 `.en.md`，缺失则该语言跳过该讲（允许渐进翻译）。
 - 范围：**全量 34 篇**（31 讲 + 3 实战），译文派子 agent 并行（L4 隔离）。
-- ⚠️ 遗留待办（仍未做）：`assets/diagrams/*.svg` 18 张框架图**内嵌中文**，英文版暂沿用中文图，后续需出英文版 SVG（独立一波）。
+- ✅ 框架图英文化（2026-06-19 完成）：18 张 `assets/diagrams/*.svg` 各出英文版 `x.en.svg`（派 4 子 agent 并行翻译内嵌中文，主线 qlmanage 逐张渲染核查、修了 6 张英文变长导致的溢出/重叠）。机制 = build.py 复制 en assets 后用 `x.en.svg` 覆盖同名 `x.svg`，中英两站各用各的图，markdown 零改动。验证：英文站 18 张全英文、中文站 18 张未损、产物无 `.en.svg` 残留。
 
 **② 国内备案（待办·排期，需用户本人办）**：
 - 目的：让国内读者也能访问 chengyansuo.com（与英文版正交，解的是「国内打不开」）。

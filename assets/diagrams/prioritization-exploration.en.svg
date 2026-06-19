@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 360" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-4%" y="-4%" width="108%" height="108%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="37" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2"/></filter></defs>
+  <rect x="0" y="0" width="680" height="360" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">Prioritization: the urgent × important quadrants</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">Dependencies are hard constraints (clear blockers first); within a tier, sort with this matrix</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6" fill="none">
+    <rect x="170" y="92" width="220" height="110" rx="8" fill="#fdf6f1"/>
+    <rect x="398" y="92" width="220" height="110" rx="8" fill="#ffffff"/>
+    <rect x="170" y="210" width="220" height="110" rx="8" fill="#ffffff"/>
+    <rect x="398" y="210" width="220" height="110" rx="8" fill="#ffffff"/>
+    <path d="M150 326 L630 326 M630 326 L621 321 M630 326 L621 331" stroke="#9a9a92"/>
+    <path d="M150 326 L150 80 M150 80 L145 89 M150 80 L155 89" stroke="#9a9a92"/>
+  </g>
+  <g font-size="14" font-weight="700" fill="#1a1a19" text-anchor="middle">
+    <text x="280" y="135">Delegate / handle fast</text>
+    <text x="508" y="135">Do now (active)</text>
+    <text x="280" y="253">Cut if you can</text>
+    <text x="508" y="253">Schedule it, don&apos;t forget</text>
+  </g>
+  <g font-size="9.5" fill="#6b6b64" text-anchor="middle">
+    <text x="280" y="158">Urgent, not important: off the main line</text>
+    <text x="508" y="158">Urgent and important: the only active one</text>
+    <text x="280" y="276">Neither urgent nor important: cut it</text>
+    <text x="508" y="276">Not urgent but important: risks firefighting</text>
+  </g>
+  <text x="640" y="345" font-size="12" font-weight="700" fill="#C15F3C" text-anchor="end">Importance →</text>
+  <text x="138" y="78" font-size="12" font-weight="700" fill="#C15F3C" text-anchor="middle">Urgency ↑</text>
+</svg>

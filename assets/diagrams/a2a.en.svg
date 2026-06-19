@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 300" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-6%" y="-6%" width="112%" height="112%"><feTurbulence type="fractalNoise" baseFrequency="0.013" numOctaves="2" seed="35" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2"/></filter></defs>
+  <rect x="0" y="0" width="740" height="300" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">Three orchestration patterns: how a group of agents coordinate</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">Choose by &quot;is there one central arbiter?&quot; — most production systems default to central orchestration</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.5" fill="none">
+    <line x1="252" y1="92" x2="252" y2="258" stroke="#eae8e3"/>
+    <line x1="492" y1="92" x2="492" y2="258" stroke="#eae8e3"/>
+    <!-- 组1 Orchestrator-Worker -->
+    <line x1="125" y1="140" x2="80" y2="195" stroke="#C15F3C"/>
+    <line x1="125" y1="140" x2="125" y2="205" stroke="#C15F3C"/>
+    <line x1="125" y1="140" x2="170" y2="195" stroke="#C15F3C"/>
+    <circle cx="125" cy="135" r="22" fill="#fdf6f1"/>
+    <circle cx="80" cy="200" r="15" fill="#ffffff"/>
+    <circle cx="125" cy="210" r="15" fill="#ffffff"/>
+    <circle cx="170" cy="200" r="15" fill="#ffffff"/>
+    <!-- 组2 Peer-to-peer -->
+    <line x1="372" y1="120" x2="335" y2="190" stroke="#C15F3C"/>
+    <line x1="372" y1="120" x2="409" y2="190" stroke="#C15F3C"/>
+    <line x1="335" y1="190" x2="409" y2="190" stroke="#C15F3C"/>
+    <circle cx="372" cy="118" r="18" fill="#ffffff"/>
+    <circle cx="335" cy="195" r="18" fill="#ffffff"/>
+    <circle cx="409" cy="195" r="18" fill="#ffffff"/>
+    <!-- 组3 Blackboard -->
+    <line x1="615" y1="170" x2="615" y2="138" stroke="#C15F3C"/>
+    <line x1="572" y1="195" x2="600" y2="138" stroke="#C15F3C"/>
+    <line x1="658" y1="195" x2="630" y2="138" stroke="#C15F3C"/>
+    <rect x="578" y="108" width="74" height="32" rx="6" fill="#fdf6f1"/>
+    <circle cx="572" cy="200" r="15" fill="#ffffff"/>
+    <circle cx="615" cy="205" r="15" fill="#ffffff"/>
+    <circle cx="658" cy="200" r="15" fill="#ffffff"/>
+  </g>
+  <g font-size="11" font-weight="700" fill="#C15F3C" text-anchor="middle">
+    <text x="125" y="140">O</text>
+  </g>
+  <text x="615" y="128" font-size="10.5" font-weight="700" fill="#C15F3C" text-anchor="middle">Board</text>
+  <g font-size="13" font-weight="700" fill="#1a1a19" text-anchor="middle">
+    <text x="125" y="250">Orchestrator-Worker</text>
+    <text x="372" y="250">Peer-to-peer</text>
+    <text x="615" y="250">Blackboard</text>
+  </g>
+  <g font-size="9.5" fill="#6b6b64" text-anchor="middle">
+    <text x="125" y="270">Central dispatch · easy merge · debuggable</text>
+    <text x="372" y="270">Peer negotiation · emergent · hard to converge</text>
+    <text x="615" y="270">Shared board · decoupled · weak consistency</text>
+  </g>
+</svg>

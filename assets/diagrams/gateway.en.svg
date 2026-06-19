@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 300" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.013" numOctaves="2" seed="17" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+  <rect x="0" y="0" width="740" height="300" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">The Gateway is the chassis that takes an Agent to production</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">The Harness decides what it can do; the Gateway decides whether it gets delivered and stays up</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.6" fill="none">
+    <rect x="28" y="110" width="110" height="120" rx="8" fill="#ffffff"/>
+    <rect x="210" y="86" width="320" height="170" rx="8" fill="#fdf6f1"/>
+    <rect x="602" y="110" width="110" height="120" rx="8" fill="#ffffff"/>
+    <path d="M140 170 L208 170 M208 170 L199 165 M208 170 L199 175" stroke="#C15F3C"/>
+    <path d="M532 170 L600 170 M600 170 L591 165 M600 170 L591 175" stroke="#C15F3C"/>
+    <rect x="228" y="128" width="284" height="22" rx="5" fill="#ffffff"/>
+    <rect x="228" y="156" width="284" height="22" rx="5" fill="#ffffff"/>
+    <rect x="228" y="184" width="284" height="22" rx="5" fill="#ffffff"/>
+    <rect x="228" y="212" width="284" height="22" rx="5" fill="#ffffff"/>
+  </g>
+  <text x="83" y="160" font-size="12.5" font-weight="700" fill="#1a1a19" text-anchor="middle">Entry points</text>
+  <text x="83" y="180" font-size="11" fill="#6b6b64" text-anchor="middle">IM/phone/CLI</text>
+  <text x="370" y="112" font-size="13.5" font-weight="700" fill="#C15F3C" text-anchor="middle">Gateway chassis</text>
+  <g font-size="10" fill="#1a1a19">
+    <text x="240" y="143">Multi-channel ingress (unified message format)</text>
+    <text x="240" y="171">Message routing (exact &#8594; fallback tiers)</text>
+    <text x="240" y="199">Session persistence (JSONL) + reliable delivery (WAQ)</text>
+    <text x="240" y="227">Concurrency control (Named Lanes, user-priority)</text>
+  </g>
+  <text x="657" y="160" font-size="12.5" font-weight="700" fill="#1a1a19" text-anchor="middle">Agent Loop</text>
+  <text x="657" y="180" font-size="11" fill="#6b6b64" text-anchor="middle">invariant</text>
+  <text x="370" y="282" font-size="11" fill="#9a9a92" text-anchor="middle">The core loop is the invariant; every production capability wraps around it</text>
+</svg>

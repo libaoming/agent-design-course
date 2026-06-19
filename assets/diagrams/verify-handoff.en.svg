@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 300" font-family="-apple-system,'PingFang SC',sans-serif">
+  <defs><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="23" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+  <rect x="0" y="0" width="700" height="300" rx="14" fill="#fbfaf8"/>
+  <text x="28" y="36" font-size="18" font-weight="700" fill="#1a1a19">Three-layer termination check: each hop up loses information</text>
+  <text x="28" y="58" font-size="12.5" fill="#6b6b64">Unit tests passing &#8800; done; most defects hide in L3, and overconfidence is passing a low layer off as a high one</text>
+  <g filter="url(#rough)" stroke="#2a2a28" stroke-width="1.7">
+    <rect x="90" y="216" width="420" height="46" rx="8" fill="#ffffff"/>
+    <rect x="150" y="162" width="300" height="46" rx="8" fill="#fdf6f1"/>
+    <rect x="210" y="108" width="180" height="46" rx="8" fill="#C15F3C" fill-opacity="0.12"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="300" y="245" font-size="13.5" font-weight="700" fill="#1a1a19">L1 static syntax</text>
+    <text x="300" y="191" font-size="13.5" font-weight="700" fill="#1a1a19">L2 runtime behavior</text>
+    <text x="300" y="137" font-size="13.5" font-weight="700" fill="#C15F3C">L3 system-level E2E</text>
+  </g>
+  <g font-size="11" fill="#6b6b64">
+    <text x="520" y="243">compile / lint / types</text>
+    <text x="520" y="189">unit tests / assertions</text>
+    <text x="400" y="135" fill="#9e4a2c">real startup · real input</text>
+  </g>
+  <text x="350" y="290" font-size="11" fill="#9a9a92" text-anchor="middle">Externalize the done call: writing it only reaches in_progress; passing comes only when the E2E script is green</text>
+</svg>

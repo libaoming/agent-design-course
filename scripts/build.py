@@ -701,6 +701,18 @@ def build():
     shutil.copytree(ASSETS, os.path.join(SITE, "assets"))
     shutil.copytree(ASSETS, os.path.join(SITE, "en", "assets"))
 
+    # 框架图英文化：源 assets/diagrams/x.en.svg = 英文版。
+    # 英文站用 x.en.svg 覆盖同名 x.svg；中英两站都删掉 .en.svg 源（无人引用，避免冗余）。
+    en_dg = os.path.join(SITE, "en", "assets", "diagrams")
+    if os.path.isdir(en_dg):
+        for fn in os.listdir(en_dg):
+            if fn.endswith(".en.svg"):
+                shutil.copyfile(os.path.join(en_dg, fn), os.path.join(en_dg, fn[:-7] + ".svg"))
+    for d in (os.path.join(SITE, "assets", "diagrams"), en_dg):
+        if os.path.isdir(d):
+            for fn in os.listdir(d):
+                if fn.endswith(".en.svg"): os.remove(os.path.join(d, fn))
+
     lectures, examples = collect()
     counts = {}
     for lang in LANGS:
