@@ -610,14 +610,61 @@ MOD_ICON = {
     "ex": '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/>',
 }
 
-def _cover(cls, badge, icon_key):
+# 每篇一个独特线条图标（按 slug，贴合该篇主题）；缺失回退模块级 MOD_ICON
+SLUG_ICON = {
+    # A 产品能力
+    "five-layers": '<path d="M4 5h16M4 8.75h16M4 12.5h16M4 16.25h16M4 20h16"/>',
+    "task-path": '<circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/><path d="M6.8 12h3.4M13.8 12h3.4"/>',
+    "failure-nodes": '<circle cx="5" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/><path d="M6.8 12h3M14.2 12h3M10.4 9.5l3.2 5M13.6 9.5l-3.2 5"/>',
+    "error-recovery": '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M17.5 3.5v3.5h-3.5"/>',
+    "transparency": '<path d="M2.5 12s3.6-6 9.5-6 9.5 6 9.5 6-3.6 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.4"/>',
+    "boundary-behavior": '<path d="M12 3l7.5 3v6c0 4.3-3.2 6.9-7.5 8.5-4.3-1.6-7.5-4.2-7.5-8.5V6z"/>',
+    # B 工程地基
+    "harness": '<rect x="3.5" y="6" width="17" height="10" rx="2"/><circle cx="8" cy="18.5" r="1.6"/><circle cx="16" cy="18.5" r="1.6"/><path d="M4 11h16"/>',
+    "context-engineering": '<path d="M4 5h16l-5.5 7v6.5l-5-2.5V12z"/>',
+    "gateway": '<path d="M5 20V8a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v12"/><path d="M4 20h16M10 20v-5a2 2 0 0 1 4 0v5"/>',
+    "framework-selection": '<circle cx="7" cy="5" r="1.6"/><circle cx="17" cy="5" r="1.6"/><circle cx="12" cy="20" r="1.6"/><path d="M12 18.4V12M12 12l-4.3-4.3M12 12l4.3-4.3"/>',
+    "evaluation": '<path d="M4 20h16"/><rect x="5" y="12" width="3.5" height="6"/><rect x="10.25" y="7" width="3.5" height="11"/><rect x="15.5" y="14" width="3.5" height="4"/>',
+    "multi-agent-platform": '<circle cx="12" cy="5" r="1.9"/><circle cx="5" cy="18" r="1.9"/><circle cx="19" cy="18" r="1.9"/><circle cx="12" cy="13" r="1.9"/><path d="M12 6.9v4.2M10.4 14.3L6.4 16.6M13.6 14.3l4 2.3"/>',
+    # C Harness
+    "why-agents-fail": '<path d="M12 3.5L3 19.5h18z"/><path d="M12 10v4.5M12 17v.4"/>',
+    "what-is-harness": '<circle cx="12" cy="12" r="3.4"/><path d="M12 3.2v3M12 17.8v3M3.2 12h3M17.8 12h3M5.9 5.9l2.1 2.1M15.9 15.9l2.1 2.1M18.1 5.9l-2.1 2.1M7.9 15.9l-2.1 2.1"/>',
+    "repo-source-of-truth": '<ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.5 3.1 2.6 7 2.6s7-1.1 7-2.6V6"/><path d="M5 12c0 1.5 3.1 2.6 7 2.6s7-1.1 7-2.6"/>',
+    "split-instructions": '<rect x="3.5" y="4.5" width="9" height="12" rx="1.5"/><path d="M15 9h5.5v10.5h-9V17"/>',
+    "cross-session": '<rect x="3" y="9" width="9.5" height="6" rx="3"/><rect x="11.5" y="9" width="9.5" height="6" rx="3"/>',
+    "wip-and-features": '<path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 5.5l1.4 1.4 2.3-2.4M3.5 17.5l1.4 1.4 2.3-2.4M4 11.5h3.5"/>',
+    "verify-and-handoff": '<path d="M3.5 12l3.2 3.2 5.3-6.4"/><path d="M13 9.5h7M20 9.5l-2.6-2.6M20 9.5l-2.6 2.6"/>',
+    # D 设计模式
+    "overview": '<rect x="4" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2"/>',
+    "reflection-reasoning": '<path d="M18.5 11a6.5 6.5 0 1 0-1.8 5.2"/><path d="M16.5 13v3.5H20"/>',
+    "learning-rag": '<rect x="4" y="5" width="9" height="12" rx="1"/><path d="M4 8h9"/><circle cx="16.5" cy="14.5" r="3.2"/><path d="M18.8 16.8L21 19"/>',
+    "a2a": '<path d="M5 9h11M16 9l-3-2.5M16 9l-3 2.5"/><path d="M19 15H8M8 15l3-2.5M8 15l3 2.5"/>',
+    "prioritization-exploration": '<path d="M5 6h15M5 12h10M5 18h5"/>',
+    # E 上下文工程
+    "context-engineering-overview": '<rect x="4" y="5" width="16" height="5.5" rx="1.2"/><rect x="4" y="13" width="16" height="5.5" rx="1.2" stroke-dasharray="2.5 2.5"/>',
+    "prompt-instruction-layers": '<rect x="4" y="4.5" width="16" height="3.6" rx="1"/><rect x="4" y="10.2" width="16" height="3.6" rx="1"/><rect x="4" y="15.9" width="16" height="3.6" rx="1"/>',
+    "structured-io-and-tools": '<path d="M9.5 4c-2.2 0-2 3.3-2 4.5S7.3 12 5.5 12c1.8 0 2 2.3 2 3.5s-.2 4.5 2 4.5"/><path d="M14.5 4c2.2 0 2 3.3 2 4.5s.2 3.5 2 3.5c-1.8 0-2 2.3-2 3.5s.2 4.5-2 4.5"/>',
+    "memory-and-rag": '<rect x="6.5" y="6.5" width="11" height="11" rx="2"/><path d="M9.5 3v3.5M14.5 3v3.5M9.5 17.5V21M14.5 17.5V21M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21"/>',
+    "history-and-compaction": '<path d="M4 7h16M4 17h16"/><path d="M8.5 3.5l3.5 3.5 3.5-3.5M8.5 20.5l3.5-3.5 3.5 3.5"/>',
+    "cache-engineering": '<path d="M13 3L5 13.5h5.5L9.5 21l8-11h-5.5z"/>',
+    "observability-and-eval": '<path d="M4 4v16h16"/><path d="M7.5 14.5l3.5-4.5 3 2 4.5-6.5"/>',
+    # 实战示例
+    "claude-code": '<path d="M9 8l-4 4 4 4M15 8l4 4-4 4M13 6l-2 12"/>',
+    "cursor": '<path d="M5 3.5l5.5 15.5 2.2-6.4 6.4-2.2z"/>',
+    "vertical-aios": '<path d="M12 3v13M7.5 11.5L12 16l4.5-4.5M6 20h12"/>',
+}
+
+def icon_for(slug, mod):
+    return SLUG_ICON.get(slug, MOD_ICON.get(mod, ""))
+
+def _cover(cls, badge, inner):
     return (f'<span class="card-cover {cls}"><span class="cover-badge">{badge}</span>'
-            f'<svg class="cover-icon" viewBox="0 0 24 24" fill="none" stroke="#262420" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">{MOD_ICON[icon_key]}</svg></span>')
+            f'<svg class="cover-icon" viewBox="0 0 24 24" fill="none" stroke="#262420" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">{inner}</svg></span>')
 
 def lecture_card(lec, lang, prefix=""):
     mod = lec["module"]
     return f'''<a class="card card-v" href="{prefix}module-{mod}/{lec['slug']}.html">
-      {_cover(f"thumb-{mod}", f"{mod.upper()} · {lec['order']}", mod)}
+      {_cover(f"thumb-{mod}", f"{mod.upper()} · {lec['order']}", icon_for(lec['slug'], mod))}
       <span class="card-body">
       <span class="card-no">{html.escape(tr(NAV_SHORT[mod], lang))} · {S(lang,"lecture_no") % lec['order']}</span>
       <h3>{html.escape(fld(lec,'title',lang))}</h3>
@@ -630,7 +677,7 @@ def example_card(ex, lang, prefix="", idx=0):
     tgt = html.escape(fld(ex, "target", lang) or ex.get("target", "")) if (ex.get("target") or fld(ex, "target", lang)) else ""
     label = tgt if tgt else S(lang,"example_tag")
     return f'''<a class="card card-v" href="{prefix}examples/{ex['slug']}.html">
-      {_cover("thumb-ex", f'{"例" if lang=="zh" else "EX"} · {idx + 1}', "ex")}
+      {_cover("thumb-ex", f'{"例" if lang=="zh" else "EX"} · {idx + 1}', icon_for(ex['slug'], "ex"))}
       <span class="card-body">
       <span class="card-no">{label}</span>
       <h3>{html.escape(fld(ex,'title',lang))}</h3>
