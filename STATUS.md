@@ -10,16 +10,16 @@
 > 早期状态（2026-06-05 主体完成）：4 模块 24 讲全 passing，Module C 融合 walkinglabs + 本项目实战方法论（自指），Module D 源 Google《Agentic Design Patterns》/xindoo 仓库。
 关联：libaoming.github.io 根站 2017 旧简历已换成跳转课程站的占位页（另一仓库 libaoming/libaoming.github.io，旧源码在 git 历史可恢复）。
 
-## 🚧 进行中（2026-06-18）：英文版 i18n + 国内备案排期
+## ✅ 已收口（2026-06-19）：英文版 i18n 全量翻译已上线 + 国内备案待排
 
 **背景**：站点托管 GitHub Pages，国内访问长期被污染/限速。确定方向 = **出海·面向英文开发者**（GitHub Pages 对海外无障碍），做英文版；国内访问问题单独走备案另排。
 
-**① 英文版 i18n（进行中）**——决策已定：
+**① 英文版 i18n（✅ 完成 2026-06-18，已部署）**：全量 34 篇（31 讲 + 3 实战）译文落地，commit `0948ba7` 已 push，GitHub Actions「Deploy site to GitHub Pages」run = success。英文站 `chengyansuo.com/en/` 上线。实现回顾（决策记录留存）：
 - URL：`/en/` 子目录（中文留根 `chengyansuo.com/`，英文 `chengyansuo.com/en/`）。GitHub Pages 单仓库唯一干净方案。
 - build.py：UI 串抽成 `STRINGS[lang]` 字典，`build()` 跑两遍（zh→根 / en→/en/），侧栏加语言切换器，`<html lang>` 跟随。
 - 内容：每篇 `NN-slug.md` 配兄弟文件 `NN-slug.en.md`（自带英文 frontmatter，译 title/nav/summary + 正文）；`collect()` 找 `.en.md`，缺失则该语言跳过该讲（允许渐进翻译）。
 - 范围：**全量 34 篇**（31 讲 + 3 实战），译文派子 agent 并行（L4 隔离）。
-- ⚠️ 遗留待办：`assets/diagrams/*.svg` 18 张框架图**内嵌中文**，英文版暂沿用中文图，后续需出英文版 SVG（独立一波）。
+- ⚠️ 遗留待办（仍未做）：`assets/diagrams/*.svg` 18 张框架图**内嵌中文**，英文版暂沿用中文图，后续需出英文版 SVG（独立一波）。
 
 **② 国内备案（待办·排期，需用户本人办）**：
 - 目的：让国内读者也能访问 chengyansuo.com（与英文版正交，解的是「国内打不开」）。
