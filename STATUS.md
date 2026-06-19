@@ -3,12 +3,25 @@
 > 每次 session 第一个读的文件。收尾必更新本文件。
 
 ## 一句话状态（2026-06-16 新增 Module E · 上下文工程）
-**5 讲义模块 31 讲**（A 产品能力 6 / B 工程地基 6 / C Harness 工程 7 / D 设计模式 5 / **E 上下文工程 7**）+ 3 实战示例 + 18 张轻手绘 SVG 框架图 + 每页「已有 N 人学过本课程」统计（GoatCounter）。侧栏导航 + 模块导语 + Claude doc 风 + GitHub Actions 自动部署。
+**5 讲义模块 31 讲**（A 产品能力 6 / B 工程地基 6 / C Harness 工程 7 / D 设计模式 5 / **E 上下文工程 7**）+ 3 实战示例 + 18 张轻手绘 SVG 框架图 + 每页「已有 N 人学过本课程」统计（GoatCounter）。模块导语 + GitHub Actions 自动部署。**（⚠️ 2026-06-19 已改版为「橙研所」博客流：侧栏导航→顶部 nav、课程→博客、「N 人学过」已删，详见下方「网站改版」段）**
 
 **2026-06-16 新增 Module E · Context Engineering 上下文工程**：与 A（产品能力）/ C（Harness）并列的第三大支柱，源自 CE 7 单元自学体系。S5 切片，**第 0 讲「CE 总览·七层与暗物质」已上线**（七层次表 + 暗物质 + CE/PE/Harness 辨析，五段式）。**全程脱敏**：私人项目写成「某语音 agent / 某成熟产品」，build 后跑 grep 闸门确认零命中（妙招/豆包/ECS/评级等）。**E01-E06（U2-U7 各层深入讲）于 2026-06-16 全部完稿上线**：prompt 分层 / 结构化 IO+工具 / 记忆+RAG / 历史+压缩 / cache 工程 / 可观测+eval，均「为什么 X」立靶句式 + 五段式，build/verify 全绿、脱敏 grep 干净。features.json 全 22 feature passing。
 
 > 早期状态（2026-06-05 主体完成）：4 模块 24 讲全 passing，Module C 融合 walkinglabs + 本项目实战方法论（自指），Module D 源 Google《Agentic Design Patterns》/xindoo 仓库。
 关联：libaoming.github.io 根站 2017 旧简历已换成跳转课程站的占位页（另一仓库 libaoming/libaoming.github.io，旧源码在 git 历史可恢复）。
+
+## 🎨 网站改版（2026-06-19，方向 B：从「在线课程」→「橙研所」个人 IP 博客流，对标 claude.com/blog）
+**动机**：原站太像在线课程（左侧课程目录 sidebar + 模块/讲/「N 人学过本课程」），定位应是个人 Build in Public 思想阵地。**已上线**：
+- **骨架**：左 sidebar → **顶部横向 nav**（橙研所品牌 + 5 主线 + 实战 + 主题/语言），全宽布局；shell 全站统一（`topnav()`/`site_footer()`，旧 `sidebar()` 保留未用）。
+- **首页**：博客 hero（左定位 + 右 5 主线大字入口，serif）+ 作者卡 + **每主线精选 3 篇卡片网格 + 「查看全部 N 篇 →」**（不再全量铺开）。
+- **卡片**：竖卡（封面 banner + 分类 + 标题 + 摘要），3 列 grid（`lecture_card`/`example_card` 改造）。
+- **封面**：柔和粉彩 5 色板（A 陶土 / B sage / C 淡紫 / D 玫瑰 / E 雾蓝）+ 黑色线条图标（`MOD_ICON` 模块级）+ 去网格纹理，暗色降饱和适配。
+- **去课程化文案**：站名「构建 AI Agent」→**「橙研所」**（en「ChengYanSuo」）；「讲」→「篇」、「Lecture」→「Post」；title 带「· 橙研所」后缀。
+- **serif**：零加载系统衬线栈（Georgia + 宋体）；英文站标题全衬线、中文 hero 大标题宋体。
+- 改动集中在 `scripts/build.py` + `assets/orangebook.css`，讲义内容一字未动。
+
+**🔴 下一轮待办（用户明确要）**：**每篇封面图标做成不同的**——现在同主线 6-7 张卡共用一个图标（`MOD_ICON` 模块级），重复。要按 slug 给 31 讲 + 3 实战各配独特 line-art（清单已在 2026-06-19 session 拉取，见 `content/module-*/`）。更进一步可走 AI 生图做 claude 那种叙事插画。
+**可选**：分类筛选交互、精选条横排、中文 serif 是否扩到正文标题（现仅 hero）。
 
 ## ✅ 已收口（2026-06-19）：英文版 i18n 全量翻译已上线 + 国内备案待排
 

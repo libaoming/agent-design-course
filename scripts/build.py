@@ -26,7 +26,7 @@ def tr(val, lang):
 # 自定义域名（GitHub Pages）：仅写一次到 site/CNAME。留空则不写。
 SITE_DOMAIN = "chengyansuo.com"
 
-SITE_TITLE = {"zh": "构建 AI Agent", "en": "Building AI Agents"}
+SITE_TITLE = {"zh": "橙研所", "en": "ChengYanSuo"}
 SITE_TAGLINE = {
     "zh": "从能力设计到生产交付，一门问题驱动的 AI Agent 工程公开课",
     "en": "From capability design to production delivery — a problem-driven open course on AI Agent engineering",
@@ -46,20 +46,26 @@ STRINGS = {
         "build_in_public": "Build in Public",
         "foot_wechat": "公众号「橙研所」 · ",
         "github": "GitHub",
-        "lecture_no": "第 %d 讲",
+        "lecture_no": "第 %d 篇",
         "example_tag": "实战示例",
         "minutes": "约 %d 分钟",
-        "sec_count_lec": "%d 讲",
+        "sec_count_lec": "%d 篇",
+        "see_all": "查看全部 %d 篇 &#8594;",
         "sec_count_ex": "%d 篇",
         "home_ex_desc": "用框架拆解真实 Agent 产品",
-        "list_head": "讲次",
+        "list_head": "篇目",
         "crumb_home": "首页",
-        "meta_lecture": "Module %s · 第 %d 讲",
+        "meta_lecture": "Module %s · 第 %d 篇",
         "meta_example": "实战示例",
         "meta_example_target": "实战示例 · 拆解对象：%s",
         "prev": "← 上一篇",
         "next": "下一篇 →",
-        "stats": '已有 <strong id="gcU">·</strong> 人学过本课程',
+        "stats": '已有 <strong id="gcU">·</strong> 人读过',
+        "landing_eyebrow": "橙研所 · Build in Public",
+        "landing_h1": "把 Agent 当<em>产品</em>设计，当<em>系统</em>交付",
+        "landing_lead": "我是橙研所，一个 AI 产品经理。这里是我边做边写的 Agent 工程笔记——从产品能力、工程地基，到 Harness、设计模式与上下文工程。问题驱动，持续生长。",
+        "start_here": "从这里开始",
+        "start_desc": "五条主线，每条都是一组问题驱动的深度笔记。挑一条切进去。",
         "hero_eyebrow": "A Course on Building Agents",
         "hero_h1": "学会<em>设计</em>与<em>工程化</em>一个 AI Agent",
         "hero_lead_suffix": "。两条主线：把 Agent 当产品来设计，把 Agent 当系统来交付。",
@@ -76,20 +82,26 @@ STRINGS = {
         "build_in_public": "Build in Public",
         "foot_wechat": "WeChat: ChengYanSuo · ",
         "github": "GitHub",
-        "lecture_no": "Lecture %d",
+        "lecture_no": "Post %d",
         "example_tag": "Case Study",
         "minutes": "%d min read",
-        "sec_count_lec": "%d lectures",
+        "sec_count_lec": "%d posts",
+        "see_all": "See all %d posts &#8594;",
         "sec_count_ex": "%d studies",
         "home_ex_desc": "Real Agent products, dissected with the frameworks",
-        "list_head": "Lectures",
+        "list_head": "Posts",
         "crumb_home": "Home",
-        "meta_lecture": "Module %s · Lecture %d",
+        "meta_lecture": "Module %s · Post %d",
         "meta_example": "Case Study",
         "meta_example_target": "Case Study · Subject: %s",
         "prev": "← Previous",
         "next": "Next →",
-        "stats": '<strong id="gcU">·</strong> people have taken this course',
+        "stats": '<strong id="gcU">·</strong> readers so far',
+        "landing_eyebrow": "ChengYanSuo · Build in Public",
+        "landing_h1": "Design the Agent as a <em>product</em>, ship it as a <em>system</em>",
+        "landing_lead": "I'm an AI product manager writing in the open. These are my Agent engineering notes — from product capability and engineering foundations to harnesses, design patterns, and context engineering. Problem-driven, always growing.",
+        "start_here": "Start here",
+        "start_desc": "Five threads, each a set of problem-driven deep notes. Pick one and dive in.",
         "hero_eyebrow": "A Course on Building Agents",
         "hero_h1": "Learn to <em>design</em> and <em>engineer</em> an AI Agent",
         "hero_lead_suffix": ". Two threads: design the Agent as a product, and deliver the Agent as a system.",
@@ -417,7 +429,41 @@ def lang_switch_href(lang, prefix, rel):
     hop = "en/" if other == "en" else "../"
     return prefix + hop + rel
 
-# ---------------------------------------------------------------- sidebar / shell
+# ---------------------------------------------------------------- 顶部导航 / 页脚 / shell
+# 顶部横向导航用的主线短名（侧栏全称太长，横排放不下）
+NAV_SHORT = {
+    "a": {"zh": "产品能力", "en": "Product"},
+    "b": {"zh": "工程地基", "en": "Foundations"},
+    "c": {"zh": "Harness", "en": "Harness"},
+    "d": {"zh": "设计模式", "en": "Patterns"},
+    "e": {"zh": "上下文工程", "en": "Context"},
+}
+
+def topnav(lang, prefix, rel, active_mod=""):
+    s = ['<header class="topnav"><div class="topnav-inner">']
+    s.append(f'<a class="brand" href="{prefix}index.html"><span class="brand-dot"></span><span class="brand-name">{html.escape(tr(SITE_TITLE, lang))}</span></a>')
+    s.append('<nav class="topnav-links">')
+    for mod in MODULES:
+        amod = " active" if active_mod == mod else ""
+        s.append(f'<a class="tn-link{amod}" href="{prefix}module-{mod}.html">{html.escape(tr(NAV_SHORT[mod], lang))}</a>')
+    aex = " active" if active_mod == "examples" else ""
+    s.append(f'<a class="tn-link{aex}" href="{prefix}examples.html">{"实战" if lang=="zh" else "Cases"}</a>')
+    s.append('</nav>')
+    s.append('<div class="topnav-tools">')
+    s.append(f'<button class="theme-toggle" id="themeToggle" type="button" aria-label="{S(lang,"theme_toggle")}" title="{S(lang,"theme_toggle")}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>')
+    s.append(f'<a class="lang-switch" href="{lang_switch_href(lang, prefix, rel)}" title="{S(lang,"lang_switch_title")}">{S(lang,"lang_switch")}</a>')
+    s.append('</div></div></header>')
+    return "".join(s)
+
+def site_footer(lang):
+    return ('<footer class="site-foot"><div class="site-foot-inner">'
+            '<span class="sf-name">%s</span> · %s'
+            '<span class="sf-links">%s<a href="https://github.com/libaoming" target="_blank" rel="noopener">%s</a></span>'
+            '</div></footer>') % (
+        html.escape(tr(AUTHOR["name"], lang)), S(lang, "build_in_public"),
+        S(lang, "foot_wechat"), S(lang, "github"))
+
+# ---------------------------------------------------------------- sidebar（保留：暂未使用，文章页系列内导航备用） / shell
 def sidebar(lang, by_mod, examples, prefix, rel, active_slug="", active_mod="", home=False):
     s = ['<aside class="sidebar"><div class="sidebar-scroll">']
     s.append(f'<a class="sidebar-brand{" active" if home else ""}" href="{prefix}index.html"><span class="brand-dot"></span><span>{html.escape(tr(SITE_TITLE, lang))}</span></a>')
@@ -455,6 +501,8 @@ def sidebar(lang, by_mod, examples, prefix, rel, active_slug="", active_mod="", 
 
 def shell(lang, title, body, by_mod, examples, prefix="", rel="index.html", active_slug="", active_mod="", home=False, toc=None):
     main_cls, toc_html, stats_in_content = "main-inner", "", ""
+    _site = tr(SITE_TITLE, lang)
+    full_title = _site if title == _site else f"{title} · {_site}"
     if toc:
         main_cls = "main-inner with-toc"
         items = "".join('<li><a href="#%s">%s</a></li>' % (hid, html.escape(t)) for t, hid in toc)
@@ -465,19 +513,18 @@ def shell(lang, title, body, by_mod, examples, prefix="", rel="index.html", acti
 <html lang="{S(lang,"html_lang")}"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(title)}</title>
+<title>{html.escape(full_title)}</title>
 <link rel="icon" type="image/svg+xml" href="{prefix}assets/favicon.svg">
 {THEME_HEAD_JS}
 <link rel="stylesheet" href="{prefix}assets/orangebook.css">
 {gc_tracking()}
 </head><body>
-<div class="layout">
-{sidebar(lang, by_mod, examples, prefix, rel, active_slug, active_mod, home)}
+{topnav(lang, prefix, rel, active_mod)}
 <main class="main"><div class="{main_cls}">
 <div class="content">{body}{stats_in_content}</div>
 {toc_html}
 </div></main>
-</div>
+{site_footer(lang)}
 {THEME_BODY_JS}
 </body></html>'''
 
@@ -553,12 +600,26 @@ def card_tags(item, lang):
         parts.append('<span class="tag-pill tag-time">%s</span>' % (S(lang, "minutes") % minutes_of(item, lang)))
     return ('<span class="card-tags">%s</span>' % "".join(parts)) if parts else ""
 
+# 每条主线一个线条图标（封面用，白描边）；同主线讲义共用图标，靠角标编号区分
+MOD_ICON = {
+    "a": '<circle cx="12" cy="12" r="9"/><path d="M12 12l4.5-5-2.2 6.5-6.5 2.2z"/>',
+    "b": '<path d="M3 8l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4"/><path d="M3 16l9 4 9-4"/>',
+    "c": '<circle cx="12" cy="12" r="3.4"/><path d="M12 3.2v3M12 17.8v3M3.2 12h3M17.8 12h3M5.9 5.9l2.1 2.1M15.9 15.9l2.1 2.1M18.1 5.9l-2.1 2.1M7.9 15.9l-2.1 2.1"/>',
+    "d": '<rect x="4" y="4" width="7" height="7" rx="1.3"/><rect x="13" y="4" width="7" height="7" rx="1.3"/><rect x="4" y="13" width="7" height="7" rx="1.3"/><rect x="13" y="13" width="7" height="7" rx="1.3"/>',
+    "e": '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9.2h17"/>',
+    "ex": '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/>',
+}
+
+def _cover(cls, badge, icon_key):
+    return (f'<span class="card-cover {cls}"><span class="cover-badge">{badge}</span>'
+            f'<svg class="cover-icon" viewBox="0 0 24 24" fill="none" stroke="#262420" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">{MOD_ICON[icon_key]}</svg></span>')
+
 def lecture_card(lec, lang, prefix=""):
     mod = lec["module"]
-    return f'''<a class="card" href="{prefix}module-{mod}/{lec['slug']}.html">
-      <span class="card-thumb thumb-{mod}"><span class="thumb-badge">{mod.upper()}</span><span class="thumb-no">{lec['order']}</span></span>
+    return f'''<a class="card card-v" href="{prefix}module-{mod}/{lec['slug']}.html">
+      {_cover(f"thumb-{mod}", f"{mod.upper()} · {lec['order']}", mod)}
       <span class="card-body">
-      <span class="card-no">{S(lang,"lecture_no") % lec['order']}</span>
+      <span class="card-no">{html.escape(tr(NAV_SHORT[mod], lang))} · {S(lang,"lecture_no") % lec['order']}</span>
       <h3>{html.escape(fld(lec,'title',lang))}</h3>
       <p>{html.escape(fld(lec,'summary',lang))}</p>
       {card_tags(lec, lang)}
@@ -567,11 +628,11 @@ def lecture_card(lec, lang, prefix=""):
 
 def example_card(ex, lang, prefix="", idx=0):
     tgt = html.escape(fld(ex, "target", lang) or ex.get("target", "")) if (ex.get("target") or fld(ex, "target", lang)) else ""
-    badge = f'<span class="card-no">{tgt}</span>' if tgt else f'<span class="card-no">{S(lang,"example_tag")}</span>'
-    return f'''<a class="card" href="{prefix}examples/{ex['slug']}.html">
-      <span class="card-thumb thumb-ex"><span class="thumb-badge">{"例" if lang=="zh" else "EX"}</span><span class="thumb-no">{idx + 1}</span></span>
+    label = tgt if tgt else S(lang,"example_tag")
+    return f'''<a class="card card-v" href="{prefix}examples/{ex['slug']}.html">
+      {_cover("thumb-ex", f'{"例" if lang=="zh" else "EX"} · {idx + 1}', "ex")}
       <span class="card-body">
-      {badge}
+      <span class="card-no">{label}</span>
       <h3>{html.escape(fld(ex,'title',lang))}</h3>
       <p>{html.escape(fld(ex,'summary',lang))}</p>
       {card_tags(ex, lang)}
@@ -631,26 +692,32 @@ def build_lang(lang, lectures, examples):
         by_mod[lec["module"]].append(lec)
     langs_examples = [e for e in examples if has_lang(e, lang)]
 
-    # 首页
-    home = [f'''<div class="hero">
-      <span class="eyebrow">{S(lang,"hero_eyebrow")}</span>
-      <h1>{S(lang,"hero_h1")}</h1>
-      <p class="lead">{html.escape(tr(SITE_TAGLINE, lang))}{S(lang,"hero_lead_suffix")}</p>
-      <div class="hero-actions">{stats_block(lang)}{support_block(lang, "")}</div>
-    </div>''']
+    # 首页（博客流：hero 双栏[左定位 + 右主线入口] + 按主线分组的卡片网格）
+    home = [f'''<section class="bloghero">
+      <div class="bloghero-l">
+        <span class="eyebrow">{S(lang,"landing_eyebrow")}</span>
+        <h1>{S(lang,"landing_h1")}</h1>
+        <p class="lead">{S(lang,"landing_lead")}</p>
+        <div class="hero-actions">{support_block(lang, "")}</div>
+      </div>
+      <nav class="bloghero-r">''']
+    for mod in MODULES:
+        home.append(f'<a class="thread-link" href="module-{mod}.html">{html.escape(tr(MODULES[mod]["name"], lang))}<span class="arr">&#8594;</span></a>')
+    home.append(f'<a class="thread-link" href="examples.html">{html.escape(tr(EXAMPLES_TITLE, lang))}<span class="arr">&#8594;</span></a>')
+    home.append('</nav></section>')
     home.append(author_block(lang))
     for mod in MODULES:
         info = MODULES[mod]; count = len(by_mod[mod])
         home.append(f'<h2 class="home-sec"><span class="mod-badge">{mod.upper()}</span>{html.escape(tr(info["name"], lang))}<span class="sec-count">{S(lang,"sec_count_lec") % count}</span></h2>')
-        home.append(f'<p class="home-desc">{html.escape(tr(info["desc"], lang))}</p>')
-        home.append('<div class="card-list">')
-        for lec in by_mod[mod]:
+        home.append('<div class="card-grid">')
+        for lec in by_mod[mod][:3]:
             home.append(lecture_card(lec, lang, prefix=""))
         home.append("</div>")
+        if count > 3:
+            home.append(f'<a class="see-all" href="module-{mod}.html">{S(lang,"see_all") % count}</a>')
     home.append(f'<h2 class="home-sec"><span class="mod-badge ex">{"例" if lang=="zh" else "EX"}</span>{html.escape(tr(EXAMPLES_TITLE, lang))}<span class="sec-count">{S(lang,"sec_count_ex") % len(langs_examples)}</span></h2>')
-    home.append(f'<p class="home-desc">{html.escape(S(lang,"home_ex_desc"))}</p>')
     if langs_examples:
-        home.append('<div class="card-list">')
+        home.append('<div class="card-grid">')
         for i, ex in enumerate(langs_examples):
             home.append(example_card(ex, lang, prefix="", idx=i))
         home.append("</div>")
@@ -665,7 +732,7 @@ def build_lang(lang, lectures, examples):
         page = [f'<div class="page-head"><span class="mod-badge big">{mod.upper()}</span><h1>{html.escape(tr(info["name"], lang))}</h1><p class="lead">{html.escape(tr(info["desc"], lang))}</p></div>']
         if intro_html:
             page.append(f'<div class="module-intro">{intro_html}</div>')
-        page.append(f'<h2 class="list-head">{S(lang,"list_head")}</h2><div class="card-list">')
+        page.append(f'<h2 class="list-head">{S(lang,"list_head")}</h2><div class="card-grid">')
         for lec in by_mod[mod]:
             page.append(lecture_card(lec, lang, prefix=""))
         page.append("</div>")
@@ -677,7 +744,7 @@ def build_lang(lang, lectures, examples):
     exp = [f'<div class="page-head"><span class="mod-badge big ex">{"例" if lang=="zh" else "EX"}</span><h1>{html.escape(tr(EXAMPLES_TITLE, lang))}</h1></div>',
            f'<div class="module-intro">{intro_html}</div>']
     if langs_examples:
-        exp.append(f'<h2 class="list-head">{S(lang,"list_head") if lang=="en" else "示例"}</h2><div class="card-list">')
+        exp.append(f'<h2 class="list-head">{S(lang,"list_head") if lang=="en" else "示例"}</h2><div class="card-grid">')
         for i, ex in enumerate(langs_examples):
             exp.append(example_card(ex, lang, prefix="", idx=i))
         exp.append("</div>")
