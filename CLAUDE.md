@@ -71,6 +71,7 @@ learn-agent-design/
 - **开工闸门**：`verify` 字段为空的 feature 不准动
 - `features.json` status：草稿写完只到 `in_progress`；**build 产出正确 HTML 且过检查清单才能改 `passing`**
 - 每讲 verify 检查清单：① build 无报错 ② 产出对应 `.html` ③ 关键章节标题出现在 HTML ④ 全文无 emoji（`grep` 检测）⑤ 从导航可点达
+- 🖼️ **框架图 SVG 必须渲染逐张肉眼看，禁止只靠估算**：改完/新出 SVG（尤其多语言版本），用 `qlmanage -t -s 1480 x.svg -o /tmp/...` 渲染成 PNG **逐张 Read 看**。XML 合法 + 无文本残留只是结构验证，**看不出文字撞框/重叠/溢出**——这要渲染才知道。教训（2026-06-19 英文化 18 张图）：子 agent 自报「已防溢出」是靠字符数估算的，**6/6 都误判**（英文比中文宽，居中标签撞框、行标撞列、长行出框）。修法 = 精简文案 / 单行降字号，**列坐标与几何元素一律不动**。
 
 ## 命名约定
 - 讲义文件：`content/module-{a,b}/{NN}-{slug}.md`（NN 两位序号）
