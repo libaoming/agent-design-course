@@ -52,6 +52,13 @@ STRINGS = {
         "sec_count_lec": "%d 篇",
         "see_all": "查看全部 %d 篇 &#8594;",
         "sec_count_ex": "%d 篇",
+        "sec_count_lab": "%d 个项目",
+        "see_all_lab": "查看全部 %d 个项目 &#8594;",
+        "lab_soon": "实验室项目筹备中，敬请期待。",
+        "meta_lab": "实验室",
+        "lab_links_title": "项目链接",
+        "lab_related": "配套讲义",
+        "lab_repo": "GitHub 仓库",
         "home_ex_desc": "用框架拆解真实 Agent 产品",
         "list_head": "篇目",
         "crumb_home": "首页",
@@ -88,6 +95,13 @@ STRINGS = {
         "sec_count_lec": "%d posts",
         "see_all": "See all %d posts &#8594;",
         "sec_count_ex": "%d studies",
+        "sec_count_lab": "%d projects",
+        "see_all_lab": "See all %d projects &#8594;",
+        "lab_soon": "Lab projects coming soon — stay tuned.",
+        "meta_lab": "Lab",
+        "lab_links_title": "Project links",
+        "lab_related": "Related course",
+        "lab_repo": "GitHub repo",
         "home_ex_desc": "Real Agent products, dissected with the frameworks",
         "list_head": "Posts",
         "crumb_home": "Home",
@@ -297,6 +311,26 @@ EXAMPLES_INTRO = {
     ),
 }
 
+LAB_TITLE = {"zh": "实验室", "en": "Lab"}
+LAB_INTRO = {
+    "zh": (
+        "讲义是想明白的，实战是拆解过的，实验室是**做出来的**——这一区陈列我自己写的开源项目。"
+        "都是为了同一件事造的工具：让 Agent 在长任务里不漂移、有记忆、上下文可控、用量看得清。"
+        "每个项目一页，固定结构：解决什么 → 核心机制 → 怎么用。"
+    ),
+    "en": (
+        "Lectures are what I've thought through, case studies are what I've taken apart, and the Lab is what I've **actually built** — "
+        "this section lists my own open-source projects. They're all tools made for the same goal: keeping Agents from drifting on long tasks, "
+        "giving them memory, keeping context under control, and making usage legible. One page per project: what it solves, how it works, how to use it."
+    ),
+}
+# 项目状态徽章（canonical key → 双语标签）。实验室可容纳不同成熟度。
+STATUS_LABEL = {
+    "open-source": {"zh": "已开源", "en": "Open Source"},
+    "experimental": {"zh": "试验中", "en": "Experimental"},
+    "local-only": {"zh": "本地未推", "en": "Local Only"},
+}
+
 # 访问统计（GoatCounter）。留空 = 不接入任何第三方脚本。
 GC_CODE = "learn-agent-design"
 
@@ -448,6 +482,8 @@ def topnav(lang, prefix, rel, active_mod=""):
         s.append(f'<a class="tn-link{amod}" href="{prefix}module-{mod}.html">{html.escape(tr(NAV_SHORT[mod], lang))}</a>')
     aex = " active" if active_mod == "examples" else ""
     s.append(f'<a class="tn-link{aex}" href="{prefix}examples.html">{"实战" if lang=="zh" else "Cases"}</a>')
+    alab = " active" if active_mod == "lab" else ""
+    s.append(f'<a class="tn-link{alab}" href="{prefix}lab.html">{html.escape(tr(LAB_TITLE, lang))}</a>')
     s.append('</nav>')
     s.append('<div class="topnav-tools">')
     s.append(f'<button class="theme-toggle" id="themeToggle" type="button" aria-label="{S(lang,"theme_toggle")}" title="{S(lang,"theme_toggle")}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>')
@@ -589,7 +625,8 @@ def collect():
         lectures += _collect_dir(os.path.join(CONTENT, "module-" + mod), default_mod=mod)
     lectures.sort(key=lambda x: (x["module"], x["order"]))
     examples = _collect_dir(os.path.join(CONTENT, "examples"))
-    return lectures, examples
+    labs = _collect_dir(os.path.join(CONTENT, "lab"))
+    return lectures, examples, labs
 
 def card_tags(item, lang):
     parts = []
@@ -608,6 +645,7 @@ MOD_ICON = {
     "d": '<rect x="4" y="4" width="7" height="7" rx="1.3"/><rect x="13" y="4" width="7" height="7" rx="1.3"/><rect x="4" y="13" width="7" height="7" rx="1.3"/><rect x="13" y="13" width="7" height="7" rx="1.3"/>',
     "e": '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9.2h17"/>',
     "ex": '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/>',
+    "lab": '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.5 14h9"/>',
 }
 
 # 每篇一个独特线条图标（按 slug，贴合该篇主题）；缺失回退模块级 MOD_ICON
@@ -652,6 +690,12 @@ SLUG_ICON = {
     "claude-code": '<path d="M9 8l-4 4 4 4M15 8l4 4-4 4M13 6l-2 12"/>',
     "cursor": '<path d="M5 3.5l5.5 15.5 2.2-6.4 6.4-2.2z"/>',
     "vertical-aios": '<path d="M12 3v13M7.5 11.5L12 16l4.5-4.5M6 20h12"/>',
+    # 实验室
+    "harness-kit": '<rect x="3.5" y="6" width="17" height="9" rx="2"/><circle cx="8" cy="17.5" r="1.7"/><circle cx="16" cy="17.5" r="1.7"/><path d="M4 10.5h16"/>',
+    "agent-memory-kit": '<path d="M5.5 8.5a7 7 0 0 1 12-1.5"/><path d="M18.5 15.5a7 7 0 0 1-12 1.5"/><path d="M17.5 3v3.5H14M6.5 21v-3.5H10"/>',
+    "context-engineering-kit": '<rect x="4" y="4.5" width="16" height="4.3" rx="1.2"/><rect x="4" y="11" width="16" height="3" rx="1" stroke-dasharray="2.5 2.5"/><rect x="4" y="16" width="16" height="3" rx="1" stroke-dasharray="2.5 2.5"/>',
+    "claude-usage": '<path d="M4 16.5a8 8 0 0 1 16 0"/><path d="M12 16.5l4.5-4"/><circle cx="12" cy="16.5" r="1.2"/>',
+    "agent-skill-case-studies": '<rect x="4" y="4" width="16" height="13" rx="1.5"/><path d="M4 8h16"/><circle cx="11" cy="12.5" r="2.6"/><path d="M13 14.5L15.5 17"/>',
 }
 
 def icon_for(slug, mod):
@@ -686,6 +730,19 @@ def example_card(ex, lang, prefix="", idx=0):
       </span>
     </a>'''
 
+def lab_card(lab, lang, prefix="", idx=0):
+    st = lab.get("status", "")
+    st_label = tr(STATUS_LABEL[st], lang) if st in STATUS_LABEL else st
+    return f'''<a class="card card-v" href="{prefix}lab/{lab['slug']}.html">
+      {_cover("thumb-lab", f'{"研" if lang=="zh" else "LAB"} · {idx + 1}', icon_for(lab['slug'], "lab"))}
+      <span class="card-body">
+      <span class="card-no">{html.escape(st_label)}</span>
+      <h3>{html.escape(fld(lab,'title',lang))}</h3>
+      <p>{html.escape(fld(lab,'summary',lang))}</p>
+      {card_tags(lab, lang)}
+      </span>
+    </a>'''
+
 def out_path(lang, relpath):
     return relpath if lang == "zh" else os.path.join("en", relpath)
 
@@ -706,11 +763,16 @@ def article_page(lang, item, kind, siblings, by_mod, examples):
         crumb = f'<a href="../index.html">{S(lang,"crumb_home")}</a><span>/</span><a href="../module-{mod}.html">{html.escape(tr(MODULES[mod]["name"], lang))}</a>'
         meta_line = S(lang, "meta_lecture") % (mod.upper(), item["order"])
         active_mod = mod; subdir = "module-%s" % mod
-    else:
+    elif kind == "example":
         crumb = f'<a href="../index.html">{S(lang,"crumb_home")}</a><span>/</span><a href="../examples.html">{html.escape(tr(EXAMPLES_TITLE, lang))}</a>'
         tgt = fld(item, "target", lang) or item.get("target", "")
         meta_line = (S(lang, "meta_example_target") % html.escape(tgt)) if tgt else S(lang, "meta_example")
         active_mod = "examples"; subdir = "examples"
+    else:  # lab
+        crumb = f'<a href="../index.html">{S(lang,"crumb_home")}</a><span>/</span><a href="../lab.html">{html.escape(tr(LAB_TITLE, lang))}</a>'
+        st = item.get("status", ""); st_label = tr(STATUS_LABEL[st], lang) if st in STATUS_LABEL else st
+        meta_line = ("%s · %s" % (S(lang, "meta_lab"), html.escape(st_label))) if st_label else S(lang, "meta_lab")
+        active_mod = "lab"; subdir = "lab"
     art = ['<article class="lecture">', f'<div class="breadcrumb">{crumb}</div>', f'<h1>{html.escape(fld(item,"title",lang))}</h1>']
     if summary:
         art.append(f'<p class="summary">{summary}</p>')
@@ -721,6 +783,16 @@ def article_page(lang, item, kind, siblings, by_mod, examples):
     if minutes_of(item, lang):
         badges += '<span class="tag-pill tag-time">%s</span>' % (S(lang, "minutes") % minutes_of(item, lang))
     art.append(f'<p class="meta">{meta_line}{badges}</p>')
+    if kind == "lab":
+        links = []
+        repo = item.get("repo", "")
+        if repo:
+            links.append(f'<a class="lab-link" href="{html.escape(repo)}" target="_blank" rel="noopener">{S(lang,"lab_repo")} &#8599;</a>')
+        rl = item.get("related_lecture", "")
+        if rl and rl in MODULES:
+            links.append(f'<a class="lab-link" href="../module-{rl}.html">{S(lang,"lab_related")} · {html.escape(tr(MODULES[rl]["name"], lang))}</a>')
+        if links:
+            art.append(f'<div class="lab-links"><span class="lab-links-t">{S(lang,"lab_links_title")}</span>{"".join(links)}</div>')
     art.append(body_html)
     pager = ['<div class="pager">']
     pager.append(f'<a class="prev" href="{prev_it["slug"]}.html"><span class="dir">{S(lang,"prev")}</span><span class="ttl">{html.escape(fld(prev_it,"nav",lang) or fld(prev_it,"title",lang))}</span></a>' if prev_it else '<span class="spacer"></span>')
@@ -731,13 +803,14 @@ def article_page(lang, item, kind, siblings, by_mod, examples):
           shell(lang, fld(item, "title", lang), "\n".join(art), by_mod, examples, prefix="../", rel=rel, active_slug=item["slug"], active_mod=active_mod, toc=toc))
 
 # ---------------------------------------------------------------- build
-def build_lang(lang, lectures, examples):
-    # 按语言过滤：只渲染有该语言版本的讲义/示例
+def build_lang(lang, lectures, examples, labs):
+    # 按语言过滤：只渲染有该语言版本的讲义/示例/实验室项目
     by_mod = {m: [] for m in MODULES}
     langs_lectures = [l for l in lectures if has_lang(l, lang)]
     for lec in langs_lectures:
         by_mod[lec["module"]].append(lec)
     langs_examples = [e for e in examples if has_lang(e, lang)]
+    langs_labs = [x for x in labs if has_lang(x, lang)]
 
     # 首页（博客流：hero 双栏[左定位 + 右主线入口] + 按主线分组的卡片网格）
     home = [f'''<section class="bloghero">
@@ -751,6 +824,7 @@ def build_lang(lang, lectures, examples):
     for mod in MODULES:
         home.append(f'<a class="thread-link" href="module-{mod}.html">{html.escape(tr(MODULES[mod]["name"], lang))}<span class="arr">&#8594;</span></a>')
     home.append(f'<a class="thread-link" href="examples.html">{html.escape(tr(EXAMPLES_TITLE, lang))}<span class="arr">&#8594;</span></a>')
+    home.append(f'<a class="thread-link" href="lab.html">{html.escape(tr(LAB_TITLE, lang))}<span class="arr">&#8594;</span></a>')
     home.append('</nav></section>')
     home.append(author_block(lang))
     for mod in MODULES:
@@ -770,6 +844,17 @@ def build_lang(lang, lectures, examples):
         home.append("</div>")
     else:
         home.append(f'<p class="soon-note">{S(lang,"soon_note")}</p>')
+    # 首页 · 实验室精选（克制：精选前 3 + 全部）
+    home.append(f'<h2 class="home-sec"><span class="mod-badge lab">{"研" if lang=="zh" else "LAB"}</span>{html.escape(tr(LAB_TITLE, lang))}<span class="sec-count">{S(lang,"sec_count_lab") % len(langs_labs)}</span></h2>')
+    if langs_labs:
+        home.append('<div class="card-grid">')
+        for i, lab in enumerate(langs_labs[:3]):
+            home.append(lab_card(lab, lang, prefix="", idx=i))
+        home.append("</div>")
+        if len(langs_labs) > 3:
+            home.append(f'<a class="see-all" href="lab.html">{S(lang,"see_all_lab") % len(langs_labs)}</a>')
+    else:
+        home.append(f'<p class="soon-note">{S(lang,"lab_soon")}</p>')
     write(lang, "index.html", shell(lang, tr(SITE_TITLE, lang), "\n".join(home), by_mod, langs_examples, prefix="", rel="index.html", home=True))
 
     # 模块页（含模块导语）
@@ -799,14 +884,30 @@ def build_lang(lang, lectures, examples):
         exp.append(f'<p class="soon-note">{S(lang,"examples_soon")}</p>')
     write(lang, "examples.html", shell(lang, tr(EXAMPLES_TITLE, lang), "\n".join(exp), by_mod, langs_examples, prefix="", rel="examples.html", active_mod="examples"))
 
+    # 实验室列表页
+    intro_html, _ = render_md(tr(LAB_INTRO, lang))
+    labp = [f'<div class="page-head"><span class="mod-badge big lab">{"研" if lang=="zh" else "LAB"}</span><h1>{html.escape(tr(LAB_TITLE, lang))}</h1></div>',
+            f'<div class="module-intro">{intro_html}</div>']
+    if langs_labs:
+        labp.append(f'<h2 class="list-head">{S(lang,"list_head") if lang=="en" else "项目"}</h2><div class="card-grid">')
+        for i, lab in enumerate(langs_labs):
+            labp.append(lab_card(lab, lang, prefix="", idx=i))
+        labp.append("</div>")
+    else:
+        labp.append(f'<p class="soon-note">{S(lang,"lab_soon")}</p>')
+    write(lang, "lab.html", shell(lang, tr(LAB_TITLE, lang), "\n".join(labp), by_mod, langs_examples, prefix="", rel="lab.html", active_mod="lab"))
+
     # 讲义详情
     for lec in langs_lectures:
         article_page(lang, lec, "lecture", by_mod[lec["module"]], by_mod, langs_examples)
     # 示例详情
     for ex in langs_examples:
         article_page(lang, ex, "example", langs_examples, by_mod, langs_examples)
+    # 实验室详情
+    for lab in langs_labs:
+        article_page(lang, lab, "lab", langs_labs, by_mod, langs_examples)
 
-    return len(langs_lectures), len(langs_examples)
+    return len(langs_lectures), len(langs_examples), len(langs_labs)
 
 def build():
     if os.path.isdir(SITE): shutil.rmtree(SITE)
@@ -827,10 +928,10 @@ def build():
             for fn in os.listdir(d):
                 if fn.endswith(".en.svg"): os.remove(os.path.join(d, fn))
 
-    lectures, examples = collect()
+    lectures, examples, labs = collect()
     counts = {}
     for lang in LANGS:
-        counts[lang] = build_lang(lang, lectures, examples)
+        counts[lang] = build_lang(lang, lectures, examples, labs)
 
     # GitHub Pages 自定义域名：仅根目录写一次 CNAME
     if SITE_DOMAIN:
@@ -838,7 +939,7 @@ def build():
             f.write(SITE_DOMAIN + "\n")
 
     for lang in LANGS:
-        print("build done [%s]: %d lectures + %d examples" % (lang, counts[lang][0], counts[lang][1]))
+        print("build done [%s]: %d lectures + %d examples + %d labs" % (lang, counts[lang][0], counts[lang][1], counts[lang][2]))
     print("site/ ready (zh → /, en → /en/)")
     return counts
 

@@ -8,8 +8,8 @@ bad(){ echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 echo "== 1. build =="
 python3 scripts/build.py && [ -f site/index.html ] && ok "build 产出 site/index.html" || { bad "build 失败"; exit 1; }
 
-echo "== 2. 双模块 + 侧边栏出现在首页 =="
-grep -q "Agent 产品与能力设计" site/index.html && grep -q "Agent 工程地基" site/index.html && grep -q 'class="sidebar"' site/index.html && ok "首页含双模块 + 侧边栏" || bad "首页缺模块或侧边栏"
+echo "== 2. 双模块 + 顶部 nav 出现在首页 =="
+grep -q "Agent 产品与能力设计" site/index.html && grep -q "Agent 工程地基" site/index.html && grep -q 'class="topnav"' site/index.html && ok "首页含双模块 + 顶部 nav" || bad "首页缺模块或顶部 nav"
 
 echo "== 3. 第1讲渲染 =="
 LEC=site/module-a/transparency.html

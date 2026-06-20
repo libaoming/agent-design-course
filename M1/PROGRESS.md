@@ -17,6 +17,16 @@
 - （无）
 
 ## Session Log（倒序）
+### 2026-06-20（新增「实验室 / Lab」区——第三条内容线）
+- 接续 LAB-PLAN.md（6-19 因环境抖动暂停）。环境已恢复（build.py 846 行对得上、无污染）。
+- 开工前修了 verify.sh 过期检查：第 2 条找首页 `class="sidebar"`，但 6-19 改版已换 topnav → 改为找 `class="topnav"`，FAIL=1→0。
+- 写 5 篇 `content/lab/*.md` + 5 篇 `.en.md`（harness-kit/agent-memory-kit/context-engineering-kit/claude-usage/agent-skill-case-studies），固定结构、禁比喻禁 emoji、脱敏干净。英文版 inline 自译（环境抖动期不派子 agent，内容短风险低）。
+- build.py 加实验室平行线（9 处接入，照 examples 对称克隆，逐处 Edit + 不动现有逻辑）：collect 收 labs / LAB_TITLE·LAB_INTRO·STATUS_LABEL / topnav+hero+首页精选(前3+全部) / lab_card / lab.html 列表页 / article_page 的 lab 分支（meta「实验室·已开源」+ 可点「项目链接」行 GitHub repo+互链模块 C/E）/ SLUG_ICON 5 图标 + MOD_ICON lab 回退。
+- CSS：`.thumb-lab`(琥珀 #C7A15B) + `.mod-badge.lab` + `.lab-links` 链接行。
+- 踩坑修复：lab md 正文最初带 `# 标题`，与 frontmatter title 渲染的 H1 重复 → 脚本删掉 10 文件首个 H1，正文从 `>` 立靶开始。
+- 验证：build 中英各「31+3+5」全绿、verify FAIL=0、脱敏 grep 干净、零隐藏字符、headless 截图中英列表页/详情页/首页共 4+ 张逐一肉眼核查通过。
+- LAB-PLAN.md 任务完成，已删除（前瞻信息[第二批/不公开清单]归入 git 历史）。
+
 ### 2026-06-17（首页加微信收款码赞赏卡片）
 - 发现上一轮遗留半成品：build.py 有 +21 行未提交改动（`SUPPORT` 字典 + `support_block()`，首页接入），但 CSS 缺失、图片不存在。
 - 补齐 `.support-card / .support-head / .support-title / .support-note / .support-qr` CSS（96×96 二维码，对齐 author-card 橙皮风，移动端换行）。

@@ -10,6 +10,15 @@
 > 早期状态（2026-06-05 主体完成）：4 模块 24 讲全 passing，Module C 融合 walkinglabs + 本项目实战方法论（自指），Module D 源 Google《Agentic Design Patterns》/xindoo 仓库。
 关联：libaoming.github.io 根站 2017 旧简历已换成跳转课程站的占位页（另一仓库 libaoming/libaoming.github.io，旧源码在 git 历史可恢复）。
 
+## 🧪 新增「实验室 / Lab」区（2026-06-20 上线，第三条内容线）
+网站第三足：**讲义=想明白的 / 实战=拆解过的 / 实验室=做出来的（开源工程产出）**。首批 5 个项目（全已开源）：harness-kit（互链模块 C）/ agent-memory-kit / context-engineering-kit（互链模块 E）/ claude-usage / agent-skill-case-studies。
+- **内容**：`content/lab/NN-slug.md(+.en.md)` 中英各 5 篇，固定结构「解决什么→核心机制→怎么用→一句话」，frontmatter 含 `status`/`repo`/`related_lecture`。禁比喻禁 emoji、脱敏干净。
+- **build.py**：照 examples 对称克隆一条平行线（collect 收 labs / LAB_TITLE·LAB_INTRO·STATUS_LABEL 常量 / topnav+hero+首页精选区 / lab_card / lab.html 列表页 / article_page 的 `lab` 分支带「项目链接」行：GitHub repo + 互链模块）。新增模块/平行线时照此扩。
+- **视觉**：封面琥珀色 `.thumb-lab` + `.mod-badge.lab` + `.lab-links` 链接行；SLUG_ICON 配 5 个独特 line-SVG。状态徽章双语映射（已开源/Open Source 等）。
+- **verify**：FAIL=0（顺手修了改版漏更的 verify.sh 第 2 条 sidebar→topnav）。headless 截图中英各 2 张逐一肉眼核查通过。
+- **坑**：lab md 正文别带 `# 标题`（frontmatter title 已渲染成 H1，会重复）——正文从 `>` 立靶或 `##` 开始，与讲义/示例一致。
+- **下一步可选**：第二批项目（标 `试验中`/`本地未推`，见已删除的 LAB-PLAN.md 或 git 历史）；harness-kit 等重点项目日后可加厚成造物日志长文；首页精选条横排微调。
+
 ## 🎨 网站改版（2026-06-19，方向 B：从「在线课程」→「橙研所」个人 IP 博客流，对标 claude.com/blog）
 **动机**：原站太像在线课程（左侧课程目录 sidebar + 模块/讲/「N 人学过本课程」），定位应是个人 Build in Public 思想阵地。**已上线**：
 - **骨架**：左 sidebar → **顶部横向 nav**（橙研所品牌 + 5 主线 + 实战 + 主题/语言），全宽布局；shell 全站统一（`topnav()`/`site_footer()`，旧 `sidebar()` 保留未用）。
