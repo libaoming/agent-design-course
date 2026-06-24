@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 2 课 · Attention Is All You Need：为什么注意力能取代循环</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 2 课 / 经典论文 <strong>P01</strong> &nbsp;·&nbsp; 阶段一：地基（Vaswani et al., 2017）</div>
+
+  <h1>Attention Is All You Need：<br>为什么「注意力」能取代「循环」</h1>
+
+  <div class="mission">
+    这是<b>今天所有 LLM 的底座论文</b>。读完它，你在
+    <a href="0001-next-token-prediction.html">第 1 课</a> 里见过的「模型每步算一个分布」背后那台机器，
+    才算露出主结构。也是后面 KV cache、长上下文成本、multi-head 这些你工作里碰到的词的<b>共同源头</b>。
+  </div>
+
+  <div class="big-idea">
+    扔掉「一个词一个词顺着算」的循环，<br>
+    让每个 token <em>一步到位</em>地直接「看」序列里所有其他 token——<br>
+    看谁、看多重，由它们自己算出来的注意力权重决定。
+  </div>
+
+  <h2>一、立靶：循环网络（RNN/LSTM）卡在哪</h2>
+
+  <p>
+    2017 年之前，处理序列靠 RNN/LSTM——像读句子一样<strong>一个词一个词往后读</strong>，把"读到现在的记忆"传给下一步。两个致命问题：
+  </p>
+
+  <table>
+    <tr><th>问题</th><th>后果</th></tr>
+    <tr><td><strong>必须顺序计算</strong></td><td>第 100 个词要等前 99 个算完才能算 → <strong>没法并行</strong>，GPU 喂不饱，训练慢。</td></tr>
+    <tr><td><strong>长距离依赖会衰减</strong></td><td>句首信息传到句尾要经过几十步，<em>像传话游戏</em>，越传越糊。</td></tr>
+  </table>
+
+  <p>论文的回答简单粗暴：<strong>把循环整个删掉，只留 attention。</strong>标题就是这个意思——注意力，足够了。</p>
+
+  <h2>二、抽框架：self-attention 的三步（Q / K / V）</h2>
+
+  <p>核心机制叫 <strong>self-attention</strong>。给每个 token，先从它的向量算出三个角色向量：</p>
+
+  <table>
+    <tr><th>角色</th><th>直觉（用「查资料」打比方）</th></tr>
+    <tr><td><strong>Query（查询）</strong></td><td>我想找什么？——我带着一个「问题」去问全场。</td></tr>
+    <tr><td><strong>Key（键）</strong></td><td>每个 token 挂出的「标签」——表明"我这有什么信息"。</td></tr>
+    <tr><td><strong>Value（值）</strong></td><td>每个 token 真正要交出去的「内容」。</td></tr>
+  </table>
+
+  <p>然后三步算出某个 token 的新表示：</p>
+  <pre><code>1. 我的 Query 去和【所有 token 的 Key】做点积  → 一串「相关度分数」
+2. 分数 ÷ √d_k，再过 softmax            → 一组加起来=1 的「注意力权重」
+3. 用这组权重，对【所有 token 的 Value】加权求和 → 我的新表示</code></pre>
+
+  <p>
+    一句话：<strong>注意力 = 带着权重，从最相关的那些 token 那里取信息。</strong>
+    权重不是写死的，是 token 之间用 Q·K <em>当场算出来</em>的——这就是它比"传话"强的地方：句首和句尾<strong>一步直连</strong>，不衰减。
+  </p>
+
+  <div class="callout">
+    <div class="label">论文里三个容易被略过、但很关键的细节</div>
+    <p style="margin:0.3rem 0"><strong>① 为什么要 ÷√d_k？</strong> 向量维度大时点积数值会很大，softmax 会被推到"几乎全 1 / 全 0"的饱和区，梯度消失。除以 √d_k 把它拉回温和区间。</p>
+    <p style="margin:0.3rem 0"><strong>② Multi-head（多头）：</strong> 不止一组 Q/K/V，而是并行好几组（base 模型 8 组）。每组关注不同侧面——有的盯语法、有的盯指代。最后拼起来。</p>
+    <p style="margin:0.3rem 0"><strong>③ Positional Encoding（位置编码）：</strong> attention 本身<strong>不分先后</strong>（打乱词序它算出来一样）。所以要额外给每个位置注入一个"位置信号"，模型才知道词序。</p>
+  </div>
+
+  <h2>三、动手玩：看一个 token 把注意力放在哪</h2>
+  <p class="interactive-hint cite">
+    下面这句话里有个指代："它"到底指谁？点不同的 query 词，看它的注意力权重落在哪些词上（示意权重，帮你建立直觉）。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.7rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      句子：<strong>小猫 · 因为 · 累了 · 所以 · 它 · 睡着了</strong>　|　选 query 词：
+      <span id="qbtns"></span>
+    </div>
+    <div id="attn-bars" style="font-family:-apple-system,'PingFang SC',sans-serif;font-size:0.85rem"></div>
+    <div id="attn-note" class="cite" style="margin-top:0.7rem"></div>
+  </div>
+
+  <h2>四、对照表：Transformer vs 循环网络</h2>
+  <table>
+    <tr><th>维度</th><th>RNN / LSTM</th><th>Transformer（self-attention）</th></tr>
+    <tr><td>并行性</td><td>不能，必须顺序</td><td><strong>整句一次并行</strong></td></tr>
+    <tr><td>任意两词的连接距离</td><td>O(n) 步，会衰减</td><td><strong>O(1) 步，直连</strong></td></tr>
+    <tr><td>每层计算量</td><td>O(n·d)</td><td>O(n²·d)　← <em>序列越长越贵的根源</em></td></tr>
+    <tr><td>词序信息</td><td>天然自带</td><td>要额外加位置编码</td></tr>
+  </table>
+
+  <h2>五、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你用的所有模型底座</td><td>就是这个 self-attention block <strong>堆叠几十层</strong>（GPT 是它的 decoder 部分）。</td></tr>
+    <tr><td>KV cache（realtime 降延迟）</td><td>生成时把已算过的 Key/Value 缓存下来，新 token 不必重算——直接来自这里的 K、V。</td></tr>
+    <tr><td>长上下文为什么又慢又贵</td><td>那个 <strong>O(n²)</strong>：上下文翻倍，注意力计算量翻四倍。FlashAttention（P13）就是来治它的。</td></tr>
+    <tr><td>模型"能同时顾及多个方面"</td><td>multi-head：多组注意力并行，各看各的侧面。</td></tr>
+  </table>
+
+  <h2>六、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="2"
+       data-ok="self-attention 让任意两个 token 一步直连（O(1)），且整句可并行计算——这正是它取代循环的两大理由。"
+       data-no="循环网络的问题恰恰是：必须顺序（不能并行）+ 长距离要走很多步会衰减。attention 把这两点都解决了。">
+    <div class="quiz-q">1. Transformer 用 attention 取代循环，核心赢在哪两点？</div>
+    <button class="quiz-opt">参数更少，而且训练数据需求更小</button>
+    <button class="quiz-opt">自带词序信息，不需要任何额外处理</button>
+    <button class="quiz-opt">整句可并行，且任意两词一步直连</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="Query 是「我要找什么」，去和所有 token 的 Key 点积算相关度；Value 才是真正被加权取走的内容。"
+       data-no="顺序是：用我的 Query 和所有 Key 点积得权重，再用权重对 Value 加权求和。Query 是发问方。">
+    <div class="quiz-q">2. 在 Q/K/V 里，「我带着去问全场的那个问题」是哪个？</div>
+    <button class="quiz-opt">是 Key，它挂出每个词的标签</button>
+    <button class="quiz-opt">是 Query，它代表我要找什么</button>
+    <button class="quiz-opt">是 Value，它装着真正的内容</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：attention 本身对词序无感（打乱也一样），所以必须额外注入位置编码，模型才知道谁先谁后。"
+       data-no="再想想细节③：attention 打乱词序结果不变，所以词序得靠额外的 positional encoding 注入。">
+    <div class="quiz-q">3. 为什么 Transformer 需要额外的「位置编码」？</div>
+    <button class="quiz-opt">因为 attention 本身分不出词的先后</button>
+    <button class="quiz-opt">因为要防止点积数值过大而饱和</button>
+    <button class="quiz-opt">因为多头之间需要对齐各自位置</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      先看图解打直觉：Jay Alammar — <a href="https://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer</a>。
+    </p>
+    <p style="margin:0.3rem 0">
+      再读原典：<a href="https://arxiv.org/abs/1706.03762">Attention Is All You Need (arXiv:1706.03762)</a>——
+      重点读第 3.2 节（Scaled Dot-Product & Multi-Head Attention）。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      想看它怎么变成可跑的代码：Karpathy — <a href="https://www.youtube.com/watch?v=kCc8FmEb1nY">Let's build GPT</a>。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「Q/K/V 那三个矩阵是怎么学出来的？」「multi-head 拼起来之后维度怎么对上？」
+    「encoder 和 decoder 的 attention 有什么不一样？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0001-next-token-prediction.html">&#8592; 第 1 课：下一个 token 的概率分布</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P01</code> → 明天 P02</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Vaswani et al., <em>Attention Is All You Need</em>, NeurIPS 2017；Alammar, <em>The Illustrated Transformer</em>；Karpathy, <em>Let's build GPT</em>.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— self-attention 注意力权重互动（示意权重）—— */
+(function () {
+  var TOKENS = ["小猫", "因为", "累了", "所以", "它", "睡着了"];
+  // 每个 query 词对全句的示意注意力权重（和=1），语义合理即可
+  var ATTN = {
+    "它":   { w: [0.55, 0.04, 0.18, 0.04, 0.11, 0.08], note: "「它」是指代——注意力主要落在「小猫」上，模型在做指代消解。" },
+    "累了": { w: [0.48, 0.05, 0.22, 0.04, 0.13, 0.08], note: "「累了」在找主语：谁累了？权重落回「小猫」。" },
+    "睡着了": { w: [0.30, 0.04, 0.34, 0.05, 0.19, 0.08], note: "「睡着了」同时看「小猫」（谁）和「累了」（为什么）——注意力可以分给多个相关词。" }
+  };
+  var QUERIES = ["它", "累了", "睡着了"];
+  var COLORS = ["#d2691e","#c77b3c","#bb8d5e","#b09f80","#c79a4e","#a8b1a0"];
+  var qbtns = document.getElementById("qbtns");
+  var bars = document.getElementById("attn-bars");
+  var note = document.getElementById("attn-note");
+
+  function render(q) {
+    var w = ATTN[q].w;
+    var html = "";
+    TOKENS.forEach(function (tok, i) {
+      var pct = w[i] * 100;
+      var isQ = (tok === q);
+      html += '<div style="display:flex;align-items:center;gap:0.6rem;margin:0.3rem 0">'
+        + '<div style="width:4rem;text-align:right;font-weight:' + (isQ ? '700' : '500') + ';color:' + (isQ ? '#a8521a' : '#2b2620') + '">' + tok + (isQ ? ' ◀' : '') + '</div>'
+        + '<div style="flex:1;background:#efe7d8;border-radius:5px;overflow:hidden;height:1.2rem">'
+        + '<div style="height:100%;width:' + pct.toFixed(1) + '%;background:' + COLORS[i] + ';transition:width .15s"></div>'
+        + '</div>'
+        + '<div class="mono" style="width:3rem;font-size:0.78rem">' + pct.toFixed(0) + '%</div>'
+        + '</div>';
+    });
+    bars.innerHTML = html;
+    note.textContent = ATTN[q].note;
+    Array.prototype.forEach.call(qbtns.children, function (b) {
+      b.style.background = (b.textContent === q) ? "#d2691e" : "#fff";
+      b.style.color = (b.textContent === q) ? "#fff" : "#a8521a";
+    });
+  }
+  QUERIES.forEach(function (q) {
+    var b = document.createElement("button");
+    b.textContent = q;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.7rem;margin:0 0.25rem;cursor:pointer;font-size:0.82rem;font-family:inherit";
+    b.addEventListener("click", function () { render(q); });
+    qbtns.appendChild(b);
+  });
+  render("它");
+})();
+</script>
+</body>
+</html>

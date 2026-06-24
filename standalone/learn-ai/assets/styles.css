@@ -1,0 +1,165 @@
+/* ============================================================
+   AI 模型硬功底 · 共享样式表
+   Tufte 启发 + 暖色调（橙研所审美）+ 打印友好
+   每一课都 link 这个文件，保证整门课像「一门课」而非一堆碎页。
+   ============================================================ */
+
+:root {
+  --paper:      #fbf7f0;   /* 暖白纸 */
+  --ink:        #2b2620;   /* 深墨 */
+  --ink-soft:   #6b6256;   /* 边注/次要 */
+  --accent:     #d2691e;   /* 橙（焦点） */
+  --accent-deep:#a8521a;
+  --rule:       #e4dccf;   /* 分隔线 */
+  --code-bg:    #f3ecdf;
+  --good:       #2e7d52;
+  --bad:        #b3402f;
+  --maxw:       42rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 18px; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Georgia, "Songti SC", "STSong", "Noto Serif SC", serif;
+  line-height: 1.62;
+  padding: 3.5rem 1.25rem 6rem;
+}
+
+.wrap { max-width: var(--maxw); margin: 0 auto; }
+
+/* ---- Header ---- */
+.course-tag {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--accent-deep); font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+.lesson-no {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 1.1rem;
+}
+h1 {
+  font-size: 2.1rem; line-height: 1.18; margin: 0 0 0.6rem;
+  letter-spacing: -0.01em;
+}
+h2 {
+  font-size: 1.32rem; margin: 2.6rem 0 0.7rem;
+  padding-bottom: 0.3rem; border-bottom: 2px solid var(--rule);
+}
+h3 { font-size: 1.08rem; margin: 1.6rem 0 0.4rem; }
+
+p { margin: 0.85rem 0; }
+
+a { color: var(--accent-deep); text-decoration: none; border-bottom: 1px solid rgba(168,82,26,0.35); }
+a:hover { border-bottom-color: var(--accent-deep); }
+
+strong { color: var(--ink); }
+em { color: var(--accent-deep); font-style: italic; }
+
+/* ---- Mission tie-in banner ---- */
+.mission {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.92rem; line-height: 1.5;
+  background: linear-gradient(180deg, #fff5e9, #fdeede);
+  border-left: 4px solid var(--accent);
+  padding: 0.85rem 1.1rem; border-radius: 0 8px 8px 0;
+  margin: 1.4rem 0 2rem; color: #5a4a36;
+}
+.mission b { color: var(--accent-deep); }
+
+/* ---- The one idea ---- */
+.big-idea {
+  font-size: 1.18rem; line-height: 1.5;
+  text-align: center; font-style: italic;
+  margin: 2rem auto; max-width: 34rem; color: var(--ink);
+  padding: 1.2rem 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+}
+
+/* ---- Sidenote-ish citation ---- */
+.cite { font-size: 0.78rem; color: var(--ink-soft); }
+sup.ref { font-size: 0.7rem; color: var(--accent-deep); }
+
+/* ---- Code ---- */
+code, .mono {
+  font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.85em; background: var(--code-bg);
+  padding: 0.1em 0.35em; border-radius: 4px;
+}
+pre {
+  background: var(--code-bg); padding: 1rem 1.1rem; border-radius: 8px;
+  overflow-x: auto; font-size: 0.82rem; line-height: 1.5;
+  border: 1px solid var(--rule);
+}
+pre code { background: none; padding: 0; }
+
+/* ---- Tables (对照表 是这门课的主力) ---- */
+table {
+  width: 100%; border-collapse: collapse; margin: 1.2rem 0;
+  font-family: -apple-system, "PingFang SC", sans-serif; font-size: 0.9rem;
+}
+th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { color: var(--accent-deep); font-weight: 700; border-bottom: 2px solid var(--rule); }
+tr:last-child td { border-bottom: none; }
+
+/* ---- Callouts ---- */
+.callout {
+  background: #fff; border: 1px solid var(--rule); border-radius: 10px;
+  padding: 1rem 1.2rem; margin: 1.4rem 0;
+}
+.callout.primary { border-color: var(--accent); background: #fffaf3; }
+.callout .label {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+  font-weight: 700; color: var(--accent-deep); margin-bottom: 0.4rem;
+}
+
+/* ---- Teacher reminder ---- */
+.ask-teacher {
+  font-family: -apple-system, "PingFang SC", sans-serif; font-size: 0.9rem;
+  background: #f0ece3; border-radius: 10px; padding: 1rem 1.2rem;
+  margin: 2.4rem 0 1rem; color: #5a5346;
+}
+.ask-teacher b { color: var(--accent-deep); }
+
+/* ---- Nav footer ---- */
+.nav {
+  display: flex; justify-content: space-between; gap: 1rem;
+  margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule);
+  font-family: -apple-system, "PingFang SC", sans-serif; font-size: 0.85rem;
+}
+
+/* ============================================================
+   Quiz widget（配合 assets/quiz.js）
+   ============================================================ */
+.quiz { margin: 1.4rem 0; font-family: -apple-system, "PingFang SC", sans-serif; }
+.quiz-q { font-weight: 700; margin-bottom: 0.6rem; font-size: 0.96rem; }
+.quiz-opt {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  background: #fff; border: 1.5px solid var(--rule); border-radius: 8px;
+  padding: 0.6rem 0.9rem; margin: 0.4rem 0; font-size: 0.9rem; color: var(--ink);
+  transition: border-color 0.12s, background 0.12s;
+}
+.quiz-opt:hover { border-color: var(--accent); }
+.quiz-opt.correct { border-color: var(--good); background: #eaf6ef; }
+.quiz-opt.wrong   { border-color: var(--bad); background: #fbecea; }
+.quiz-opt:disabled { cursor: default; opacity: 0.95; }
+.quiz-fb {
+  font-size: 0.86rem; line-height: 1.5; margin-top: 0.5rem;
+  padding: 0.6rem 0.9rem; border-radius: 8px; display: none;
+}
+.quiz-fb.show { display: block; }
+.quiz-fb.ok  { background: #eaf6ef; color: var(--good); }
+.quiz-fb.no  { background: #fbecea; color: var(--bad); }
+
+/* ---- Print ---- */
+@media print {
+  body { padding: 0; font-size: 11pt; background: #fff; }
+  .quiz-opt:hover { border-color: var(--rule); }
+  .ask-teacher, .nav, .interactive-hint { display: none; }
+  a { color: var(--ink); border: none; }
+}

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 1 课 · 模型只在做一件事：算下一个 token 的概率分布</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 1 课 / 12 &nbsp;·&nbsp; 模块 W1：建立全局图</div>
+
+  <h1>模型其实只在做一件事：<br>算「下一个 token」的概率分布</h1>
+
+  <div class="mission">
+    你天天拧 <b>temperature</b>、调 <b>top-p</b>，抱怨语音 agent「忽冷忽热、偶尔胡说」。
+    这一课把那个旋钮背后的机器拆开——拆完之后，「输出不稳定」对你不再是玄学，而是
+    <b>一个分布上怎么挑数</b> 的问题。这是整门课所有后续机制（注意力、采样、对齐）的地基。
+  </div>
+
+  <div class="big-idea">
+    一个 LLM，本质是一个函数：<br>
+    吃进「到目前为止的文本」，吐出「词表里<em>每一个</em> token 接下来出现的概率」。<br>
+    生成一整句话，只是把这个函数循环调用。
+  </div>
+
+  <h2>一、还原逻辑：生成一句话，到底发生了什么</h2>
+
+  <p>
+    我们以为模型「写出了一句话」。其实它一次只往前走<strong>一个 token</strong>，然后把刚写出的 token 接回输入，
+    重新算一遍，再走一个。这个「吐一个、接回去、再吐一个」的循环，叫
+    <strong>自回归（autoregressive）生成</strong>。<sup class="ref">1</sup>
+  </p>
+
+  <pre><code>输入：「猫坐在」
+  → 模型算出下一个 token 的概率分布 → 挑中「垫子」
+输入：「猫坐在垫子」
+  → 再算一次分布 → 挑中「上」
+输入：「猫坐在垫子上」
+  → 再算一次 → 挑中「。」（句号，结束）</code></pre>
+
+  <p>
+    关键的反直觉点在这里：模型并<em>没有</em>「想好一整句再写」。它对第 10 个字的规划，
+    完全发生在它已经写完前 9 个字、第 10 次调用自己的那一刻。
+    <span class="cite">—— 这一条之后会反复回来咬你：它解释了为什么模型「数不清自己写了几个字」、为什么它会顺着一个错误的开头一路编下去。</span>
+  </p>
+
+  <h2>二、抽框架：每一步都是这四步</h2>
+
+  <p>模型每往前走一个 token，内部都走同一条流水线：</p>
+
+  <table>
+    <tr><th>步骤</th><th>发生了什么</th><th>产物</th></tr>
+    <tr><td><strong>1. 前向计算</strong></td><td>把当前文本喂进网络（注意力 + 若干层），最后吐出一串「原始分数」</td><td><code>logits</code>：词表里每个 token 一个分数</td></tr>
+    <tr><td><strong>2. Softmax</strong></td><td>把这串分数压成「加起来 = 1」的概率</td><td>一个<strong>概率分布</strong></td></tr>
+    <tr><td><strong>3. 采样</strong></td><td>按概率从分布里<strong>挑一个</strong> token（这一步才用到 temperature / top-p）</td><td>1 个 token</td></tr>
+    <tr><td><strong>4. 拼接 & 回到第 1 步</strong></td><td>把挑中的 token 接到文本末尾，重新跑</td><td>更长的文本</td></tr>
+  </table>
+
+  <div class="callout">
+    <div class="label">最该刻进肌肉的一句</div>
+    模型第 1 步的输出<strong>不是一个词</strong>，而是<strong>整个词表上的一个概率分布</strong>——
+    一个上万维（GPT 词表约 5 万、Claude/现代模型约 10 万+）的向量，<strong>每一步都重新算一遍</strong>。
+    你平时看到的「那个字」，是第 3 步从这个分布里挑出来的<em>一个样本</em>。
+  </div>
+
+  <h2>三、对照表：这一个事实，解释了你早就遇到的怪现象</h2>
+
+  <table>
+    <tr><th>你遇到的现象</th><th>用「概率分布」一句话解释</th></tr>
+    <tr><td>同样的 prompt，输出每次不一样</td><td>第 3 步是<strong>随机采样</strong>，不是取最大值。除非你把 temperature 设 0。</td></tr>
+    <tr><td>调高 temperature → 更「有创意」也更容易胡说</td><td>temperature 把分布<strong>压平</strong>，本来概率很低的怪 token 也有机会被抽中。</td></tr>
+    <tr><td>模型一本正经地编（幻觉）</td><td>分布里「听起来最顺」的 token 概率最高，而「顺」≠「真」。它永远在挑最像的，不是最对的。</td></tr>
+    <tr><td>顺着一个错开头越编越离谱</td><td>第 4 步把错 token 接回输入，下一步就在「错误前提」上继续算分布。错误会自我强化。</td></tr>
+    <tr><td>让它「数 strawberry 里有几个 r」常出错</td><td>它没在「数」，它在挑下一个最可能的 token；数数不是这条流水线擅长的事。</td></tr>
+  </table>
+
+  <h2>四、动手玩：把第 2、3 步亲手拧一遍</h2>
+
+  <p class="interactive-hint cite">
+    下面是一组固定的 logits（模型对「猫坐在 ___ 上」给每个候选 token 打的原始分数）。
+    拖动 temperature，看 softmax 之后的概率分布怎么变。<strong>别背公式，先建立手感。</strong>
+  </p>
+
+  <div class="callout primary">
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.8rem">
+      <label style="font-family:-apple-system,sans-serif;font-size:0.9rem;font-weight:700;color:#a8521a">
+        Temperature = <span id="tval" class="mono">1.00</span>
+      </label>
+      <input id="temp" type="range" min="0.1" max="2.0" step="0.05" value="1.0" style="flex:1;min-width:200px;accent-color:#d2691e">
+    </div>
+    <div id="bars" style="font-family:-apple-system,'PingFang SC',sans-serif;font-size:0.85rem"></div>
+    <div id="readout" class="cite" style="margin-top:0.7rem"></div>
+  </div>
+
+  <p>
+    把滑块拖到 <strong>最左（0.1）</strong>：分布几乎全压到「垫子」一个 token 上——这就是
+    <strong>贪婪解码 / temperature≈0</strong>，几乎确定、可复现、但呆板。
+    拖到 <strong>最右（2.0）</strong>：分布被压平，连「薛定谔」这种离谱 token 都分到了可观概率——这就是「有创意」与「胡说」的同一个来源。
+  </p>
+
+  <h2>五、映射到你的项目</h2>
+
+  <table>
+    <tr><th>你的场景</th><th>其实是在这条流水线的哪一步做选择</th></tr>
+    <tr><td>语音招聘 agent 要「稳」，话术不能跑偏</td><td>调低 temperature / 用 top-p 收窄——让第 3 步只在分布的「头部」挑，牺牲多样性换稳定。</td></tr>
+    <tr><td>要 agent 文案有变化、不千篇一律</td><td>反过来，适度抬高 temperature，让第 3 步能碰到分布的「腰部」。</td></tr>
+    <tr><td>Grader 要可复现地打分</td><td>temperature=0，让第 3 步退化成「永远取最大」，同输入同输出。</td></tr>
+    <tr><td>autoevolve 在「优化 prompt」</td><td>本质是在改第 1 步的输入，从而<strong>改变整个分布的形状</strong>——prompt 工程 = 给分布动手术。</td></tr>
+  </table>
+
+  <h2>六、检索练习（关掉上面的内容，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="1"
+       data-ok="模型每一步输出的是覆盖整个词表的概率分布，你看到的那个字是从中采样出来的一个样本。"
+       data-no="它的直接输出不是单个词，而是整个词表上的一个概率分布——那个字是第 3 步采样的结果。">
+    <div class="quiz-q">1. 模型走一步，它的「直接输出」是什么？</div>
+    <button class="quiz-opt">它直接输出那一个最合适的中文词</button>
+    <button class="quiz-opt">它输出整个词表上的一个概率分布</button>
+    <button class="quiz-opt">它输出一整句已经规划好的话</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="2"
+       data-ok="Temperature 作用在第 3 步采样：压平分布，让低概率 token 也有机会，所以更发散也更易胡说。"
+       data-no="Temperature 不改前向计算，也不改 softmax 之前的 logits 大小关系；它在采样这一步把分布压平或收紧。">
+    <div class="quiz-q">2. 调高 temperature，本质上改变了哪一步？</div>
+    <button class="quiz-opt">第 1 步：让模型算出不同的 logits</button>
+    <button class="quiz-opt">第 4 步：让拼接顺序发生变化</button>
+    <button class="quiz-opt">第 3 步：把分布压平后再采样</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：错 token 被拼回输入，下一步就在错误前提上继续算分布，误差自我强化——这就是「顺着错开头越编越离谱」。"
+       data-no="再想想第 4 步：挑中的 token 会被接回输入，成为下一次计算的前提。错的前提会被一路沿用。">
+    <div class="quiz-q">3. 为什么模型会「顺着一个错误开头一路编下去」？</div>
+    <button class="quiz-opt">错 token 被接回输入，成了下一步的前提</button>
+    <button class="quiz-opt">因为 temperature 设得太低了</button>
+    <button class="quiz-opt">因为词表太大，算不过来</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="callout primary">
+    <div class="label">本课主源（最高质量，建议看）</div>
+    <p style="margin:0.3rem 0">
+      Jay Alammar — <a href="https://jalammar.github.io/illustrated-gpt2/">The Illustrated GPT-2</a>：
+      用图把「自回归生成循环」讲透，看「Auto-Regression」那一节就够本课了（约 15 分钟）。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      想要总览版心智模型：Karpathy —
+      <a href="https://www.youtube.com/watch?v=zjkBMFhNj_g">Intro to Large Language Models（1 小时）</a>。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「softmax 那个除法到底在干嘛？」「top-p 和 temperature 有什么区别，为什么要两个？」
+    「logits 是怎么从神经网络最后一层冒出来的？」——任何一句没拆透的，直接问我，别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0002-attention-is-all-you-need.html">下一课 &#8594; 第 2 课 · Attention Is All You Need 精读（经典论文 P01）</a></span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    1. Alammar, <em>The Illustrated GPT-2</em>（autoregression）；Karpathy, <em>Intro to LLMs</em>；3Blue1Brown, <em>Transformers</em> 系列。
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— softmax + temperature 互动 playground —— */
+(function () {
+  var TOKENS = [
+    { t: "垫子", logit: 3.2 },
+    { t: "沙发", logit: 2.4 },
+    { t: "屋顶", logit: 1.1 },
+    { t: "香蕉", logit: -0.4 },
+    { t: "薛定谔", logit: -1.2 }
+  ];
+  var COLORS = ["#d2691e","#c77b3c","#bb8d5e","#b09f80","#a8b1a0"];
+  var slider = document.getElementById("temp");
+  var tval = document.getElementById("tval");
+  var bars = document.getElementById("bars");
+  var readout = document.getElementById("readout");
+
+  function softmax(logits, T) {
+    var scaled = logits.map(function (z) { return z / T; });
+    var m = Math.max.apply(null, scaled);
+    var exps = scaled.map(function (z) { return Math.exp(z - m); });
+    var sum = exps.reduce(function (a, b) { return a + b; }, 0);
+    return exps.map(function (e) { return e / sum; });
+  }
+
+  function render() {
+    var T = parseFloat(slider.value);
+    tval.textContent = T.toFixed(2);
+    var probs = softmax(TOKENS.map(function (x) { return x.logit; }), T);
+    var html = "";
+    TOKENS.forEach(function (tok, i) {
+      var pct = (probs[i] * 100);
+      html += '<div style="display:flex;align-items:center;gap:0.6rem;margin:0.35rem 0">'
+        + '<div style="width:3.6rem;text-align:right;font-weight:600">' + tok.t + '</div>'
+        + '<div style="flex:1;background:#efe7d8;border-radius:5px;overflow:hidden;height:1.25rem">'
+        + '<div style="height:100%;width:' + pct.toFixed(1) + '%;background:' + COLORS[i] + ';transition:width 0.12s"></div>'
+        + '</div>'
+        + '<div class="mono" style="width:3.2rem;font-size:0.8rem">' + pct.toFixed(1) + '%</div>'
+        + '</div>';
+    });
+    bars.innerHTML = html;
+    var top = probs[0] * 100;
+    var weird = probs[4] * 100;
+    var note;
+    if (T <= 0.3) note = "≈ 贪婪解码：几乎确定挑「垫子」，可复现但呆板。";
+    else if (T >= 1.7) note = "分布被压平：连「薛定谔」都有 " + weird.toFixed(1) + "% 机会——这就是「胡说」的来源。";
+    else note = "「垫子」占 " + top.toFixed(0) + "%，但腰部 token 也有机会被抽中 → 这就是「同 prompt 不同输出」。";
+    readout.textContent = note;
+  }
+  slider.addEventListener("input", render);
+  render();
+})();
+</script>
+</body>
+</html>

@@ -938,6 +938,17 @@ def build():
         with open(os.path.join(SITE, "CNAME"), "w", encoding="utf-8") as f:
             f.write(SITE_DOMAIN + "\n")
 
+    # 独立板块：standalone/<name>/ 整目录原样发布到 site/<name>/（= chengyansuo.com/<name>/）。
+    # 绕开 markdown 渲染，用于「Learn AI」等自带交互(playground/quiz)的成品 HTML 课线。
+    # 注意：site 在 build 开头已 rmtree，这里在最后复制，故 standalone 内容不会被清掉。
+    STANDALONE = os.path.join(ROOT, "standalone")
+    if os.path.isdir(STANDALONE):
+        for name in sorted(os.listdir(STANDALONE)):
+            src = os.path.join(STANDALONE, name)
+            if os.path.isdir(src):
+                shutil.copytree(src, os.path.join(SITE, name))
+                print("standalone published: site/%s/" % name)
+
     for lang in LANGS:
         print("build done [%s]: %d lectures + %d examples + %d labs" % (lang, counts[lang][0], counts[lang][1], counts[lang][2]))
     print("site/ ready (zh → /, en → /en/)")

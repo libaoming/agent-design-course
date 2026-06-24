@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 0 课 · 一张地图：LLM 从「一个文件」到「一台操作系统」</title>
+<link rel="stylesheet" href="../assets/styles.css">
+<style>
+  .stage { display:flex; align-items:flex-start; gap:0.9rem; margin:0.5rem 0; }
+  .stage-no { flex-shrink:0; width:2rem; height:2rem; border-radius:50%; background:#d2691e; color:#fff;
+    font-family:-apple-system,sans-serif; font-weight:700; font-size:0.85rem;
+    display:flex; align-items:center; justify-content:center; }
+  .stage-body { font-family:-apple-system,'PingFang SC',sans-serif; font-size:0.92rem; padding-top:0.15rem; }
+  .stage-body b { color:#a8521a; }
+  .stage-line { width:2px; height:0.8rem; background:#e4dccf; margin-left:0.95rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 0 课 / 全景导论 &nbsp;·&nbsp; 基于 Karpathy《Intro to LLMs》(Nov 2023)</div>
+
+  <h1>一张地图：<br>LLM 从「一个文件」到「一台操作系统」</h1>
+
+  <div class="mission">
+    这是<b>整门课的地图</b>。它把 Karpathy 那场经典 1 小时演讲压成一页——后面每一篇论文精读、你工作里的每一个 agent 问题，
+    都能挂回这张图上的某一站。先有全局，再钻细节。
+  </div>
+
+  <div class="big-idea">
+    LLM 的一生，可以用一句话概括：<br>
+    把互联网<em>压缩</em>成两个文件，再<em>教它对话</em>，最后让它长成一台<em>操作系统</em>。
+  </div>
+
+  <h2>一、LLM 的一生（八站全景）</h2>
+
+  <div class="stage"><div class="stage-no">1</div><div class="stage-body"><b>它是什么</b>：两个文件——<code>parameters</code>(140GB 权重) + <code>run.c</code>(~500 行运行代码)。AI 不是魔法，是一个能在 MacBook 上离线跑的文件。</div></div>
+  <div class="stage-line"></div>
+  <div class="stage"><div class="stage-no">2</div><div class="stage-body"><b>怎么来的</b>：把 ~10TB 互联网文本<b>有损压缩</b>进参数（6000 GPU·12 天·$2M）。「有损压缩」一句话解释了幻觉。</div></div>
+  <div class="stage-line"></div>
+  <div class="stage"><div class="stage-no">3</div><div class="stage-body"><b>怎么工作</b>：每步输出<b>整个词表的概率分布</b>，采样一个 token，循环。底层是 Transformer。模型是「难以理解的造物」→ 所以要靠<b>评估</b>来驾驭。</div></div>
+  <div class="stage-line"></div>
+  <div class="stage"><div class="stage-no">4</div><div class="stage-body"><b>两阶段训练</b>：预训练得 base model（知识）→ 微调得 assistant model（对话+对齐）。<em>知识在预训练就定死，微调只教「怎么说」。</em></div></div>
+  <div class="stage-line"></div>
+  <div class="stage"><div class="stage-no">5</div><div class="stage-body"><b>能力外扩</b>：多模态（看图、生成图、<b>语音 speech-to-speech</b>）。Karpathy 配图直接是电影《Her》。</div></div>
+  <div class="stage-line"></div>
+  <div class="stage"><div class="stage-no">6</div><div class="stage-body"><b>慢思考</b>：现在只有 System 1（脱口而出）；未来要 System 2（树搜索式推理）——<b>把时间换成准确率</b>。这是推理模型(o1)的预言。</div></div>
+  <div class="stage-line"></div>
+  <div class="stage"><div class="stage-no">7</div><div class="stage-body"><b>自我提升</b>：AlphaGo 靠自我对弈超越人类；LLM 的难题是开放语言<b>缺一个明确的 reward criterion</b>。</div></div>
+  <div class="stage-line"></div>
+  <div class="stage"><div class="stage-no">8</div><div class="stage-body"><b>终局：LLM OS</b>。LLM 不只是聊天框，而是新操作系统的内核：LLM=CPU，context window=RAM，工具/文件/浏览器/其他 LLM=外设。</div></div>
+
+  <h2>二、把整场串成一张地图（也是本课的全景表）</h2>
+
+  <table>
+    <tr><th>这一站</th><th>一句话</th><th>挂到 Learn AI 的哪里</th></tr>
+    <tr><td>LLM 是什么</td><td>两个文件：参数 + 运行代码</td><td>第 1 课（生成）</td></tr>
+    <tr><td>怎么训出来</td><td>压缩互联网→base；微调→assistant</td><td>论文 P05–P08、P15</td></tr>
+    <tr><td>它怎么工作</td><td>Transformer + 「靠评估驾驭造物」</td><td>第 2 课、论文 P01</td></tr>
+    <tr><td>能力外扩</td><td>多模态、语音（Her）</td><td>你的语音招聘 agent</td></tr>
+    <tr><td>慢思考</td><td>System 1 → System 2，时间换准确率</td><td>o1 / 推理模型</td></tr>
+    <tr><td>自我提升</td><td>AlphaGo 类比，缺 reward criterion</td><td>你的 Grader / autoevolve</td></tr>
+    <tr><td>LLM OS</td><td>LLM=CPU，context=RAM，工具=外设</td><td>你的 Context Engineering</td></tr>
+    <tr><td>安全</td><td>越狱 / 提示注入 / 投毒</td><td>你做线上 agent 的护栏</td></tr>
+  </table>
+
+  <h2>三、LLM OS：你做 agent 的顶层心智模型</h2>
+  <table>
+    <tr><th>传统电脑</th><th>LLM OS</th><th>对你的意义</th></tr>
+    <tr><td>CPU</td><td>LLM 本体</td><td>运算核心</td></tr>
+    <tr><td><strong>RAM</strong></td><td><strong>context window</strong></td><td>⭐ 这就是 Context Engineering——最稀缺、要精打细算</td></tr>
+    <tr><td>硬盘</td><td>文件系统 + embeddings</td><td>RAG / 知识库注入</td></tr>
+    <tr><td>软件/外设</td><td>计算器 / Python / 浏览器 / 音视频</td><td>tool use、你的语音 agent</td></tr>
+    <tr><td>网络</td><td>和其他 LLM 通信</td><td>多 agent 协作</td></tr>
+  </table>
+
+  <h2>四、安全：做线上 agent 必须懂的三类攻击</h2>
+  <table>
+    <tr><th>攻击</th><th>怎么打</th><th>对你的威胁</th></tr>
+    <tr><td>越狱 Jailbreak</td><td>「奶奶漏洞」、角色扮演、对抗后缀</td><td>诱导 agent 说不该说的</td></tr>
+    <tr><td>提示注入 Injection</td><td>把指令藏进简历/网页/图片，甚至诱导<b>数据外泄</b></td><td>⚠️ agent 一读外部内容就有风险</td></tr>
+    <tr><td>数据投毒 Poisoning</td><td>训练数据埋触发词后门（sleeper agent）</td><td>了解即可（在训练方）</td></tr>
+  </table>
+  <p class="cite">附 Karpathy 引的 OWASP LLM 清单：越狱 · 提示注入 · 投毒 · 对抗输入 · <strong>不安全的输出处理</strong> · 数据提取 · DoS · 权限升级 · 模型窃取。其中「不安全的输出处理」——把模型输出直接进库/执行——是工程上最易翻车的一环。</p>
+
+  <h2>五、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="0"
+       data-ok="知识在预训练（压缩互联网）阶段就定死了；微调只教模型「怎么把知识说成有用的回答」，不灌新知识。"
+       data-no="再想想第 4 站：预训练给知识，微调给风格与对齐。知识来自预训练。">
+    <div class="quiz-q">1. 一个 LLM 的「知识」主要是在哪个阶段获得的？</div>
+    <button class="quiz-opt">预训练阶段：压缩整个互联网</button>
+    <button class="quiz-opt">微调阶段：学十万条对话数据</button>
+    <button class="quiz-opt">采样阶段：每次推理时现查现学</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="在 LLM OS 比喻里，context window 就是 RAM——它是当下能被「看到」的工作内存，最稀缺，这正是 Context Engineering 要管的。"
+       data-no="再想想 LLM OS 那张表：LLM=CPU，硬盘=文件系统，而 context window 对应的是 RAM。">
+    <div class="quiz-q">2. 在「LLM OS」比喻里，context window 对应传统电脑的什么？</div>
+    <button class="quiz-opt">硬盘：负责长期存放全部资料</button>
+    <button class="quiz-opt">内存 RAM：当下的工作记忆</button>
+    <button class="quiz-opt">中央处理器 CPU：负责运算</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="2"
+       data-ok="提示注入：别人在你 agent 会读到的外部内容（简历/网页）里藏指令，劫持它的行为甚至窃取数据——这是读外部内容的 agent 的头号威胁。"
+       data-no="越狱靠用户自己诱导；这里的风险是外部内容里藏的指令——那叫提示注入。">
+    <div class="quiz-q">3. 你的招聘 agent 要读用户上传的简历，最该防的攻击是？</div>
+    <button class="quiz-opt">模型窃取：别人复制走你的模型</button>
+    <button class="quiz-opt">数据投毒：训练数据被埋后门</button>
+    <button class="quiz-opt">提示注入：简历里藏了恶意指令</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      Andrej Karpathy — <a href="https://www.youtube.com/watch?v=zjkBMFhNj_g">Intro to Large Language Models（1 小时演讲）</a>。
+      这一课就是它的全景压缩；强烈建议完整看一遍，再回来用这张地图对照。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 这张地图上任何一站想往下钻——「有损压缩怎么就导致幻觉」「System 2 和 o1 是什么关系」「LLM OS 对我做 agent 到底意味着什么」——直接问我。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="../index.html">&#8592; Learn AI 课程目录</a></span>
+    <span class="cite"><a href="0001-next-token-prediction.html">第 1 课 · 下一个 token 的概率分布 &#8594;</a></span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：Andrej Karpathy, <em>Intro to Large Language Models</em>, Nov 2023（45 页 slides 全程精读）。</p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
