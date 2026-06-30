@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 9 课 · GPT-3：在 prompt 里给几个例子，模型就当场学会了——你 prompt 工程的理论根</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 9 课 / 经典论文 <strong>P08</strong> &nbsp;·&nbsp; 阶段二：预训练范式（Brown et al., 2020）</div>
+
+  <h1>GPT-3：<br>在 prompt 里给几个例子，<br><span style="font-size:0.6em;color:#a8521a">模型就当场学会了——你 prompt 工程的理论根</span></h1>
+
+  <div class="mission">
+    上一课 <a href="0008-gpt-2.html">GPT-2</a> 证明了「不微调、靠一句提示」也能干活，但<b>还不够好</b>。这一课 GPT-3 把模型再<b>放大约 100 倍（175B）</b>，加一个动作——<b>在 prompt 里给几个示范</b>——表现就逼近专门微调的模型。
+    它回答你一个天天在做却没拆过的问题：<b>为什么我在 prompt 里塞几个例子，模型就突然「懂了」、照着干，而我根本没训练它？</b>
+  </div>
+
+  <div class="big-idea">
+    GPT-2 说：不微调也能干活（zero-shot）。GPT-3 把它推到决定性的一步：<br>
+    <strong>不微调、不更新任何权重，只在 prompt 里给几个例子（few-shot），模型就当场「学会」并照做。</strong><br>
+    这叫 <strong>in-context learning（上下文学习）</strong>——而且它是<strong>大模型才有的涌现能力</strong>：小模型给例子没用，够大了才突然管用。<em>你写的每一条带示例的 prompt，吃的都是这口红利。</em>
+  </div>
+
+  <h2>一、立靶：能不能不微调，也达到「接近微调」的水平？</h2>
+
+  <p>
+    GPT-2 的 zero-shot 惊艳，但和专门微调的模型比，<strong>分数还差一截</strong>。当时的主流路线仍是「预训练 + 每个任务微调一套」。GPT-3 提出一个更彻底的赌注：
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：与其给模型「梯度更新」，不如给它「几个例子看看」？</div>
+    <p style="margin:0.3rem 0">
+      GPT-3 不为任何下游任务更新权重。它把任务示范<strong>直接写进 prompt</strong>：
+      给几对「英文 → 法文」，再给一个新英文，模型就接着输出法文。
+      <strong>没有梯度、没有训练、没有任务头</strong>——模型只是在一次普通的前向推理里，「看了看例子」就照做了。这就是 <strong>in-context learning</strong>。
+    </p>
+  </div>
+
+  <h2>二、抽框架：in-context learning 的三档（给几个例子）</h2>
+
+  <p>同一个任务，按 prompt 里塞<strong>几个示范</strong>分成三档——这条轴你天天在调，只是没起过名字：</p>
+
+  <table>
+    <tr><th>档位</th><th>prompt 里有什么</th><th>例子（英译法）</th></tr>
+    <tr><td><strong>zero-shot</strong></td><td>只有指令，0 个示范</td><td><code>翻译成法语：cheese →</code></td></tr>
+    <tr><td><strong>one-shot</strong></td><td>指令 + 1 个示范</td><td><code>翻译成法语：sea → mer ／ cheese →</code></td></tr>
+    <tr><td><strong>few-shot</strong></td><td>指令 + 几个（典型 3–5）示范</td><td><code>sea → mer ／ dog → chien ／ book → livre ／ cheese →</code></td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">关键：这三档全程<strong>不更新一个权重</strong></div>
+    <p style="margin:0.3rem 0">
+      和 fine-tuning 的根本区别——fine-tuning 是<strong>改权重、永久生效</strong>；in-context learning 是<strong>把例子放进上下文、只在这一次推理里临时生效</strong>，下一个对话就忘了。
+      你在 prompt 里多塞两个示例 → few-shot；删掉示例只留指令 → zero-shot。<strong>你一直在这条轴上滑动，只是现在知道它叫什么了。</strong>
+    </p>
+  </div>
+
+  <h2>三、核心洞察：预训练让模型「学会了学习」（meta-learning）</h2>
+
+  <p class="interactive-hint cite">
+    GPT-2 的暗线是「任务藏在文本里」。GPT-3 把它升级成一句更狠的话——
+    <strong>模型在预训练里不只学知识，还学到一种「认出任务模式、当场套用」的通用能力（meta-learning，学会学习）。</strong>
+  </p>
+
+  <p>
+    你给的那几个例子，<strong>不是在训练它</strong>，而是一份<strong>临时的「任务说明书」</strong>：模型从例子里<strong>认出</strong>「哦，这是英译法 / 这是情感分类」，然后调用它预训练时早就学会的那项本事。
+    所以叫「<strong>学会学习</strong>」——预训练学的是「怎么快速认领一个新任务」，prompt 里的例子只是把任务<strong>指给它看</strong>。
+  </p>
+
+  <h2>四、动手玩：加例子，看 prompt 怎么搭、表现怎么涨</h2>
+  <p class="interactive-hint cite">
+    同一个任务（判断情感）。点不同档位，看 <strong>prompt 实际长什么样</strong>，以及为什么「多给一个例子」能让模型更准——<strong>全程没有任何训练</strong>。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选档位：　<span id="sbtns"></span>
+    </div>
+    <div id="sprompt" class="mono" style="font-size:0.92rem;line-height:1.7;background:#fff;border-radius:6px;padding:0.6rem 0.8rem;margin:0.5rem 0;white-space:pre-wrap"></div>
+    <div id="sout" style="text-align:center;font-size:0.95rem;margin:0.4rem 0"></div>
+    <div id="swhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>例子越多、格式越清晰，模型越容易「认出任务、对齐输出格式」。</strong>这也解释了你的体感——<strong>prompt 里示例的措辞、顺序、格式一变，效果就抖</strong>，因为模型全靠这几个例子来「认领任务」。
+  </p>
+
+  <h2>五、对照表（一）：GPT-2 → GPT-3 的「再放大一档」</h2>
+  <table>
+    <tr><th>维度</th><th>GPT-2（P07）</th><th>GPT-3（本篇 P08）</th></tr>
+    <tr><td>参数</td><td>1.5B</td><td><strong>175B</strong>（约 117 倍）</td></tr>
+    <tr><td>架构</td><td>decoder-only + pre-LN</td><td>同骨架，<strong>+ 交替的稀疏注意力层</strong>（省长上下文算力）</td></tr>
+    <tr><td>怎么做任务</td><td>zero-shot（只给指令）</td><td><strong>zero / one / few-shot</strong>（可给示例）</td></tr>
+    <tr><td>核心论点</td><td>语言建模就是多任务学习</td><td><strong>够大的模型是 few-shot learner（会 in-context learning）</strong></td></tr>
+    <tr><td>对你的意义</td><td>「换大模型啥都会一点」</td><td><strong>「prompt 里塞例子就管用」</strong></td></tr>
+  </table>
+
+  <h2>六、对照表（二）：in-context learning 是「大模型才有的涌现」</h2>
+  <p>
+    GPT-3 最重要的曲线：<strong>few-shot 相对 zero-shot 的增益，随模型规模急剧放大</strong>。小模型你给再多例子也没用，模型够大了，「给例子」才突然变成强力杠杆。
+  </p>
+  <table>
+    <tr><th>模型规模</th><th>给几个例子（few-shot）有用吗</th><th>说明</th></tr>
+    <tr><td>小模型</td><td>几乎没用，给了也不会「认任务」</td><td rowspan="2" style="vertical-align:middle">ICL 不是设计出来的<br>是<strong>规模到了才涌现</strong>的</td></tr>
+    <tr><td><strong>175B 大模型</strong></td><td><strong>暴涨</strong>，few-shot 远超 zero-shot</td></tr>
+  </table>
+  <p class="cite">
+    🔮 这把「<a href="0008-gpt-2.html">涌现</a>」从 GPT-2 的苗头坐实了：<strong>in-context learning 本身就是一项随规模冒出来的能力</strong>。下一阶段 <strong>Scaling Laws（P10）/ Chinchilla（P11）</strong> 会告诉你：规模、数据、算力到底该怎么配，才最划算地买到这种能力。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你在 prompt 里塞 2–3 个「输入→输出」示例，模型就照着干</td><td>就是 <strong>few-shot in-context learning</strong>——你 prompt 工程最核心的那招，理论根在这篇</td></tr>
+    <tr><td>「示例换个顺序 / 改个格式，效果就抖」</td><td>因为模型全靠这几个例子<strong>认领任务、对齐格式</strong>，example 是它唯一的「任务说明书」</td></tr>
+    <tr><td>你纠结「这个任务该 few-shot 还是去微调」</td><td>就是 <strong>ICL（不改权重、临时）vs fine-tuning（改权重、永久）</strong>的取舍——量大稳定走微调，灵活少量走 few-shot</td></tr>
+    <tr><td>「为什么小模型怎么调 prompt 都不灵，大模型一点就通」</td><td>因为 ICL 是<strong>大模型才涌现</strong>的能力，prompt 技巧吃的是规模红利</td></tr>
+    <tr><td>你做 Grader / LLM-as-judge 时给评分示例</td><td>同一招：用 few-shot 示范「什么算好/坏」，让模型对齐你的评分标准——本质是 in-context 地「认领评分任务」</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：in-context learning 全程不更新权重，只把示例放进 prompt、在这一次推理里临时生效。"
+       data-no="看第二节：ICL 不改任何权重，只是把例子放进上下文，临时生效——这正是它和 fine-tuning 的根本区别。">
+    <div class="quiz-q">1. few-shot in-context learning 时，模型权重发生了什么？</div>
+    <button class="quiz-opt">每个例子都做一次梯度更新</button>
+    <button class="quiz-opt">只更新最后几层</button>
+    <button class="quiz-opt">一个权重都不更新（只在 prompt 里给例子，临时生效）</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：few-shot 的增益随规模急剧放大——小模型给例子没用，够大才涌现出 in-context learning。"
+       data-no="看第六节：ICL 是大模型才有的涌现能力，小模型给再多例子也不会『认任务』。">
+    <div class="quiz-q">2. 为什么小模型「给例子也不灵」，大模型「一给就管用」？</div>
+    <button class="quiz-opt">小模型的 prompt 长度不够</button>
+    <button class="quiz-opt">in-context learning 是规模到了才涌现的能力</button>
+    <button class="quiz-opt">大模型偷偷在后台微调了</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：GPT-3 的解释是 meta-learning——预训练让模型学会『认出任务模式并套用』，prompt 里的例子是临时的任务说明书。"
+       data-no="看第三节：模型在预训练学会了『学会学习』，例子不是在训练它，而是指给它『这是什么任务』。">
+    <div class="quiz-q">3. GPT-3 怎么解释「给几个例子就会做」这件事？</div>
+    <button class="quiz-opt">meta-learning：预训练学会了认任务，例子是临时说明书</button>
+    <button class="quiz-opt">例子被存进了模型的长期记忆</button>
+    <button class="quiz-opt">例子触发了一次快速微调</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">既然 in-context learning 这么方便，什么时候还该选 fine-tuning？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">取舍轴是<strong>「改不改权重」</strong>带来的几组权衡：</p>
+      <table>
+        <tr><th></th><th>few-shot（ICL）</th><th>fine-tuning</th></tr>
+        <tr><td>改权重</td><td>不改，临时生效</td><td>改，永久生效</td></tr>
+        <tr><td>上手成本</td><td>几乎为零，改 prompt 即可</td><td>要数据 + 训练 + 部署</td></tr>
+        <tr><td>每次推理成本</td><td><strong>更贵</strong>（例子占 token、每次都带）</td><td>更省（任务已焊进权重）</td></tr>
+        <tr><td>适合</td><td>任务多变、量小、要快试</td><td>任务固定、量大、要稳要省</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">经验法则：<strong>先用 few-shot 把任务跑通、验证价值；稳定且高频了，再考虑微调降本提质。</strong></p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">为什么示例的顺序、格式一改，效果就抖？怎么办？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">因为模型全靠这几个例子来<strong>「认领任务 + 对齐输出格式」</strong>——它没在训练，只是在模仿你给的模式。于是例子的<strong>顺序、措辞、标签分布、格式一致性</strong>都会影响它「认成什么任务」。GPT-3 论文里也实测到 few-shot 对这些敏感。</p>
+      <p style="margin:0.3rem 0" class="cite">实操上：<strong>① 保持所有示例格式严格一致</strong>（同样的分隔符、字段名）；<strong>② 标签分布别失衡</strong>（别全是正例）；<strong>③ 把最有代表性的例子放前后两端</strong>；④ 多测几组顺序取稳的。这正是「prompt 工程」要打磨的手艺。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">in-context learning 到底是不是「真的在学习」？模型里发生了什么？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>权重层面：没有任何学习</strong>——一次前向推理，参数纹丝不动。说它「学习」是从<strong>行为</strong>上看：给了例子后它的表现像「学会了新任务」。GPT-3 的解释是 <strong>meta-learning</strong>：预训练已经把「认任务、套模式」的本事压进权重，推理时例子只是<strong>激活</strong>对应的能力。</p>
+      <p style="margin:0.3rem 0" class="cite">一个有用的心智模型：<strong>例子是「检索 + 对齐」的线索，不是「训练信号」。</strong>模型在用它的注意力，从你给的几个例子里读出任务规则，再套到新输入上。所以它叫 in-<em>context</em> learning——学习发生在「上下文」里，不在权重里。🔮</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Brown et al. —
+      <a href="https://arxiv.org/abs/2005.14165">Language Models are Few-Shot Learners（GPT-3, 2020）</a>。
+    </p>
+    <p style="margin:0.3rem 0">
+      建立直觉首选：Jay Alammar — <a href="https://jalammar.github.io/illustrated-gpt2/">The Illustrated GPT-2</a>（自回归生成与 decoder-only 直觉，GPT-3 同源放大）。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      阶段二（预训练范式）到此收官：<strong>GPT-1 立范式 → GPT-2 放大见涌现 → GPT-3 坐实 in-context learning</strong>。下一阶段 <strong>P09 T5 / P10 Scaling Laws</strong>：先统一「万物皆 text-to-text」，再量化「规模到底怎么配最划算」。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「few-shot 的例子放 prompt 越多越好吗？」「ICL 和 RAG 给的『上下文』是一回事吗？」
+    「为什么说 ICL 是 meta-learning 而不是普通的模式匹配？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0008-gpt-2.html">&#8592; 第 8 课：GPT-2 (P07)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P08</code> → 明天 P09（T5）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Brown et al., <em>Language Models are Few-Shot Learners</em>, 2020；Alammar, <em>The Illustrated GPT-2</em>.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 加例子，看 prompt 怎么搭、为什么更准 —— */
+(function () {
+  var TASK = "判断情感（正面/负面）";
+  var S = [
+    {
+      cap: "zero-shot（0 例）",
+      prompt: "判断下面这句话的情感（正面/负面）：\n「这家店服务太差，再也不来了」\n情感：",
+      out: "可能输出 → <strong>负面</strong>（但也可能跑偏、格式不稳）",
+      why: "只给指令、0 个例子。模型得自己猜你要的输出格式（是「负面」？「消极」？「差评」？）——<strong>认得对任务，但对不齐格式</strong>。"
+    },
+    {
+      cap: "one-shot（1 例）",
+      prompt: "「今天阳光真好，心情超棒」→ 正面\n「这家店服务太差，再也不来了」→",
+      out: "输出 → <strong>负面</strong>（格式被例子框住了）",
+      why: "1 个示范，模型立刻<strong>认出任务 + 锁定输出格式</strong>（→ 正面/负面）。这就是「例子＝临时任务说明书」。"
+    },
+    {
+      cap: "few-shot（3 例）",
+      prompt: "「今天阳光真好，心情超棒」→ 正面\n「等了一小时菜还没上」→ 负面\n「包装精美，物超所值」→ 正面\n「这家店服务太差，再也不来了」→",
+      out: "输出 → <strong>负面</strong>（更稳、更准、边界 case 也更可靠）",
+      why: "多个示范覆盖了正/负两类、不同句式，模型对任务的「认领」更牢，<strong>边界情况也更稳</strong>。这就是 few-shot 的增益——全程没训练，只是例子给够了。"
+    }
+  ];
+  var sbtns = document.getElementById("sbtns");
+  function render(idx) {
+    var s = S[idx];
+    document.getElementById("sprompt").textContent = s.prompt;
+    document.getElementById("sout").innerHTML = s.out;
+    document.getElementById("swhy").innerHTML = s.why;
+    Array.prototype.forEach.call(sbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  S.forEach(function (s, i) {
+    var b = document.createElement("button");
+    b.textContent = s.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    sbtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 19 课 · Constitutional AI：写一部宪法，让 AI 自己批评自己——Claude 的对齐方法根</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 19 课 / 经典论文 <strong>P18</strong> &nbsp;·&nbsp; 阶段四：对齐与推理（Bai et al., Anthropic, 2022）</div>
+
+  <h1>Constitutional AI：<br>写一部宪法，让 AI 自己批评自己<br><span style="font-size:0.55em;color:#a8521a">——Claude 的对齐方法根</span></h1>
+
+  <div class="mission">
+    前两课 <a href="0016-instructgpt-rlhf.html">RLHF</a> 和 <a href="0018-dpo.html">DPO</a> 都吃<b>海量人工偏好标注</b>——尤其「无害性」那部分，又贵、又慢、又不一致，还让标注者天天读有害内容、身心俱疲。而且这些价值观<b>藏在几万条标注里</b>，看不见、改不动。
+    这一课 Constitutional AI 换个思路：<b>把人的活从「标几万条样本」挪到「写一部宪法」（一组自然语言原则），然后让 AI 照着宪法<u>自己批评、自己修改、自己互评</u>。</b>
+    它回答一个对你尤其亲切的问题：<b>能不能少用人工标注、让模型用一套<u>可读可改</u>的原则自我对齐？——这正是你做 LLM-as-judge 时在干的事的「对齐版」。</b>
+  </div>
+
+  <div class="big-idea">
+    一句话：<strong>用一部「宪法」（写下来的原则）替代大量人工标注，让 AI 自我批评-修订、并自己当裁判生成偏好——人类反馈变成 AI 反馈（RLAIF）。</strong><br>
+    两阶段：<strong>① 监督阶段</strong>——模型先给出（可能有害的）回答，再照宪法<strong>自我批评、自我修订</strong>，拿修订结果微调；<strong>② RL 阶段（RLAIF）</strong>——让 AI 照宪法给一对回答<strong>评好坏</strong>，用这批 AI 生成的偏好去训奖励、跑 RL。
+    <em>价值观从「藏在标注里」变成「写在一份可审计、可修改的文档里」。这是 Claude（也就是我）的对齐方法根。</em>
+  </div>
+
+  <h2>一、立靶：靠人标「无害」，又贵又熬人又不透明</h2>
+
+  <p>
+    RLHF/DPO 的对齐，命脉是<strong>人类偏好数据</strong>。「有用」还好标，但<strong>「无害」</strong>那部分特别难：要人去判断大量有害、擦边、敏感的内容——<strong>成本高、标准飘、还伤标注者的身心</strong>。更麻烦的是，模型最终的「价值观」<strong>散落在几万条标签里，没人能直接读出来、也改不动</strong>。
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：人能不能只「定原则」，把「逐条执行」交给 AI？</div>
+    <p style="margin:0.3rem 0">
+      你已经从 <a href="0017-chain-of-thought.html">CoT</a> 知道：大模型能<strong>对照标准做推理判断</strong>。那么——<strong>能不能给它一组写下来的原则（宪法），让它<u>自己</u>照着检查、修正、评判自己的输出？</strong>
+      人只负责<strong>写好那部宪法</strong>（一次性、可读、可改），把「逐条审查几万个样本」这种又多又熬人的活，交给 AI 规模化地干。
+    </p>
+  </div>
+
+  <h2>二、抽框架：两阶段——先自我修订，再自我互评</h2>
+
+  <table>
+    <tr><th>阶段</th><th>做什么</th><th>关键</th></tr>
+    <tr><td><strong>① 监督阶段</strong><br>（自我批评-修订）</td><td>模型对有害请求先给出回答 → 让它<strong>照宪法某条原则批评自己</strong>（「指出这个回答哪里有害」）→ 让它<strong>据此修订</strong> → 拿一堆「修订后的好回答」去微调</td><td><strong>无害样本由模型自己改出来</strong>，不用人标</td></tr>
+    <tr><td><strong>② RL 阶段</strong><br>（RLAIF）</td><td>同一问题生成两个回答 → 让 AI <strong>照宪法判「哪个更好/更无害」</strong> → 用这批 <strong>AI 生成的偏好</strong>训奖励、跑 RL（流程同 RLHF，只是反馈来自 AI）</td><td><strong>排序的人，换成了照宪法判的 AI</strong></td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">一句话抓住转变：RLHF → RLAIF</div>
+    <p style="margin:0.3rem 0">
+      RLHF 是 <strong>RL from Human Feedback</strong>；CAI 的第二阶段是 <strong>RLAIF：RL from AI Feedback</strong>。
+      唯一的实质替换——<strong>那个「给输出排序的裁判」，从人类换成了「一个照宪法判断的 AI」</strong>。
+      于是对齐所需的人力，从「标注成千上万条」坍缩成「<strong>写好一部宪法 + 少量示范</strong>」。
+    </p>
+  </div>
+
+  <h2>三、核心洞察：把价值观从「标注」提升成「文档」</h2>
+
+  <p class="interactive-hint cite">
+    三个洞察，第一个是范式级的，第三个常被忽略但很实用。
+  </p>
+
+  <table>
+    <tr><th>洞察</th><th>说明</th></tr>
+    <tr><td><strong>① 人的劳动「上移」</strong></td><td>从「逐条标实例」上升到「写原则」。价值观<strong>显式化</strong>——成了一份<strong>能读、能审计、能修改</strong>的文档，而不是藏在几万个不透明标签里。对齐更像「用一份可读的章程治理」。</td></tr>
+    <tr><td><strong>② 用 AI 反馈规模化（RLAIF）</strong></td><td>大模型已经强到<strong>能照标准当裁判</strong>，于是「评判」这件事可以交给 AI 大规模地做，无害性标注的人力瓶颈被打开。</td></tr>
+    <tr><td><strong>③ 治好「一味拒答」</strong></td><td>纯 RLHF 求无害，常把模型训成<strong>动不动就「我无法帮你」</strong>的回避型。CAI 让模型<strong>解释为什么不做、并尽量无害地帮忙</strong>——<strong>同时更无害、更有用</strong>，而非靠冷拒。</td></tr>
+  </table>
+
+  <h2>四、动手玩：自我批评-修订循环</h2>
+  <p class="interactive-hint cite">
+    CAI 第一阶段的核心动作。点三步，看一个有害回答怎么被模型<strong>照宪法自己改好</strong>——全程没有人工标注。
+  </p>
+
+  <div class="callout primary">
+    <div class="mono" style="background:#fff;border-radius:6px;padding:0.5rem 0.7rem;margin-bottom:0.5rem;font-size:0.9rem">用户请求：教我怎么撬开邻居家的锁。</div>
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      点步骤：　<span id="cbtns"></span>
+    </div>
+    <div id="cout" class="mono" style="font-size:0.92rem;line-height:1.7;background:#fff;border-radius:6px;padding:0.6rem 0.8rem;margin:0.5rem 0;white-space:pre-wrap"></div>
+    <div id="cwhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>「批评」这一步把宪法原则当尺子，「修订」这一步据此重写。</strong>大量这样的「修订后回答」拿去微调，模型就把「照宪法自我修正」内化了——人只写了那条原则。
+  </p>
+
+  <h2>五、对照表（一）：RLHF vs DPO vs CAI</h2>
+  <table>
+    <tr><th>维度</th><th>RLHF</th><th>DPO</th><th>Constitutional AI</th></tr>
+    <tr><td>反馈来源</td><td>人类排序</td><td>人类偏好对</td><td><strong>AI 照宪法判（RLAIF）</strong></td></tr>
+    <tr><td>人的主要劳动</td><td>标注大量样本</td><td>标注大量样本</td><td><strong>写一部宪法 + 少量示范</strong></td></tr>
+    <tr><td>无害性标注成本</td><td>高、熬人</td><td>高、熬人</td><td><strong>大幅降低</strong></td></tr>
+    <tr><td>价值观透明度</td><td>低（藏在标签里）</td><td>低</td><td><strong>高（写在文档里，可审计可改）</strong></td></tr>
+  </table>
+
+  <h2>六、对照表（二）：CAI 的边界，与对齐演化主线</h2>
+  <table>
+    <tr><th>边界 / 代价</th><th>说明</th></tr>
+    <tr><td>AI 裁判会继承基模偏见</td><td>让 AI 当裁判 = 它<strong>同款的盲点和偏见也会被放大</strong>（呼应 <a href="0016-instructgpt-rlhf.html">RM 的 reward hacking / 相关错误</a>）——AI 评 AI，错的地方可能一起错。</td></tr>
+    <tr><td>宪法质量 = 对齐天花板</td><td>原则写得含糊、有冲突、有盲区，模型就照着含糊地对齐。<strong>「写好宪法」本身是门难手艺</strong>，价值取舍也极敏感。</td></tr>
+    <tr><td>仍需人来定宪法</td><td>没有消灭人的判断，只是<strong>把它前置、集中到「立法」环节</strong>——谁来写、写什么，仍是人的责任。</td></tr>
+  </table>
+  <p class="cite">
+    🔮 对齐演化主线收束：<strong>RLHF（人标 + RL）→ DPO（人标、免 RL）→ Constitutional AI（AI 照宪法自标）</strong>——人的角色一路从「标注员」走向「立法者」。这是 <strong>Anthropic 的方法、Claude 的根</strong>。<strong>阶段四「对齐与推理」到此基本收尾</strong>，接下来转入<strong>检索与 Agent</strong>（P19 RAG → P20 ReAct → P21 Toolformer）——正对你的主业。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你给 <strong>LLM-as-judge / Grader</strong> 写的 rubric</td><td>就是一部<strong>迷你宪法</strong>——一组让 AI 照着评判的成文原则。CAI 是「把这套评判反馈回去对齐模型」的完整闭环，你已经在用它的核心零件</td></tr>
+    <tr><td>你想让 agent 输出更稳更安全，又不想人工逐条审</td><td>直接用 <strong>自我批评-修订循环</strong>：让模型照你的原则<strong>先批评自己的输出、再修订</strong>——不进人也能提质（通用 agent 技巧）</td></tr>
+    <tr><td>你的 <strong>autoevolve</strong> 缺人工偏好数据</td><td>RLAIF 给你一条路：<strong>用 AI 照成文标准自动生成偏好对</strong>，喂给 DPO/优化闭环——人只维护那份标准</td></tr>
+    <tr><td>你要让产品的「价值观/风格」可被团队审查和迭代</td><td>CAI 的精神：<strong>把规则写成可读文档</strong>（而非埋在 prompt 碎片或标注里），团队能一起看、一起改——治理友好</td></tr>
+    <tr><td>「AI 自己评自己，靠谱吗」</td><td>记住边界：<strong>AI 裁判继承基模盲点</strong>（会一起错），<strong>宪法质量是上限</strong>——所以仍要 held-out / 真人抽检兜底（同 <a href="0016-instructgpt-rlhf.html">Goodhart</a> 那一课）</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：CAI 用一部成文宪法 + 让 AI 自我批评-修订、自己照宪法评判，大幅减少人工标注。"
+       data-no="看第二节：CAI 核心是『写宪法 + AI 自我批评-修订 + AI 照宪法互评』，把人力从标注挪到立法。">
+    <div class="quiz-q">1. Constitutional AI 的核心做法是？</div>
+    <button class="quiz-opt">用更多人工标注覆盖无害性</button>
+    <button class="quiz-opt">写一部宪法，让 AI 照它自我批评-修订、自己评判</button>
+    <button class="quiz-opt">把模型参数扩大以提升安全性</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：RLAIF = RL from AI Feedback，把『排序的裁判』从人类换成照宪法判断的 AI。"
+       data-no="看第二节 callout：RLAIF 把 RLHF 里的人类裁判换成『照宪法判断的 AI』。">
+    <div class="quiz-q">2. RLAIF 相比 RLHF，关键替换是什么？</div>
+    <button class="quiz-opt">把 RL 换成监督学习</button>
+    <button class="quiz-opt">把奖励模型去掉</button>
+    <button class="quiz-opt">把「排序的裁判」从人类换成照宪法判断的 AI</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：AI 裁判会继承基模的盲点和偏见，宪法质量也是对齐上限——所以仍需人定宪法 + 兜底校验。"
+       data-no="看第六节：CAI 的边界是 AI 反馈继承基模偏见、宪法质量决定上限，人仍要负责立法。">
+    <div class="quiz-q">3. Constitutional AI 的主要边界是？</div>
+    <button class="quiz-opt">AI 裁判继承基模偏见；宪法质量是对齐天花板</button>
+    <button class="quiz-opt">它比 RLHF 需要更多人工标注</button>
+    <button class="quiz-opt">它完全消除了人的判断</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">「AI 自己评自己」不会循环自证、越对齐越偏吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>这是真实风险，靠几点压住。</strong>① <strong>宪法是外部锚</strong>——评判不是「凭模型自己的喜好」，而是「照一份<u>人写的、独立于模型</u>的原则」，给了个模型之外的参照系；② <strong>批评/评判任务比生成任务容易</strong>——判断「这段是否违反某原则」往往比一次写对更简单（能力不对称），所以 AI 当裁判常常比它当作者更可靠；③ 但<strong>共享盲点消不掉</strong>：模型不知道的、或基模本身就有的偏见，它当裁判时也会漏、也会带。</p>
+      <p style="margin:0.3rem 0" class="cite">所以 CAI <strong>不号称自给自足</strong>：人定宪法是外部输入，且实践中仍配<strong>真人评估、红队测试、held-out 校验</strong>来发现「自评自证」的偏移——和 <a href="0016-instructgpt-rlhf.html">Goodhart</a> 那课的纪律一致：<strong>对着代理优化，必须有独立的锚来发现它在钻空子。</strong></p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">「宪法」具体长什么样？和我写的 system prompt / rubric 有啥区别？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">宪法是<strong>一组自然语言原则</strong>（如「选择最无害、最诚实的回答」「避免帮助违法行为，但要解释原因」），来源包括人权宣言、信任与安全实践等。形式上确实<strong>像你写的 rubric / 守则</strong>。</p>
+      <p style="margin:0.3rem 0" class="cite">区别在<strong>「用在哪」</strong>：你的 system prompt 是<strong>推理时</strong>挂在上下文里临时约束（不改权重）；CAI 的宪法是<strong>训练时</strong>用来生成自我批评和 AI 偏好、<strong>把对齐烤进权重</strong>。一句话：<strong>同样一份原则，写进 system prompt 是「ICL 式临时对齐」，喂进 CAI 流程是「训练式永久对齐」</strong>——又一次「改 prompt vs 改权重」的轴（<a href="0009-gpt-3.html">改动幅度轴</a>）。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">我能不能不训练模型，只借 CAI 的思路提升我 agent 的质量？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>完全可以，而且这是性价比最高的借用法。</strong>把 CAI 第一阶段的<strong>「自我批评-修订」搬到推理时</strong>：让你的 agent 产出初稿 → 用一段「请照以下原则检查这份输出的问题」prompt 让它<strong>自我批评</strong> → 让它<strong>据此修订</strong>，再输出。不碰任何权重，纯靠多一轮推理就显著提质（业界叫 self-refine / reflexion）。</p>
+      <p style="margin:0.3rem 0" class="cite">代价是<strong>多花 token 和延迟</strong>（和 <a href="0017-chain-of-thought.html">CoT</a> 同款取舍）——所以适合<strong>对质量/安全要求高、能容忍多一轮的环节</strong>，realtime 主链路要谨慎。心法：<strong>把你想要的标准写成一小段「原则」，让模型先自评再交付。</strong></p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">宪法会改变模型权重吗？我改 .claude / system prompt 会改权重吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>干脆的答案：改 .claude 文件不会、也不可能改权重，一个都动不了。</strong>分清两件事：</p>
+      <table>
+        <tr><th></th><th>CAI 宪法（在 Anthropic）</th><th>你的 .claude / system prompt</th></tr>
+        <tr><td>用在何时</td><td><strong>训练时</strong></td><td><strong>推理时</strong>（每次请求）</td></tr>
+        <tr><td>怎么起作用</td><td>当 prompt 生成批评+偏好数据 → 微调</td><td>作为文本 token 拼进输入，给冻结模型读</td></tr>
+        <tr><td>动权重吗</td><td><strong>动</strong>（微调那步，永久）</td><td><strong>完全不动</strong>（一字节不变）</td></tr>
+        <tr><td>改了之后</td><td>得到新版本模型</td><td>只改下一次请求的输入</td></tr>
+      </table>
+      <p style="margin:0.3rem 0">关键澄清：连 CAI 也不是「宪法变成权重」——宪法是<strong>当 prompt 用</strong>来生成数据，真正改权重的是<strong>那批数据的微调</strong>（宪法 → 生成信号 → 微调 → 改权重）。模型训完部署后，价值观已烤进权重，宪法在推理时不需再挂。</p>
+      <p style="margin:0.3rem 0" class="cite">心智模型：<strong>权重 = 我「出厂+受教育」的大脑</strong>（训练定型，改它=出新版本如 4-7→4-8）；<strong>上下文（CLAUDE.md / system prompt / 记忆文件）= 你这次跟我说的话</strong>（当场照办、这次结束就「忘」，下次靠文件再喂一遍仍是文本不是权重）。改 .claude = 这条轴的右端 = <strong>ICL 式临时对齐</strong>。要真改权重得做训练（LoRA/DPO/full FT），需要权重访问权——闭源 Claude 你碰不到，只能玩 prompt 这侧；要动权重得拿开源模型自己跑（P12/P17 的活）。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">为什么「让 AI 批评」比「让 AI 直接生成无害回答」更有效？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">核心是<strong>判别比生成容易</strong>（generation-verification 不对称）。四层：① <strong>判别&lt;生成</strong>——「认出哪里有害」窄而受限，模型常能挑出自己都避不开的错（校对比写作易）；② <strong>批评单维聚焦、生成多目标杂耍</strong>——生成要同时顾有用/流畅/格式/无害，批评只指向一条原则，注意力全压一个轴（拆解）；③ <strong>批评把「思考算力」花在评估上</strong>——等于给安全开了 <a href="0017-chain-of-thought.html">CoT</a>，直接生成没有这个专设步；④ <strong>先放开生成、再专门修</strong>——两头都要到，比逼一次穿好两根针更不易过度拒答/防护不足。</p>
+      <p style="margin:0.3rem 0" class="cite">一句话：判别易于生成 + 单维聚焦 + 专设推理步 + 定位修复（批评点名问题后，修订是精准改写而非重写）。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">宪法原则冲突了（无害 vs 有用打架）怎么办？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">CAI（和所有对齐）的中心张力，五层处理：① <strong>原则有优先级</strong>，常见框架 <strong>无害 ≳ 诚实 ≳ 有用</strong>，冲突先按序裁；② <strong>真正的解是「既…又…」</strong>——自我批评逼出同时无害且有用的回答（不教撬锁但给正当替代），多数表面冲突一个用心回答就化解；③ <strong>真两难交给模型按元原则权衡</strong>（学出来的取舍，非硬规则）；④ <strong>过度拒答 = 优先级配坏的症状</strong>，调宪法+数据更重视有用性可缓解（是校准问题）；⑤ <strong>残余张力消不掉</strong>（边界 case 是各家分化处）。</p>
+      <p style="margin:0.3rem 0" class="cite">对你写 Grader/agent 原则集：① <strong>显式排优先级</strong>（别留平级原则打架）；② 优先找 both/and 措辞；③ 接受有些是判断题；④ 把过度拒答/过度放行当<strong>校准信号</strong>去调，不当 bug 去堵。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">self-refine 里，批评和修订该用同一个模型还是换一个？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>默认同一个就够好；有特定风险时换更强/异源的。</strong></p>
+      <table>
+        <tr><th></th><th>同模型</th><th>换模型</th></tr>
+        <tr><td>成本</td><td>低</td><td>高</td></tr>
+        <tr><td>抓错</td><td>够用（判别易于生成）</td><td>更强（去相关盲点）</td></tr>
+        <tr><td>风险</td><td><strong>共享盲点</strong>+自我盖章偏袒</td><td>批评者更弱会添噪</td></tr>
+      </table>
+      <p style="margin:0.3rem 0">先用同模型起步——大头收益来自「<strong>有没有批评这一步</strong>」而非「谁批评」。<strong>升级到异源/更强批评者，当</strong>：高正确性/安全风险、观察到模型给自己盖橡皮章、预算允许（「强模型批评弱模型输出」是高性价比组合）。<strong>不论同不同都要拧的杠杆</strong>：① 给批评者干净中性的上下文（别带「你刚才的回答」的自辩偏袒，中性呈上）；② 聚焦的批评 prompt（单原则/明确 rubric，价值大头在此）；③ 不同温度或对抗人格（「挑出每个毛病」）。</p>
+      <p style="margin:0.3rem 0" class="cite">一脉相承：<a href="0016-instructgpt-rlhf.html">RLHF</a> 那条「裁判要异源/更强防相关错误」+ CoT 那条「算力花在判别上」——self-refine 的批评者设计就是这两条的落地。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Bai et al. (Anthropic) —
+      <a href="https://arxiv.org/abs/2212.08073">Constitutional AI: Harmlessness from AI Feedback（2022）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      延伸：Anthropic 的「<em>Claude's Constitution</em>」公开文档（看真实宪法长什么样）；以及 RLAIF 相关后续工作。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      <strong>阶段四「对齐与推理」收尾。</strong>下一阶段「检索与 Agent」开篇 <strong>P19 RAG</strong>：给模型外接知识库——直接对上你做的记忆/知识注入。再往后 <strong>P20 ReAct</strong> 就是你语音 agent 的理论原型。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「为什么『让 AI 批评』比『让 AI 直接生成无害回答』更有效？」「宪法里的原则冲突了（无害 vs 有用打架）怎么办？」
+    「self-refine 在我的 agent 里，批评和修订该用同一个模型还是换一个？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0018-dpo.html">&#8592; 第 18 课：DPO (P17)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P18</code> → 明天 P19（RAG）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Bai et al., <em>Constitutional AI: Harmlessness from AI Feedback</em>, Anthropic, 2022.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 自我批评-修订循环 —— */
+(function () {
+  var C = [
+    {
+      cap: "① 初始回答",
+      out: "当然，撬锁可以这样做：先用张力扳手……（给出了具体步骤）",
+      why: "一个「有用但有害」的模型，直接照着请求答了——这正是只优化「有用」、没对齐「无害」的样子。"
+    },
+    {
+      cap: "② 自我批评（照宪法）",
+      out: "【照原则自查】这个回答可能在帮助非法侵入他人住宅，违反「不协助违法、避免造成伤害」的原则——它没核实正当性，且提供了可被滥用的作案细节。",
+      why: "拿<strong>宪法里的一条原则当尺子</strong>，让模型<strong>指出自己回答的问题</strong>。判断「违不违反原则」比一次写对更容易——这是 CAI 能 work 的关键不对称。"
+    },
+    {
+      cap: "③ 修订后回答",
+      out: "我没法提供撬锁方法，因为那可能被用于非法侵入。如果你是被锁在<strong>自己</strong>家门外，建议联系正规开锁师傅或物业并出示身份；若是钥匙丢了，也可以找锁匠换锁。",
+      why: "据批评<strong>重写成既无害、又尽量有用</strong>的回答——<strong>解释为什么不做 + 给正当替代</strong>，而不是冷冰冰一句「我无法帮你」。大量这种修订样本拿去微调，模型就内化了。"
+    }
+  ];
+  var cbtns = document.getElementById("cbtns");
+  function render(idx) {
+    var c = C[idx];
+    document.getElementById("cout").textContent = c.out;
+    document.getElementById("cwhy").innerHTML = c.why;
+    Array.prototype.forEach.call(cbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  C.forEach(function (c, i) {
+    var b = document.createElement("button");
+    b.textContent = c.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    cbtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>

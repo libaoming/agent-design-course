@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 3 课 · Bahdanau Attention：attention 是从哪长出来的</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 3 课 / 经典论文 <strong>P02</strong> &nbsp;·&nbsp; 阶段一：地基（Bahdanau, Cho &amp; Bengio, 2014）</div>
+
+  <h1>Neural Machine Translation by Jointly<br>Learning to Align and Translate：<br><span style="font-size:0.62em;color:#a8521a">attention 的创世记</span></h1>
+
+  <div class="mission">
+    上一课你拆了 attention 的<b>终极形态</b>（Transformer 的 self-attention）。这一课往回走三年——
+    看 attention 第一次被发明出来时<b>长什么样、为治哪个病而生</b>。
+    读完你会发现：你每天用的 Q/K/V，<a href="0002-attention-is-all-you-need.html">第 2 课</a>那套机器，
+    其实是这篇 2014 论文的<b>直系胚胎</b>，只是当年它还长在一台 RNN 上。
+  </div>
+
+  <div class="big-idea">
+    别再逼模型把<em>整句话</em>压进<em>一个</em>向量。<br>
+    生成每一个译词时，<strong>回头看源句的所有词</strong>，<br>
+    要看谁、看多重，让模型自己当场算——这就是 attention 的第一次。
+  </div>
+
+  <h2>一、立靶：2014 年的翻译模型卡在「一个向量」</h2>
+
+  <p>
+    这篇之前的主流是 <strong>encoder–decoder</strong>（seq2seq，P03）：一台 RNN（encoder）把整句源文<strong>一个词一个词读完</strong>，
+    把"读完后的记忆"压成<strong>一个固定长度的向量 c</strong>（业内戏称 thought vector）；另一台 RNN（decoder）拿着这<strong>唯一的 c</strong>，把译文吐出来。
+  </p>
+
+  <div class="callout">
+    <div class="label">致命瓶颈：固定向量装不下长句</div>
+    <p style="margin:0.3rem 0">
+      不管源句是 5 个词还是 50 个词，全都要塞进<strong>同一个固定大小的 c</strong>。
+      短句还行，句子一长，前面的信息被后面的覆盖、稀释——像<em>让你读完一整页再凭一句话复述</em>。
+    </p>
+    <p style="margin:0.3rem 0">
+      论文最有名的实验就是这张「<strong>BLEU 随句长暴跌</strong>」曲线：固定向量模型一过 30 词，翻译质量直线跳水。
+      <strong>这就是要打的靶。</strong>
+    </p>
+  </div>
+
+  <p>论文的回答（也是标题）：<strong>别再用一个向量。让对齐（align）和翻译（translate）一起学。</strong></p>
+
+  <h2>二、抽框架：每生成一词，重算一个 context</h2>
+
+  <p>核心改动只有一处，但改得彻底——<strong>context 向量不再是一个，而是每个输出词一个</strong>，按需重算。三步：</p>
+
+  <table>
+    <tr><th>步骤</th><th>在做什么（用「翻译时回头看原文」打比方）</th></tr>
+    <tr><td><strong>① 打分 align</strong></td><td>我要译第 <code>i</code> 个词了，拿<strong>解码器当前状态 s</strong> 去和源句<strong>每个词的表示 h<sub>j</sub></strong> 比一比：<code>e<sub>ij</sub> = a(s<sub>i-1</sub>, h<sub>j</sub>)</code>——这个 <code>a</code> 是一个<strong>小前馈网络</strong>，算"源词 j 和我现在要译的，匹配度多高"。</td></tr>
+    <tr><td><strong>② 归一 softmax</strong></td><td>把一串匹配分数过 softmax → 一组加起来=1 的<strong>对齐权重 α<sub>ij</sub></strong>（attention 权重）。</td></tr>
+    <tr><td><strong>③ 加权取 context</strong></td><td><code>c<sub>i</sub> = Σ<sub>j</sub> α<sub>ij</sub> · h<sub>j</sub></code>——用这组权重对<strong>所有源词表示</strong>加权求和。译每个词，<strong>c 都不一样</strong>。</td></tr>
+  </table>
+
+  <p>
+    一句话：<strong>固定的 c 变成了"看着办"的 c<sub>i</sub></strong>。译"猫"时注意力压在 source 的 <em>cat</em> 上，译"昨天"时压到 <em>yesterday</em> 上——
+    <strong>对齐是模型自己学出来的，没人标注</strong>。这就是 "jointly learning to <u>align</u> and translate" 的字面意思。
+  </p>
+
+  <div class="callout primary">
+    <div class="label">⚡ 关键连线：这其实就是你上一课的 Q / K / V</div>
+    <p style="margin:0.3rem 0">把这套对到 Transformer 的语言上，胚胎一目了然：</p>
+    <table style="margin:0.5rem 0">
+      <tr><th>Bahdanau 2014</th><th>≈ Transformer 的</th></tr>
+      <tr><td>解码器状态 <code>s<sub>i-1</sub></code>（我要找什么）</td><td><strong>Query</strong></td></tr>
+      <tr><td>源词表示 <code>h<sub>j</sub></code>（既用来打分、又被取走）</td><td><strong>Key 和 Value（这里两者是同一个）</strong></td></tr>
+      <tr><td><code>e<sub>ij</sub> = a(s, h)</code>，小网络打分</td><td>相关度分数（但 Transformer 用 <strong>点积</strong>替掉这个小网络）</td></tr>
+      <tr><td><code>α<sub>ij</sub> = softmax(e)</code></td><td>注意力权重</td></tr>
+      <tr><td><code>c<sub>i</sub> = Σ α·h</code></td><td>加权求和的输出</td></tr>
+    </table>
+    <p style="margin:0.3rem 0">
+      区别只在三处：① 打分用<strong>小网络（additive）</strong>而非<strong>点积（dot-product）</strong>；
+      ② 这里是<strong>两条序列之间</strong>（译文看源文，叫 cross-attention），还不是自己看自己；
+      ③ 底下还拖着一台 RNN。Transformer 做的是：换点积、加 multi-head、把 RNN 整个删掉。
+    </p>
+  </div>
+
+  <div class="callout">
+    <div class="label">论文里三个容易被略过、但很关键的细节</div>
+    <p style="margin:0.3rem 0"><strong>① 双向 encoder：</strong> 每个源词的表示 <code>h<sub>j</sub></code> 是<strong>前向 + 后向两台 RNN 的拼接</strong>——让它既含"前文"又含"后文"，是真正以词 j 为中心的整句摘要，不只是"读到 j 为止"。</p>
+    <p style="margin:0.3rem 0"><strong>② 对齐是「免费」涌现的：</strong> 那个打分网络 <code>a</code> 和整个翻译系统<strong>端到端一起训</strong>，没有任何人工对齐标注。对齐是优化翻译时<em>顺带学出来的副产品</em>——这才叫 "jointly"。</p>
+    <p style="margin:0.3rem 0"><strong>③ soft alignment（软对齐）：</strong> 传统统计翻译（SMT）是<strong>硬对齐</strong>（一个源词硬配一个译词，非此即彼）。这里是<strong>软的</strong>——权重连续、可微、可一对多。正因为可微，才能塞进反向传播一起训。</p>
+  </div>
+
+  <h2>二·五、换个说法：你在饭桌上当翻译（通俗版）</h2>
+  <p class="interactive-hint cite">
+    如果上面的 Q/K/V 还没「体感」，把整篇换成一个生活场景——朋友 A 只会英文，噼里啪啦说了一长段，你要翻给只会中文的朋友 B。
+  </p>
+
+  <table>
+    <tr><th>办法</th><th>你在干什么</th><th>对应论文里的什么</th></tr>
+    <tr>
+      <td><strong>旧办法</strong><br>固定向量 seq2seq</td>
+      <td><strong>闭着眼听完，凭脑子一团印象复述。</strong>一句话还行；A 一口气说 50 个词，你脑里只剩一团模糊总印象，开头讲啥早被后面冲掉 → 翻得稀碎。</td>
+      <td>整句压成<strong>一个</strong> c；那张「<strong>30 词后 BLEU 暴跌</strong>」曲线，就是这团印象装不下长句。</td>
+    </tr>
+    <tr>
+      <td><strong>新办法</strong><br>attention（本篇）</td>
+      <td><strong>原文摊在桌上，边翻边用手指点回去。</strong>翻「猫」点 <em>cat</em>，翻「昨天」划到句尾 <em>yesterday</em>——每翻一个词，眼睛都回原文重扫一遍。</td>
+      <td>保留每个源词 <code>h<sub>j</sub></code>；<strong>每个输出词重算 context c<sub>i</sub></strong>；手指点哪、点多重 = 权重 α。</td>
+    </tr>
+  </table>
+
+  <div class="callout">
+    <div class="label">两个细节，用「手指」就讲透了</div>
+    <p style="margin:0.3rem 0"><strong>软对齐 = 手指虚按。</strong> 翻「了」这种时态词，原文里根本没有对应词，手指就在 <em>ate</em> 和 <em>yesterday</em> 之间悬着、各按一点（动作 + 过去）。一对多、按个大概——这就是软对齐，和老式翻译「一个词硬配一个词」的根本区别。</p>
+    <p style="margin:0.3rem 0"><strong>jointly = 手指落点没人教。</strong> 没有任何手册告诉你「翻猫时点 cat」。你是在「<strong>把整桌翻顺</strong>」这唯一目标下，自己练着练着手指就准了——对齐是优化翻译时<strong>顺带涌现</strong>的副产品，没人标注。</p>
+  </div>
+
+  <div class="callout primary">
+    <div class="label">为什么你「没体感」？</div>
+    <p style="margin:0.3rem 0">
+      因为你<strong>从没受过这个病的苦</strong>——你开始用 LLM 时，attention 早已是默认的空气。真正贴你主业的体感：写长 prompt / 做 RAG 时那句焦虑「<em>模型到底看没看我塞进去的后半段？</em>」——病根就是 2014 年这个「固定向量装不下长句」。
+      attention 的回答是：<strong>别让它凭一团印象答，让它每生成一个字，都把你的上下文回头重扫一遍。</strong>
+    </p>
+  </div>
+
+  <h2>三、动手玩：看一个译词「对齐」到源句的哪个词</h2>
+  <p class="interactive-hint cite">
+    英译中，词序会调换（yesterday 跑到中间）。点不同的<strong>中文译词</strong>，看它的注意力 α 落在哪个英文源词上——
+    对角线在词序调换处会<em>拐弯</em>，这正是 soft alignment 的价值（示意权重）。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.7rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      源句（EN）：<strong>I · ate · an · apple · yesterday</strong><br>
+      译句（ZH），点一个词看它对齐到哪：　<span id="qbtns"></span>
+    </div>
+    <div id="attn-bars" style="font-family:-apple-system,'PingFang SC',sans-serif;font-size:0.85rem"></div>
+    <div id="attn-note" class="cite" style="margin-top:0.7rem"></div>
+  </div>
+
+  <h2>四、对照表：固定向量 → 注意力 → Transformer</h2>
+  <table>
+    <tr><th>维度</th><th>seq2seq 固定向量<br>(2014 之前)</th><th>Bahdanau attention<br>(本篇, 2014)</th><th>Transformer<br>(P01, 2017)</th></tr>
+    <tr><td>context</td><td>整句压成<strong>1 个</strong> c</td><td>每个输出词<strong>重算</strong> c<sub>i</sub></td><td>每个 token、每层都重算</td></tr>
+    <tr><td>打分方式</td><td>—</td><td>小前馈网络（<strong>additive</strong>）</td><td>缩放点积（<strong>scaled dot-product</strong>）</td></tr>
+    <tr><td>attention 类型</td><td>无</td><td>cross（译文 ← 源文）</td><td>self + cross + multi-head</td></tr>
+    <tr><td>底座</td><td>RNN</td><td>RNN（双向）</td><td><strong>无 RNN</strong>，纯 attention</td></tr>
+    <tr><td>长句表现</td><td>30 词后暴跌</td><td><strong>长句不掉链子</strong></td><td>受限于 O(n²) 成本，不受信息瓶颈</td></tr>
+  </table>
+
+  <h2>五、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你每天用的 self-attention</td><td>就是这篇的<strong>直系后代</strong>：把"译文看源文"改成"序列看自己"、把小网络打分换成点积，就成了 P01。</td></tr>
+    <tr><td>attention 热力图 / 可解释性</td><td>软对齐第一次让"<strong>模型在看哪</strong>"可被画出来。你 debug agent"它到底参考了上下文哪段"时，看的就是这套权重的后代。</td></tr>
+    <tr><td>RAG 为什么要切块、不能把长文塞进一个 embedding</td><td>正是<strong>固定向量瓶颈</strong>在检索端的回响：一个 dense 向量压不下一篇长文档。<a href="../rag-供料层选型/MISSION.md">你的供料层选型</a>里"答得碎/拼接感"很多就栽在这。</td></tr>
+    <tr><td>encoder–decoder / cross-attention</td><td>多模态、检索增强生成里"用一条序列去引导另一条"的结构，源头就在这篇的"译文 query 源文"。</td></tr>
+  </table>
+
+  <h2>六、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：固定长度的 context 向量装不下长句，信息被稀释，BLEU 在 30 词后暴跌。attention 让每个输出词重算 context，正是来治这个。"
+       data-no="再看第一节：靶是『把整句压进一个固定向量』——长句信息装不下。不是速度也不是显存。">
+    <div class="quiz-q">1. Bahdanau attention 主要来治 seq2seq 的什么病？</div>
+    <button class="quiz-opt">RNN 训练太慢、不能并行</button>
+    <button class="quiz-opt">整句被压进一个固定向量，长句信息装不下</button>
+    <button class="quiz-opt">词向量维度太低，语义表达不够</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：解码器状态 s 像 Query，源词表示 h 同时充当 Key 和 Value，打分→softmax→加权求和，整套就是 Q/K/V 的胚胎。"
+       data-no="回看『关键连线』那张表：s 对应 Query，h 同时是 Key 和 Value。这就是你上一课 Q/K/V 的前身。">
+    <div class="quiz-q">2. 把本篇对到 Transformer，解码器状态 s 和源词表示 h 分别像什么？</div>
+    <button class="quiz-opt">s 像 Value，h 像 Query</button>
+    <button class="quiz-opt">s 和 h 都是 Key，Value 另算</button>
+    <button class="quiz-opt">s 像 Query，h 同时像 Key 和 Value</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：打分网络 a 和翻译系统端到端一起训，没有人工对齐标注，对齐是优化翻译时顺带涌现的副产品——这就是『jointly』。"
+       data-no="看细节②：对齐不是人标的，是和翻译一起端到端学出来的副产品。这正是标题里 jointly 的含义。">
+    <div class="quiz-q">3. 论文标题里的「jointly（一起学）」指的是？</div>
+    <button class="quiz-opt">对齐不用人工标注，和翻译端到端一起训出来</button>
+    <button class="quiz-opt">前向和后向两台 RNN 联合训练</button>
+    <button class="quiz-opt">多个语言对的数据混在一起训练</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Bahdanau, Cho &amp; Bengio —
+      <a href="https://arxiv.org/abs/1409.0473">Neural Machine Translation by Jointly Learning to Align and Translate (arXiv:1409.0473)</a>——
+      重点读第 3 节（模型）和图 3（那张<strong>对齐热力图</strong>，本课互动的原型）。
+    </p>
+    <p style="margin:0.3rem 0">
+      建立直觉可配：Jay Alammar — <a href="https://jalammar.github.io/visualizing-neural-machine-translation-mechanics-of-seq2seq-models-with-attention/">Visualizing A Neural Machine Translation Model</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      想接着读「它前一步」——固定向量的 seq2seq 本体，就是下一档的 <strong>P03 (Sutskever 2014)</strong>。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「additive attention 和 dot-product 谁更好、为什么 Transformer 选了点积？」
+    「双向 encoder 的前后向到底怎么拼？」「软对齐和统计翻译的硬对齐差在哪、为什么软的才能反向传播？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0002-attention-is-all-you-need.html">&#8592; 第 2 课：Attention Is All You Need (P01)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P02</code> → 明天 P03</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Bahdanau, Cho &amp; Bengio, <em>Neural Machine Translation by Jointly Learning to Align and Translate</em>, ICLR 2015；Alammar, <em>Visualizing A Neural Machine Translation Model</em>.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— cross-attention 软对齐互动（示意权重）—— */
+(function () {
+  var SRC = ["I", "ate", "an", "apple", "yesterday"];
+  // 每个中文译词对源句的示意对齐权重（和=1），语义合理即可
+  var ATTN = {
+    "我":   { w: [0.82, 0.06, 0.02, 0.04, 0.06], note: "「我」直接对齐 source 的 I，几乎全压在第 1 词——主语对主语。" },
+    "昨天": { w: [0.04, 0.07, 0.02, 0.05, 0.82], note: "「昨天」对齐 yesterday——注意它在源句是<b>最后一词</b>，在中文却排第二。对齐线在这里<b>拐了个弯</b>，这正是 soft alignment 的价值。" },
+    "吃":   { w: [0.05, 0.78, 0.04, 0.09, 0.04], note: "「吃」对齐动词 ate，权重集中在第 2 词。" },
+    "了":   { w: [0.06, 0.52, 0.04, 0.10, 0.28], note: "「了」是时态助词，没有单一源词——注意力被<b>摊在 ate 和 yesterday 之间</b>（动作 + 过去）。软对齐允许这种「一对多模糊」。" },
+    "苹果": { w: [0.03, 0.06, 0.18, 0.69, 0.04], note: "「苹果」对齐 apple；冠词 an 也分到一点（an 和 apple 是一个名词短语）。" }
+  };
+  var QUERIES = ["我", "昨天", "吃", "了", "苹果"];
+  var COLORS = ["#d2691e","#c77b3c","#bb8d5e","#c79a4e","#a8b1a0"];
+  var qbtns = document.getElementById("qbtns");
+  var bars = document.getElementById("attn-bars");
+  var note = document.getElementById("attn-note");
+
+  function render(q) {
+    var w = ATTN[q].w;
+    var html = "";
+    SRC.forEach(function (tok, i) {
+      var pct = w[i] * 100;
+      html += '<div style="display:flex;align-items:center;gap:0.6rem;margin:0.3rem 0">'
+        + '<div style="width:5rem;text-align:right;font-weight:500;color:#2b2620">' + tok + '</div>'
+        + '<div style="flex:1;background:#efe7d8;border-radius:5px;overflow:hidden;height:1.2rem">'
+        + '<div style="height:100%;width:' + pct.toFixed(1) + '%;background:' + COLORS[i] + ';transition:width .15s"></div>'
+        + '</div>'
+        + '<div class="mono" style="width:3rem;font-size:0.78rem">' + pct.toFixed(0) + '%</div>'
+        + '</div>';
+    });
+    bars.innerHTML = html;
+    note.innerHTML = '译词「<b>' + q + '</b>」：' + ATTN[q].note;
+    Array.prototype.forEach.call(qbtns.children, function (b) {
+      b.style.background = (b.textContent === q) ? "#d2691e" : "#fff";
+      b.style.color = (b.textContent === q) ? "#fff" : "#a8521a";
+    });
+  }
+  QUERIES.forEach(function (q) {
+    var b = document.createElement("button");
+    b.textContent = q;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.7rem;margin:0 0.25rem 0.3rem 0;cursor:pointer;font-size:0.82rem;font-family:inherit";
+    b.addEventListener("click", function () { render(q); });
+    qbtns.appendChild(b);
+  });
+  render("昨天");
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 12 课 · Chinchilla：当年的大模型几乎全「虚胖」——同样算力，小一半但喂饱数据，反而更强还更便宜</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 12 课 / 经典论文 <strong>P11</strong> &nbsp;·&nbsp; 阶段三：统一框架与规模（Hoffmann et al., 2022）</div>
+
+  <h1>Chinchilla：<br>当年的大模型几乎全「虚胖」<br><span style="font-size:0.55em;color:#a8521a">——同样算力，小一半但喂饱数据，反而更强还更便宜</span></h1>
+
+  <div class="mission">
+    上一课 <a href="0011-scaling-laws.html">Scaling Laws</a> 立了「loss 可预测、可外推」的范式（这点至今成立），但它对<b>预算分配</b>的建议——「钱主要砸模型大小」——埋了个雷。
+    这一课 Chinchilla 把雷引爆：DeepMind 用更细的实验证明，<b>Kaplan 算错了，当年那批巨无霸（GPT-3 175B、Gopher 280B、MT-NLG 530B）几乎全都「虚胖」</b>：参数堆太大、数据喂太少，<b>欠训练</b>。
+    它回答你做产品最该有的一个判断：<b>「参数量大 = 更强」这个直觉，靠谱吗？我该追更大的模型，还是追喂得更饱的模型？</b>
+  </div>
+
+  <div class="big-idea">
+    Chinchilla 的一句话：<strong>固定算力预算下，模型大小 N 和训练数据量 D 应该「等比例」一起放大——粗略记成「每 1 个参数，配约 20 个 token」。</strong><br>
+    当年的大模型严重偏离这条线：模型巨大、数据却少得可怜（GPT-3 175B 只喂了约 300B token，远不到 20×）。所以它们<strong>没吃饱、没训透</strong>。
+    Chinchilla 用反例钉死结论：<strong>70B 参数（比 Gopher 小 4 倍）+ 1.4T token（多喂 4 倍），同样算力，全面反超 Gopher 和 GPT-3。</strong><em>而且小模型推理还更便宜——一笔双赢。</em>
+  </div>
+
+  <h2>一、立靶：当年的「越大越好」，是不是其实是「虚胖」？</h2>
+
+  <p>
+    上一课你记住了两件事：loss 随规模呈幂律（对），以及 Kaplan 的预算建议「<strong>把算力主要砸到模型大小上</strong>，数据没必要喂太多、不必训到收敛」。整个 2020–2021 年，行业就照这个跑——比谁参数多：GPT-3 175B、Gopher 280B、MT-NLG 530B。
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：同样这笔算力，换种花法会不会更好？</div>
+    <p style="margin:0.3rem 0">
+      Chinchilla 团队重做了实验（而且用三种独立方法交叉验证），问一个要命的问题：
+      <strong>给定固定算力，模型该多大、数据该多少，才能把 loss 压到最低？</strong>
+      答案和 Kaplan 截然不同——<strong>当年的模型普遍「太大、喂太少」</strong>。把同样的算力<strong>从「堆参数」挪一部分去「喂数据」</strong>，loss 还能再降一截。换句话说：那批巨无霸不是不够大，是<strong>没吃饱</strong>。
+    </p>
+  </div>
+
+  <h2>二、抽框架：compute-optimal 的正解——N 与 D 等比例放大</h2>
+
+  <p>同一笔算力（C ≈ 6 × N × D），可以有无数种「模型多大 / 数据多少」的分法。Chinchilla 的结论是<strong>有一个最优配比</strong>，且 N、D 应当<strong>同速增长</strong>：</p>
+
+  <table>
+    <tr><th>分法</th><th>模型 N / 数据 D</th><th>结果</th></tr>
+    <tr><td>偏 Kaplan：堆参数</td><td>N 巨大，D 少（tok/参数 ≪ 20）</td><td><strong>欠训练（虚胖）</strong>，loss 偏高</td></tr>
+    <tr><td><strong>Chinchilla 最优</strong></td><td><strong>N、D 等比例，约 20 token/参数</strong></td><td><strong>loss 最低 ✓</strong></td></tr>
+    <tr><td>过头：堆数据</td><td>N 太小，D 极多</td><td>模型「装不下」，loss 又升</td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">记忆把手：<strong>约 20 token / 参数</strong></div>
+    <p style="margin:0.3rem 0">
+      这是 Chinchilla 留下最实用的一根标尺。验算一下当年的模型：<br>
+      • <strong>GPT-3</strong>：175B 参数，仅约 300B token → <strong>≈1.7 token/参数</strong>，严重欠训练。<br>
+      • <strong>Chinchilla</strong>：70B 参数，1.4T token → <strong>≈20 token/参数</strong>，正好踩线。<br>
+      Kaplan 让 N 跑得飞快、D 慢吞吞；Chinchilla 让它俩<strong>手拉手一起涨</strong>。
+    </p>
+  </div>
+
+  <h2>三、核心洞察：巨无霸都「欠训练」，而 Kaplan 为什么会算错</h2>
+
+  <p class="interactive-hint cite">
+    两个洞察，一个关于模型、一个关于方法——后者尤其值得你记住，因为它是「权威实验也会因一个细节系统性翻车」的经典案例。
+  </p>
+
+  <table>
+    <tr><th>洞察</th><th>说明</th></tr>
+    <tr><td><strong>① 当年的大模型普遍欠训练</strong></td><td>它们把算力几乎全砸在「做大」上，数据喂得太少、没训透。所以「参数量」根本不是「能力」的好代理——<strong>一个喂饱的小模型能打趴一个饿着的大模型</strong>。</td></tr>
+    <tr><td><strong>② Kaplan 错在一个方法细节</strong></td><td>Kaplan 的实验用了一个<strong>不随数据量正确衰减的学习率调度</strong>，这让大模型「看起来」比实际更省样本，于是得出「多砸模型」的偏结论。Chinchilla 把这个细节修对、用三种方法交叉验证，才翻了案。</td></tr>
+  </table>
+
+  <p class="cite">
+    第 ② 点对你是一记提醒：<strong>scaling law 这种「画直线外推」的方法极强，但它的结论强烈依赖实验设置；一个看似无关的旋钮（学习率调度）配错，整条外推线就偏了。</strong>权威结果也要看它怎么做出来的——这正合你 harness / 受控实验的洁癖。
+  </p>
+
+  <h2>四、动手玩：固定算力，配比怎么分 loss 最低？</h2>
+  <p class="interactive-hint cite">
+    算力预算锁死。点不同的「模型 / 数据」配比，看 loss 怎么走——你会看到一个<strong>谷底</strong>：太偏堆参数（虚胖）或太偏堆数据（装不下）都更差，<strong>约 20 token/参数处最低</strong>。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      固定算力，选配比：　<span id="kbtns"></span>
+    </div>
+    <div style="text-align:center;margin:0.6rem 0">
+      <span class="mono" style="font-size:1.5rem;color:#d2691e;font-weight:700" id="kloss"></span>
+      <div class="cite" style="margin-top:0.2rem" id="kratio"></div>
+    </div>
+    <div id="kwhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    谷底就是 compute-optimal。<strong>左边是 Kaplan 时代的「虚胖」打法，右边是矫枉过正的「饿死大脑」打法，最优在中间那条「约 20 token/参数」的线上。</strong>
+  </p>
+
+  <h2>五、对照表（一）：Chinchilla 怎么用反例钉死结论</h2>
+  <table>
+    <tr><th></th><th>Gopher</th><th>Chinchilla（本篇）</th></tr>
+    <tr><td>参数 N</td><td>280B</td><td><strong>70B（小 4 倍）</strong></td></tr>
+    <tr><td>训练 token D</td><td>300B</td><td><strong>1.4T（多约 4 倍）</strong></td></tr>
+    <tr><td>算力 C</td><td colspan="2" style="text-align:center"><strong>两者基本相同</strong></td></tr>
+    <tr><td>谁更强</td><td>—</td><td><strong>Chinchilla 全面反超</strong>（且也胜 GPT-3、MT-NLG）</td></tr>
+    <tr><td>推理成本</td><td>高（模型大）</td><td><strong>低（小 4 倍，部署更省）</strong></td></tr>
+  </table>
+  <p class="cite">
+    这就是 Chinchilla 的杀招：<strong>不是嘴上说「该多喂数据」，而是真造一个小 4 倍、喂 4 倍数据、同算力的模型，把更大的 Gopher 打趴。</strong>更狠的是——它还顺带省了推理成本。
+  </p>
+
+  <h2>六、对照表（二）：Kaplan vs Chinchilla，以及 LLaMA 把它推得更远</h2>
+  <table>
+    <tr><th>维度</th><th>Kaplan 2020（P10）</th><th>Chinchilla 2022（本篇 P11）</th></tr>
+    <tr><td>固定算力，钱砸哪</td><td>主要砸<strong>模型大小</strong></td><td><strong>N 与 D 等比例</strong>（约 20 token/参数）</td></tr>
+    <tr><td>对数据的态度</td><td>没必要喂太多</td><td><strong>数据被严重低估</strong>，要喂饱</td></tr>
+    <tr><td>当年模型的诊断</td><td>—</td><td>普遍<strong>欠训练 / 虚胖</strong></td></tr>
+    <tr><td>仍然成立的</td><td colspan="2" style="text-align:center">「loss 可预测、可外推、幂律」的<strong>范式不变</strong>，被修正的是<strong>配比</strong></td></tr>
+  </table>
+  <p class="cite">
+    🔮 故事还有下一跳：Chinchilla 是「<strong>训练</strong>算力最优」。但产品上线后，<strong>推理成本</strong>才是大头——模型要被调用千百万次。于是 <strong>LLaMA</strong> 等更进一步：<strong>故意把小模型训过 Chinchilla 最优点</strong>（喂远超 20× 的数据），训练时多花点，换来一个又小又强、推理便宜的模型。这条「为推理便宜而过度训练」的路线，正是今天小模型遍地开花的根。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>看到「XX 模型 700B 参数」就觉得它一定更强</td><td>小心：<strong>参数量不是能力的好代理</strong>——欠训练的大模型会输给喂饱的小模型。要看「训了多少数据」，不只是「多大」</td></tr>
+    <tr><td>你纠结「上更大的模型」还是「用小模型 + 更多数据/RAG」</td><td>就是 <strong>compute-optimal</strong> 的产品版：Chinchilla 告诉你「别迷信大，喂饱更值」，而且小模型<strong>推理更便宜</strong></td></tr>
+    <tr><td>你做选型时算「这个模型每次调用多少钱」</td><td>对上 LLaMA 路线：<strong>训练成本一次性，推理成本随调用量累加</strong>——产品该优先选「小而强、调用便宜」的</td></tr>
+    <tr><td>你看到一个「权威 scaling 外推结论」，想判断信不信</td><td>记住 Kaplan 翻车的教训：<strong>结论强依赖实验设置</strong>，一个学习率调度配错就偏——要追问它怎么做出来的</td></tr>
+    <tr><td>「为什么现在小模型（7B/8B）也能很能打」</td><td>因为它们被<strong>喂了远超 Chinchilla 最优的数据</strong>，把小身板的潜力榨干了</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：固定算力下，模型 N 和数据 D 应等比例放大，粗略约 20 token/参数。"
+       data-no="看第二节：Chinchilla 的正解是 N 与 D 等比例增长，约 20 token/参数，不是无脑做大或无脑堆数据。">
+    <div class="quiz-q">1. Chinchilla 给出的 compute-optimal 正解是？</div>
+    <button class="quiz-opt">把算力主要砸模型大小（同 Kaplan）</button>
+    <button class="quiz-opt">模型 N 与数据 D 等比例放大，约 20 token/参数</button>
+    <button class="quiz-opt">模型越小越好，数据越多越好</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：Chinchilla 70B 比 Gopher 280B 小 4 倍，但喂 4 倍数据、同算力，全面反超——证明当年的大模型欠训练。"
+       data-no="看第五节：Chinchilla 用『小 4 倍 + 多喂 4 倍数据 + 同算力 → 反超 Gopher』来证明巨无霸欠训练。">
+    <div class="quiz-q">2. Chinchilla 怎么证明「当年大模型虚胖」？</div>
+    <button class="quiz-opt">理论推导，没做实验</button>
+    <button class="quiz-opt">造一个更大的模型打败 Gopher</button>
+    <button class="quiz-opt">造一个小 4 倍但喂 4 倍数据、同算力的模型反超 Gopher</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：被修正的是『预算配比』（数据被低估）；『loss 幂律、可预测可外推』的范式至今成立。"
+       data-no="看第六节：Chinchilla 推翻的是 Kaplan 的配比建议，不是整个 scaling law 范式——后者仍成立。">
+    <div class="quiz-q">3. Chinchilla 推翻了 Kaplan 的什么？没推翻什么？</div>
+    <button class="quiz-opt">推翻「预算配比」（数据被低估）；没推翻「loss 幂律可外推」的范式</button>
+    <button class="quiz-opt">推翻了整个 scaling law，证明规模无用</button>
+    <button class="quiz-opt">推翻「数据重要」，证明只看模型大小</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">既然 Chinchilla 最优是「约 20 token/参数」，为什么今天的 LLaMA / 小模型要喂远超这个数？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">因为 Chinchilla 优化的是<strong>训练</strong>算力——「同样训练预算下，loss 最低」。但产品视角，<strong>推理成本</strong>才是主战场：模型一旦上线，要被调用千万次，<strong>每次调用的成本只跟模型大小有关，跟你训了多少数据无关</strong>。</p>
+      <p style="margin:0.3rem 0" class="cite">所以 LLaMA 的算盘是：<strong>训练时多花点（把小模型喂到远超 20×），换一个又小又强、推理永久便宜的模型</strong>。一次性多付训练费，省下无限次推理费——对要长期服务用户的产品，这笔账划算。Chinchilla 给的是「训练最优」，LLaMA 走的是「部署最优」，两者不矛盾，是<strong>优化目标不同</strong>。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">那 Chinchilla 之后，是不是「模型越小越好」？参数量彻底没意义了？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>不是。</strong>模型容量（参数量）有个上限作用——<strong>太小的模型「装不下」，喂再多数据也到顶</strong>（动手玩里右端那档就是这个）。Chinchilla 反对的是「<strong>在数据没喂够的前提下</strong>盲目做大」，不是说大没用。</p>
+      <p style="margin:0.3rem 0" class="cite">正确的心智：<strong>参数量决定「天花板有多高」，数据量决定「你爬到了天花板的几成」。</strong>当年的巨无霸天花板很高，但只爬了一两成（欠训练）。所以判断一个模型强不强，要<strong>两个数一起看：多大 + 喂了多少</strong>，而不是只看参数。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">「约 20 token/参数」这个数，我能直接拿去判断模型吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">当作<strong>粗略标尺</strong>可以，当精确公式不行。20× 是 Chinchilla 在<strong>它的数据、它的设置</strong>下拟合出来的，会随数据质量、模型架构、目标（训练最优 vs 推理最优）而变。它的<strong>真正价值是方向</strong>：提醒你「光看参数会被骗，要问数据喂够没」。</p>
+      <p style="margin:0.3rem 0" class="cite">实操上你不会自己训模型，但这把尺能让你看懂新闻稿——看到「我们的 7B 模型用了 15T token 训练」，你立刻知道：这是 ~2000 token/参数，<strong>远超 Chinchilla 最优，明显是为推理便宜而过度训练的 LLaMA 路线</strong>，大概率小而强。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Hoffmann et al. —
+      <a href="https://arxiv.org/abs/2203.15556">Training Compute-Optimal Large Language Models（Chinchilla, 2022）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      建议连着上一课读：<a href="0011-scaling-laws.html">Scaling Laws（P10）</a> 立范式、本篇修配比，两篇是一组「立靶 + 纠偏」。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      阶段三收尾在即：<strong>T5 统一形状 → Scaling Laws 量化 → Chinchilla 修正配比</strong>。下一篇 <strong>P12 LoRA</strong>：换个赛道——不再谈「怎么把大模型训出来」，而是「怎么用极小成本把它微调到你的场景」。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「为什么算力 C ≈ 6ND，那个 6 哪来的？」「Chinchilla 之后，前沿模型还在遵守 20× 吗？」
+    「训练最优和推理最优，我做产品该认哪个？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0011-scaling-laws.html">&#8592; 第 11 课：Scaling Laws (P10)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P11</code> → 明天 P12（LoRA）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Hoffmann et al., <em>Training Compute-Optimal Large Language Models</em>, 2022.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 固定算力，配比怎么分 loss 最低（compute-optimal 谷底） —— */
+(function () {
+  var K = [
+    { cap: "全砸模型", ratio: "≈1.7 token/参数", loss: 2.00,
+      why: "Kaplan 时代打法：模型巨大、数据极少（像 GPT-3 175B/300B）。<strong>欠训练、虚胖</strong>——天花板很高却只爬了一两成。" },
+    { cap: "偏堆参数", ratio: "≈5 token/参数", loss: 1.92,
+      why: "还是偏大、喂不够。比上一档好，但仍没踩到最优。" },
+    { cap: "均衡 ✓", ratio: "≈20 token/参数", loss: 1.85,
+      why: "<strong>compute-optimal 谷底</strong>——N 与 D 等比例（Chinchilla 70B/1.4T 就在这）。同算力下 loss 最低。" },
+    { cap: "偏堆数据", ratio: "≈80 token/参数", loss: 1.90,
+      why: "模型开始偏小，容量吃紧。喂更多数据的边际收益在掉——除非你是为了推理便宜（LLaMA 路线）。" },
+    { cap: "饿死大脑", ratio: "≈300 token/参数", loss: 1.97,
+      why: "模型太小「装不下」，数据再多也到顶。<strong>训练最优视角下，这是过头了。</strong>" }
+  ];
+  var kbtns = document.getElementById("kbtns");
+  function render(idx) {
+    var k = K[idx];
+    document.getElementById("kloss").textContent = "loss ≈ " + k.loss.toFixed(2);
+    document.getElementById("kratio").innerHTML = "配比：<strong>" + k.ratio + "</strong>";
+    document.getElementById("kwhy").innerHTML = k.why;
+    Array.prototype.forEach.call(kbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  K.forEach(function (k, i) {
+    var b = document.createElement("button");
+    b.textContent = k.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    kbtns.appendChild(b);
+  });
+  render(2);
+})();
+</script>
+</body>
+</html>

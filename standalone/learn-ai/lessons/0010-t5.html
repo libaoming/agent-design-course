@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 10 课 · T5：把每个任务都改写成「一段文字进、一段文字出」——你对 chat 模型用 prompt 干所有活的源头</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 10 课 / 经典论文 <strong>P09</strong> &nbsp;·&nbsp; 阶段三：统一框架与规模（Raffel et al., 2019）</div>
+
+  <h1>T5：<br>把每个任务都改写成「一段文字进、一段文字出」<br><span style="font-size:0.55em;color:#a8521a">——你对 chat 模型用 prompt 干所有活的源头</span></h1>
+
+  <div class="mission">
+    上一课 <a href="0009-gpt-3.html">GPT-3</a> 告诉你：给几个例子就当场学会。但那时业界做 NLP 还是<b>各任务各干各的</b>——分类接一个分类头、翻译用 seq2seq、打分接一个回归头，每种任务一套架构、一套输出。
+    这一课 T5 问一个更狠的<b>统一</b>问题：能不能把翻译、分类、打分、摘要、问答……<b>全都改写成同一种形状</b>——<b>一段文字进、一段文字出</b>？
+    它回答你天天在做却没拆过的事：<b>为什么我对着同一个 chat 模型，用 prompt 就能让它分类、抽取、打分、翻译，全不用换模型、换接口？</b>
+  </div>
+
+  <div class="big-idea">
+    T5 的一句话：<strong>万物皆 text-to-text（文本到文本）。</strong><br>
+    把每个任务都改写成「字符串 → 字符串」：连「情感分类」的输出都不是一个类别 id，而是<strong>生成出「positive」这几个字</strong>；连「相似度打分 0–5」这种回归，也是<strong>生成出「3.2」这串字</strong>。
+    于是<strong>一个模型、一种 loss、一种解码</strong>，就能吃下所有任务。<em>你今天对一个 chat 模型用 prompt 做分类 / 抽取 / 打分 / 翻译——本质就是 T5 立的这套「万物皆 text-to-text」。</em>
+  </div>
+
+  <h2>一、立靶：任务各干各的世界，能不能统一成一种形状？</h2>
+
+  <p>
+    回看你学过的两条线：<a href="0006-bert.html">BERT</a>（encoder-only）做分类要<strong>在顶上接一个分类头</strong>、做问答接一个抽取头，每个任务<strong>换一个输出结构</strong>；翻译 / 摘要那边走的是 <a href="0004-sequence-to-sequence-learning.html">seq2seq</a>。
+    迁移学习（pre-train 一次、到处微调）已经是共识，但<strong>「微调成什么形状」却五花八门</strong>——每加一个任务，就要设计一套新的输出层和损失。
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：与其每个任务设计一套输出，不如把所有任务都「说成一句话」？</div>
+    <p style="margin:0.3rem 0">
+      T5 的赌注：<strong>不再为任何任务定制输出头</strong>。无论翻译、分类、打分还是摘要，输入都是<strong>一段文字</strong>，输出也都是<strong>一段文字</strong>。
+      任务的区别，只靠输入开头的一个<strong>任务前缀（task prefix）</strong>来告诉模型——<code>translate English to German:</code>、<code>summarize:</code>、<code>cola sentence:</code>。
+      模型不知道「这是分类还是回归」，它只管：读进一串字，<strong>生成</strong>另一串字。
+    </p>
+  </div>
+
+  <h2>二、抽框架：text-to-text 三件套</h2>
+
+  <p>每个任务都被压成同一个模子——<strong>任务前缀 + 输入文字 → 输出文字</strong>。看这张「翻译表」，注意最右列<strong>全是字符串</strong>，连数字、连类别都是「生成出来的字」：</p>
+
+  <table>
+    <tr><th>任务</th><th>改写成的输入（带任务前缀）</th><th>输出（一串文字）</th></tr>
+    <tr><td>翻译</td><td><code>translate English to German: That is good.</code></td><td><code>Das ist gut.</code></td></tr>
+    <tr><td>情感 / 分类</td><td><code>sst2 sentence: 这家店服务太差</code></td><td><code>negative</code>（生成的是<strong>字</strong>，不是 id）</td></tr>
+    <tr><td>相似度（回归）</td><td><code>stsb sentence1: ... sentence2: ...</code></td><td><code>3.2</code>（连分数都是<strong>生成出来的字符串</strong>）</td></tr>
+    <tr><td>摘要</td><td><code>summarize: 一长段新闻……</code></td><td><code>三句话的摘要……</code></td></tr>
+    <tr><td>问答</td><td><code>question: ... context: ...</code></td><td><code>答案那段文字</code></td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">关键：统一的是「形状」，不是「不训练」</div>
+    <p style="margin:0.3rem 0">
+      别和上一课混了。<strong>GPT-3 统一的是「不更新权重」</strong>（冻结模型 + few-shot）；<strong>T5 统一的是「输入输出的形状」</strong>——它<strong>仍然每个任务微调</strong>，只是所有任务都微调成同一种 text-to-text 格式，<strong>共用一套架构、一种交叉熵 loss、一种解码</strong>。
+      两条统一是互补的：T5 把「任务长什么样」统一了，后来的指令模型（FLAN-T5、InstructGPT）才能在这套统一形状上，把「任务前缀」升级成「自然语言指令」、再做到不微调也听话。
+    </p>
+  </div>
+
+  <h2>三、核心洞察：统一形状，换来三样东西</h2>
+
+  <p class="interactive-hint cite">
+    把所有任务捏成一个形状，看着像「为了优雅」，其实换来三个硬收益——也正是为什么今天的 chat 模型全走这条路。
+  </p>
+
+  <table>
+    <tr><th>统一形状带来</th><th>说明</th></tr>
+    <tr><td><strong>① 一套代码跑所有任务</strong></td><td>同一个模型、同一种 loss、同一种解码。加新任务＝<strong>换个前缀、换批数据</strong>，不用再设计输出层。</td></tr>
+    <tr><td><strong>② 任务之间能互相搭便车</strong></td><td>形状一样，就能把多个任务<strong>混在一起训</strong>（multi-task），一个任务学到的能力能迁移给另一个。</td></tr>
+    <tr><td><strong>③ 终于能做「公平的受控对比」</strong></td><td>这是论文真正的贡献：有了统一接口，就能在<strong>同一把尺子下</strong>系统比较「架构 / 预训练目标 / 数据 / 规模」哪个改动真有用——这就是标题 <em>Exploring the Limits</em> 的意思：一篇巨大的<strong>受控 bake-off</strong>。</td></tr>
+  </table>
+
+  <p class="cite">
+    第 ③ 点对你尤其亲切：<strong>T5 本质是一篇「先搭统一 harness，再在上面做对照实验」的论文</strong>——和你做 tech-architecture bake-off、harness 方法论是同一个信条：<strong>先把接口统一，比较才有意义。</strong>
+  </p>
+
+  <h2>四、动手玩：把五种不同任务，全改写成「文字进、文字出」</h2>
+  <p class="interactive-hint cite">
+    点不同任务，看它被<strong>压成同一个形状</strong>的样子——尤其注意「分类」和「回归打分」的输出，<strong>都是生成出来的字符串</strong>，模型根本不知道任务类型。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选任务：　<span id="tbtns"></span>
+    </div>
+    <div class="mono" style="font-size:0.92rem;line-height:1.7;background:#fff;border-radius:6px;padding:0.6rem 0.8rem;margin:0.5rem 0;white-space:pre-wrap"><span style="color:#a8521a">输入 →</span> <span id="tin"></span></div>
+    <div class="mono" style="font-size:0.92rem;line-height:1.7;background:#fff;border-radius:6px;padding:0.6rem 0.8rem;margin:0.5rem 0;white-space:pre-wrap"><span style="color:#a8521a">输出 →</span> <span id="tout"></span></div>
+    <div id="twhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    五个任务、一个模子：<strong>前缀告诉模型「这是什么任务」，模型只管把一串字变成另一串字。</strong>这正是你对 chat 模型的体感——你从不「换模型做分类」，你只是<strong>换一句话开头</strong>。
+  </p>
+
+  <h2>五、对照表（一）：三条路怎么「做任务」</h2>
+  <table>
+    <tr><th>维度</th><th>BERT（P05）</th><th>GPT-3（P08）</th><th>T5（本篇 P09）</th></tr>
+    <tr><td>架构</td><td>encoder-only</td><td>decoder-only</td><td><strong>encoder-decoder</strong>（回到原版 Transformer）</td></tr>
+    <tr><td>怎么适配任务</td><td>接<strong>任务头</strong> + 微调</td><td>冻结 + <strong>prompt 给例子</strong></td><td><strong>统一 text-to-text</strong> + 微调</td></tr>
+    <tr><td>输出形状</td><td>每任务一种（类别 / 跨度…）</td><td>生成文字</td><td><strong>一律生成文字</strong></td></tr>
+    <tr><td>统一了什么</td><td>预训练（双向 MLM）</td><td><strong>不训练</strong>（few-shot）</td><td><strong>任务的形状</strong>（万物皆字符串）</td></tr>
+    <tr><td>对你的意义</td><td>「先 pre-train 再微调」</td><td>「prompt 塞例子就管用」</td><td><strong>「同一个模型、换句话就换任务」</strong></td></tr>
+  </table>
+  <p class="cite">
+    为什么 T5 选 <strong>encoder-decoder</strong>？它做了受控对比：encoder 双向读懂输入、decoder 自回归生成输出，对「读一段、写一段」的任务（翻译 / 摘要 / 问答）最自然；其变体 <strong>prefix-LM</strong>（前半段双向、后半段单向）介于二者之间。结论是：<strong>在它的 text-to-text 设定下，encoder-decoder 综合最稳。</strong>
+  </p>
+
+  <h2>六、对照表（二）：T5 是一篇「受控大实验」——顺手立了两块地基</h2>
+  <p>
+    在统一接口下，T5 把每个旋钮都拧了一遍做对比。两个对你最有用的结论：
+  </p>
+  <table>
+    <tr><th>旋钮</th><th>T5 的选择 / 结论</th><th>对照你已学的</th></tr>
+    <tr><td>预训练目标</td><td><strong>span corruption（片段损坏）</strong>胜出：随机遮掉<strong>连续的一小段</strong>词，用一个<strong>哨兵 token</strong>（<code>&lt;X&gt;</code>）占位，让模型<strong>生成被遮掉的那段</strong></td><td>比 BERT 的 <a href="0006-bert.html">MLM</a>（遮单个词、原位预测）更省、更贴合「生成」，也和 encoder-decoder 天生对味</td></tr>
+    <tr><td>训练数据</td><td>自建 <strong>C4</strong>（Colossal Clean Crawled Corpus）：把 Common Crawl <strong>狠狠清洗</strong>后得到 ~750GB 干净文本</td><td>呼应 <a href="0008-gpt-2.html">GPT-2 的 WebText</a> 与你的 RAG 供料层信条——<strong>质 ≥ 量</strong>，清洗是地基</td></tr>
+    <tr><td>规模</td><td>同一配方放大到 <strong>11B</strong>，越大越好（但成本陡升）</td><td>把悬念交给下一阶段：到底怎么配最划算？</td></tr>
+  </table>
+  <p class="cite">
+    🔮 T5 把「形状」统一了，又用受控实验确认「放大就涨」，但<strong>没回答「规模、数据、算力到底该按什么比例配」</strong>。这正是下一篇 <strong>Scaling Laws（P10）</strong> 和 <strong>Chinchilla（P11）</strong> 要量化的事。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>对同一个 chat 模型，用 prompt 做分类 / 抽取 / 打分 / 翻译，从不换模型</td><td>就是 <strong>text-to-text 统一框架</strong>——「万物皆字符串变换」，今天 chat 范式的底座在这篇</td></tr>
+    <tr><td>你做 Grader / LLM-as-judge，让模型<strong>生成一个分数</strong>（如「7/10」）</td><td>就是 T5 把<strong>回归也变成「生成数字字符串」</strong>（STS-B 打分）的同一招——分数是生成出来的字，不是回归头算的</td></tr>
+    <tr><td>你 prompt 开头那句「你是一个…请把以下…」</td><td>就是 T5 <strong>任务前缀（task prefix）</strong>的后代；指令微调（<strong>FLAN-T5</strong> 直接基于 T5）就是把前缀升级成自然语言指令</td></tr>
+    <tr><td>你做 tech-architecture bake-off / harness，先统一接口再对比方案</td><td>和 T5 同一方法论：<strong>先搭统一 harness，受控对比才公平</strong>——这篇论文本身就是一次巨型 bake-off</td></tr>
+    <tr><td>你的 RAG 供料层反复强调「清洗 &gt; 堆量」</td><td>就是 T5 造 <strong>C4</strong>（清洗 Common Crawl）的信条：<strong>数据质量是地基</strong></td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：text-to-text 把每个任务都改写成『字符串进、字符串出』，连分类标签、回归分数都是生成出来的文字。"
+       data-no="看第二节：T5 的统一是『输入输出都是一段文字』——连分类和回归打分的输出也是生成的字符串。">
+    <div class="quiz-q">1. T5 的 text-to-text 框架，统一的是什么？</div>
+    <button class="quiz-opt">所有任务都不再需要训练（冻结模型）</button>
+    <button class="quiz-opt">所有模型都用 decoder-only 架构</button>
+    <button class="quiz-opt">所有任务都改写成「一段文字进、一段文字出」</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：GPT-3 统一『不训练』（冻结 + few-shot）；T5 统一『形状』——仍每任务微调，但都微调成同一种 text-to-text 格式。"
+       data-no="看第二节的 callout：GPT-3 冻结权重靠 few-shot；T5 仍然微调，只是把所有任务微调成同一种文字进文字出的形状。">
+    <div class="quiz-q">2. T5 和 GPT-3 的「统一」差别在哪？</div>
+    <button class="quiz-opt">T5 不微调、GPT-3 微调</button>
+    <button class="quiz-opt">GPT-3 统一「不训练」，T5 统一「任务的形状」（仍微调）</button>
+    <button class="quiz-opt">两者完全一样，只是名字不同</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：T5 用 span corruption——遮掉连续一段、用哨兵 token 占位、让模型生成被遮的那段；比 BERT 遮单个词更贴合生成。"
+       data-no="看第六节：T5 的预训练目标是 span corruption（遮连续片段、生成被遮段），不是 BERT 那种遮单个词原位预测。">
+    <div class="quiz-q">3. T5 预训练用的目标是什么？</div>
+    <button class="quiz-opt">span corruption：遮掉连续片段，让模型生成被遮的那段</button>
+    <button class="quiz-opt">和 GPT 一样，纯粹猜下一个词</button>
+    <button class="quiz-opt">下一句预测（NSP）</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">把分类、回归都变成「生成字符串」，不会更慢、更不准吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">会牺牲<strong>一点点</strong>：生成「positive」要逐 token 解码，比一个分类头直接出一个类别 id 略慢；回归用「生成数字串」也不如真回归头精确。但 T5 用实测证明：<strong>这点损失换来的「统一性 + 通用性」远更值</strong>——一套代码、一种 loss、任意加任务、任务间能迁移。</p>
+      <p style="margin:0.3rem 0" class="cite">这就是为什么今天的 chat 模型<strong>全押了 text-to-text</strong>：在「极致单任务性能」和「一个模型什么都能干」之间，通用性赢了。你用 LLM 做打分（而不是训一个回归模型），吃的就是这笔交易。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">T5 的「任务前缀」和我写的 prompt / 指令，是一回事吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>是它的祖先，但还不等于。</strong>T5 的前缀是<strong>固定的短标签</strong>（<code>translate English to German:</code>），而且模型是<strong>被微调过</strong>来认这些前缀的——你不能随便换措辞。你今天写的是<strong>自然语言指令</strong>，模型不微调也能听懂。</p>
+      <p style="margin:0.3rem 0" class="cite">中间那一步关键演化叫 <strong>instruction tuning（指令微调）</strong>：把成千上万任务都写成「自然语言指令 + text-to-text」去微调，模型就学会「听任意指令」。第一个标志性成果 <strong>FLAN-T5 就直接长在 T5 上</strong>。所以链条是：T5 任务前缀 → FLAN 指令微调 → InstructGPT（P15）/ 今天的 chat。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">既然 decoder-only（GPT 那套）后来赢了，为什么 T5 选 encoder-decoder？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">在 T5 的设定（每任务微调、读一段输入写一段输出）里，<strong>encoder-decoder 综合最稳</strong>：encoder 用<strong>双向</strong>把输入读透，decoder 自回归生成——天生适配翻译 / 摘要 / 问答这类「输入→输出」任务。论文里它确实优于同等算力的 decoder-only。</p>
+      <p style="margin:0.3rem 0" class="cite">后来 decoder-only 成主流，是因为<strong>目标变了</strong>：要的是「一个冻结模型、靠 prompt 通吃、还能 few-shot」（GPT-3 路线），decoder-only 更简单、更好放大、对「续写式」交互更顺。<strong>不是 encoder-decoder 错了，是赛道从「每任务微调」换到了「一个通用对话模型」。</strong>两套架构今天都还在用（很多翻译 / 摘要专用模型仍是 encoder-decoder）。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Raffel et al. —
+      <a href="https://arxiv.org/abs/1910.10683">Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer（T5, 2019）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      建立直觉首选：Google AI Blog — <em>Exploring Transfer Learning with T5</em>；想看后续演化，搜 <strong>FLAN-T5</strong>（指令微调如何长在 text-to-text 上）。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      阶段三开篇：<strong>T5 统一了「任务的形状」</strong>。下一步 <strong>P10 Scaling Laws / P11 Chinchilla</strong>：把「放大就涨」量化成「规模 × 数据 × 算力到底怎么配最划算」。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「span corruption 和 BERT 的 MLM 到底差在哪？」「为什么说 LLM-as-judge 打分就是 T5 那招？」
+    「instruction tuning 和 in-context learning 是一回事吗？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0009-gpt-3.html">&#8592; 第 9 课：GPT-3 (P08)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P09</code> → 明天 P10（Scaling Laws）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Raffel et al., <em>Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer</em>, 2019/2020.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 把五种不同任务，全压成「文字进、文字出」 —— */
+(function () {
+  var T = [
+    {
+      cap: "翻译",
+      in: "translate English to German: That is good.",
+      out: "Das ist gut.",
+      why: "最自然的一档：输入一段、输出一段。前缀 <code>translate English to German:</code> 告诉模型干哪件事。"
+    },
+    {
+      cap: "情感分类",
+      in: "sst2 sentence: 这家店服务太差，再也不来了",
+      out: "negative",
+      why: "注意：输出不是一个「类别 id」，而是<strong>生成出「negative」这几个字</strong>。模型不知道这是「分类」——它只是在生成文字。"
+    },
+    {
+      cap: "相似度（回归）",
+      in: "stsb sentence1: 一只猫坐在垫子上 sentence2: 垫子上有只猫",
+      out: "4.6",
+      why: "连<strong>回归打分</strong>都被变成「生成一个数字字符串」。这就是你做 LLM-as-judge 让模型输出「分数」的同一招——分数是生成的字，不是回归头算的。"
+    },
+    {
+      cap: "摘要",
+      in: "summarize: 昨日发布会上，公司公布了三款新品并宣布……（一长段）",
+      out: "公司发布三款新品，重点在 X 与 Y。",
+      why: "输入长、输出短，但形状没变：还是字符串 → 字符串。换的只是前缀 <code>summarize:</code>。"
+    },
+    {
+      cap: "问答",
+      in: "question: 公司发布了几款新品？ context: 昨日发布会公布了三款新品……",
+      out: "三款",
+      why: "抽取式问答也不接「跨度预测头」了——直接<strong>把答案那段文字生成出来</strong>。一个模子，通吃。"
+    }
+  ];
+  var tbtns = document.getElementById("tbtns");
+  function render(idx) {
+    var t = T[idx];
+    document.getElementById("tin").textContent = t.in;
+    document.getElementById("tout").innerHTML = "<strong>" + t.out + "</strong>";
+    document.getElementById("twhy").innerHTML = t.why;
+    Array.prototype.forEach.call(tbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  T.forEach(function (t, i) {
+    var b = document.createElement("button");
+    b.textContent = t.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    tbtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>

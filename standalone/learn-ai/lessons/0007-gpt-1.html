@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 7 课 · GPT-1：只学「接下一个词」，却顺手学会了一切</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 7 课 / 经典论文 <strong>P06</strong> &nbsp;·&nbsp; 阶段二：预训练范式（Radford et al., 2018）</div>
+
+  <h1>GPT-1：<br>只学「接下一个词」<br><span style="font-size:0.6em;color:#a8521a">——你天天聊的 ChatGPT / Claude，血脉源头在这</span></h1>
+
+  <div class="mission">
+    上一课 <a href="0006-bert.html">BERT</a> 走了「理解」这条岔路：换目标为完形填空、夺回双向。这一课走<b>另一条岔路</b>——GPT 偏偏<b>守着「预测下一个词」这一个单向目标不放</b>，结果走出了今天统治一切的路线。
+    它回答你一个用过千百次却没拆过的问题：<b>为什么「一个词一个词往下接」这么笨的目标，能让模型顺手学会翻译、问答、推理、写代码？</b>
+  </div>
+
+  <div class="big-idea">
+    BERT 换了目标去换双向；GPT <strong>不换目标</strong>，赌的是另一件事：<br>
+    <strong>「预测下一个词」表面只是接龙，但要把下一个词猜准，模型被逼着把语法、事实、常识、推理<em>全学进去</em>。</strong><br>
+    通用能力，是「猜下一个词」这个任务的<strong>副产品</strong>——你上一轮刚拆过的那条暗线，这里推到极致。
+  </div>
+
+  <h2>一、立靶：同年对决，BERT 赢了，为什么最后是 GPT 统治？</h2>
+
+  <p>
+    GPT-1（2018 年 6 月）比 BERT（2018 年 10 月）<strong>早出几个月</strong>，但 BERT 一出，靠双向在 GLUE 榜上<strong>当场把 GPT-1 比下去</strong>。如果只看那一刻的分数，BERT 是赢家。可五年后回望，<strong>ChatGPT、Claude、Llama 几乎清一色 decoder-only——全是 GPT 这一支</strong>。BERT 系退守到 embedding/检索的角落。
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：当年的「输家」为什么赢了长线？</div>
+    <p style="margin:0.3rem 0">
+      答案不在「谁分数高」，在<strong>哪个目标更通用、更能吃规模</strong>。
+      BERT 的完形填空擅长理解、但<strong>天生不会流畅生成</strong>（你上节学的：完形填空的人不擅长从头编长文）。
+      GPT 的「预测下一个词」<strong>既是理解的训练、又直接就是生成本身</strong>——这个目标后来被证明<strong>越放大越通吃</strong>（GPT-2 / GPT-3 一路验证）。这一课先看它的起点 GPT-1 怎么搭。
+    </p>
+  </div>
+
+  <h2>二、抽框架：GPT-1 的两段式（和 BERT 同构，但每一格都换了内容）</h2>
+
+  <table>
+    <tr><th></th><th>第一段：生成式预训练（pre-training）</th><th>第二段：判别式微调（fine-tuning）</th></tr>
+    <tr><td>用什么数据</td><td><strong>海量无标注文本</strong>（BooksCorpus，7000 本书）</td><td>少量<strong>有标注</strong>的下游任务数据</td></tr>
+    <tr><td>训练目标</td><td><strong>预测下一个词</strong>（标准语言模型，单向自回归）</td><td>任务标签（分类/蕴含/相似度…）+ 一个<strong>辅助的「继续预测下一个词」</strong>正则项</td></tr>
+    <tr><td>架构</td><td colspan="2" style="text-align:center"><strong>12 层 decoder-only Transformer</strong>（带因果掩码的单向 self-attention）——预训练和微调<strong>同一个骨架</strong></td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">和 BERT 的「两段式」对齐着看，骨架一样、零件全换</div>
+    <p style="margin:0.3rem 0">
+      <strong>预训练-微调这个范式，BERT 和 GPT 是共用的</strong>（都是「先海量无标注、再少量有标注」）。差别只在两格：
+      <strong>① 目标</strong>——BERT 完形填空（双向）vs GPT 接下一个词（单向）；
+      <strong>② 架构</strong>——BERT encoder-only vs GPT decoder-only。
+      这又回到你拆透的那句：<strong>掩码开关定生死</strong>。GPT 的因果掩码挡住右边，正是「预测下一个词不能偷看答案」的物理实现。
+    </p>
+  </div>
+
+  <h2>三、暗线点题：通用能力＝「猜下一个词」的副产品</h2>
+
+  <p class="interactive-hint cite">
+    你上一轮自检答对了「word2vec 词向量是副产品」。GPT 把这条暗线推到顶：<strong>它从头到尾只做「猜下一个词」一件事，却把整个语言能力当副产品学了出来。</strong>下面这个演示让你<strong>亲眼看到「猜准下一个词」到底逼模型学了什么</strong>。
+  </p>
+
+  <h2>四、动手玩：要猜准这个空，模型被逼着学会了什么？</h2>
+  <p class="interactive-hint cite">
+    每句话都缺最后一个词。点一句，看「猜准它」<strong>究竟需要哪种能力</strong>——你会发现「接下一个词」根本不是死记，是被逼着学会语法、事实、常识、推理、情感。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.6rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      点一个例子：　<span id="ebtns"></span>
+    </div>
+    <div id="esent" class="mono" style="font-size:1.05rem;line-height:2;text-align:center;margin:0.7rem 0"></div>
+    <div id="eans" style="text-align:center;font-size:0.95rem;margin:0.4rem 0;color:#a8521a;font-weight:600"></div>
+    <div id="ewhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出来了吗：<strong>没有人单独教模型「语法/事实/推理」，是「把下一个词猜准」这个唯一目标，顺着把它们全逼了出来。</strong>这就是为什么一个看似简单的目标，撑起了今天所有通用大模型。
+  </p>
+
+  <h2>五、对照表（一）：GPT-1 vs BERT —— 同年同范式，两条性格</h2>
+  <table>
+    <tr><th>维度</th><th>GPT-1（本篇 P06）</th><th>BERT（上篇 P05）</th></tr>
+    <tr><td>架构</td><td><strong>decoder-only</strong></td><td>encoder-only</td></tr>
+    <tr><td>方向 / 掩码</td><td><strong>单向</strong>（因果掩码挡右边）</td><td>双向（无掩码）</td></tr>
+    <tr><td>预训练目标</td><td><strong>预测下一个词</strong>（接龙）</td><td>MLM（完形填空）</td></tr>
+    <tr><td>当年 GLUE 分数</td><td>开了范式，但被 BERT 反超</td><td><strong>更高</strong>（双向理解占优）</td></tr>
+    <tr><td>能否原生生成</td><td><strong>能</strong>（生成是它的主场）</td><td>不能</td></tr>
+    <tr><td>长线归宿</td><td><strong>通用大模型的主干</strong>（GPT/Claude/Llama）</td><td>退守 embedding/检索</td></tr>
+  </table>
+  <p class="cite">
+    一句话记牢：<strong>BERT 当年赢分数，GPT 长线赢天下。</strong>差别的根，仍是那个被你拆透的「目标函数 → 单向/双向 → 性格」的因果链。
+  </p>
+
+  <h2>六、对照表（二）：一个 decoder 怎么吃下不同任务？——输入变换</h2>
+  <p>
+    GPT-1 还没有「一句话提示就干活」的能力（那是 GPT-2/3 的事）。它微调时靠一个聪明的小把戏：<strong>把各种任务都改写成「一段连续的 token 序列」</strong>，喂给同一个 decoder，末尾接个小分类头。
+  </p>
+  <table>
+    <tr><th>任务</th><th>怎么塞进一个序列</th></tr>
+    <tr><td>文本分类</td><td><code>[起始] 文本 [抽取]</code> → 读末位向量分类</td></tr>
+    <tr><td>蕴含判断</td><td><code>[起始] 前提 [分隔] 假设 [抽取]</code></td></tr>
+    <tr><td>相似度</td><td>两句话<strong>正反各拼一遍</strong>（顺序无关），结果相加</td></tr>
+    <tr><td>多选问答</td><td>每个选项各拼一条序列，分别打分再 softmax</td></tr>
+  </table>
+  <p class="cite">
+    这个「<strong>把任务变成一段文本</strong>」的思路，就是日后「<strong>万物皆 text-to-text</strong>」（T5/P09）和你天天用的 <strong>prompt</strong> 的雏形。你写 prompt 把任务塞进一段话——和 GPT-1 干的是同一件事，只是它当年还要微调，你现在零样本就行。🔮
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>ChatGPT / Claude 一个 token 一个 token 往外蹦</td><td>就是 GPT-1 的<strong>「预测下一个词」自回归生成</strong>，原封不动放大了上万倍。你在<a href="0001-next-token-prediction.html">第 1 课</a>学的生成流水线，正是这条线的成品。</td></tr>
+    <tr><td>你写 prompt 把任务「描述成一段话」喂给模型</td><td>GPT-1 的<strong>输入变换</strong>的直系后代——把任务塞进一段连续 token。区别只是它要微调、你不用。</td></tr>
+    <tr><td>「为什么大模型啥都会，又没人专门教它」</td><td>因为通用能力是<strong>「猜下一个词」的副产品</strong>。猜准海量文本的下一个词，被迫把语法/事实/推理全学了。</td></tr>
+    <tr><td>你做 LLM-as-judge / autoevolve 时，模型「凭语感」打分</td><td>那份语感正是预训练「猜下一个词」副产品里的<strong>分布感</strong>——它知道「像不像人写的」，因为它就是按人写的分布训出来的。</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：GPT 守着『预测下一个词』这一个单向目标——它既是理解的训练，又直接就是生成本身，越放大越通吃。"
+       data-no="看第二节：GPT 的预训练目标是『预测下一个词』（单向自回归），不是完形填空（那是 BERT）。">
+    <div class="quiz-q">1. GPT-1 的预训练目标是什么？</div>
+    <button class="quiz-opt">完形填空（盖住词让它猜）</button>
+    <button class="quiz-opt">判断两句话是不是上下句</button>
+    <button class="quiz-opt">预测下一个词（单向自回归）</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：BERT 当年 GLUE 分数更高，但它的完形填空目标天生不会流畅生成；GPT 的『接下一个词』既能理解又能生成、越放大越通吃，长线赢了通用赛道。"
+       data-no="看第一、五节：当年 BERT 分数更高；但 GPT 的目标既是理解又是生成、更能吃规模，所以长线统治了通用大模型。">
+    <div class="quiz-q">2. 同年对决 BERT 分数更高，为什么最后是 GPT 这条路统治？</div>
+    <button class="quiz-opt">GPT-1 参数更多</button>
+    <button class="quiz-opt">『接下一个词』既能理解又能生成、越放大越通吃</button>
+    <button class="quiz-opt">BERT 后来被禁用了</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：通用能力是『猜下一个词』的副产品——没人单独教语法/事实/推理，是把下一个词猜准这个唯一目标，顺着把它们全逼了出来。"
+       data-no="看第三、四节：GPT 只做『猜下一个词』一件事，语法/事实/推理都是为了猜准而被逼出来的副产品。">
+    <div class="quiz-q">3. GPT 为什么没人专门教，却学会了翻译、推理、写代码？</div>
+    <button class="quiz-opt">这些能力是『猜下一个词』被逼出来的副产品</button>
+    <button class="quiz-opt">微调时每种能力都单独训了一遍</button>
+    <button class="quiz-opt">靠 NSP 任务学的</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">「预测下一个词」这么简单，凭什么能学出推理能力？不会只是背语料吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>关键在「猜准」的门槛有多高。</strong>在海量、多样的真实文本上，想把下一个词的概率压低损失，<strong>死记是不够的</strong>——同样的开头后面能接的词千变万化，唯一能稳定降损失的办法是<strong>真的抓住背后的规律</strong>：语法约束、世界事实、因果常识、甚至简单推理。</p>
+      <p style="margin:0.3rem 0">举例：「3 加 5 等于 ___」，背语料背不全所有算式，但<strong>学会加法</strong>就能稳定答对。于是「为了把下一个词猜得更准」这个压力，<strong>逼模型把能压缩损失的规律都内化</strong>。这就是「压缩即理解」——预测得越好，说明世界模型越准。🔮</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">GPT-1 和你天天用的 ChatGPT，中间差了什么？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">骨架同源（decoder-only + 预测下一个词），但中间隔着三级跳，<strong>每一跳都是后面的课</strong>：</p>
+      <table>
+        <tr><th>阶段</th><th>关键变化</th></tr>
+        <tr><td>GPT-1（本课）</td><td>立范式：生成式预训练 + 微调，但每个任务还要微调</td></tr>
+        <tr><td>GPT-2（P07）</td><td>放大规模，发现<strong>不微调、靠提示</strong>也能干活的苗头</td></tr>
+        <tr><td>GPT-3（P08）</td><td><strong>in-context learning / few-shot</strong>——你 prompt 工程的理论根</td></tr>
+        <tr><td>ChatGPT</td><td>再加 <strong>指令微调 + RLHF</strong>（对齐人类偏好，后面课会讲）</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">所以你用的 Claude，是「GPT-1 的目标 + 巨大规模 + 对齐」的合成体。底层那个「猜下一个词」，从 2018 到今天<strong>一字未改</strong>。🔮</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">微调时那个「辅助的继续预测下一个词」是干嘛的？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">微调时 GPT-1 不只优化任务标签，还<strong>顺带保留一部分「预测下一个词」的损失</strong>作为辅助项。作用有二：① <strong>防止灾难性遗忘</strong>——别为了一个小任务把预训练学的通用能力忘光；② <strong>当正则化</strong>，让微调更稳、泛化更好。</p>
+      <p style="margin:0.3rem 0" class="cite">这对你有迁移价值：<strong>在专门目标上微调时，掺一点原始的通用目标，能稳住别让模型「学窄」</strong>——和你调 LLM 时担心「过拟到某种风格」是同一个直觉。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">为什么 decoder 用因果掩码（causal mask）就等于「单向」？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>self-attention 默认是「全看」的</strong>：每个位置能看到序列里所有位置、左右通吃——这就是双向（BERT 吃的红利）。<strong>因果掩码做的唯一一件事，是把「右边」的注意力权重强行抹成 0</strong>（设为 -∞，softmax 后变 0），让「谁能看谁」的方格表变成一个<strong>下三角</strong>：词 3 永远只能看到词 1、2、3，物理上够不着词 4 及以后。</p>
+      <p style="margin:0.3rem 0">为什么必须这样？训练目标是「用前面的词预测下一个词」。<strong>不挡右边，模型预测词 4 时就能直接看到词 4 本身——那是抄答案，loss 瞬间归零，啥也学不到。</strong>因果掩码＝「预测下一个词不能偷看答案」的物理实现，强制信息只能从左往右流 ⇒ 这就是单向 / 自回归。</p>
+      <p style="margin:0.3rem 0" class="cite">一句话：<strong>双向 vs 单向不是两种模型，是同一个 self-attention 加不加那张下三角掩码的区别——掩码开关定生死。</strong>这也是为什么 Claude 只会一个 token 一个 token 往外蹦：因果掩码决定了它天生「看左边、猜右边」，生成必须自回归地一步步来。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">GPT-1 的「输入变换」和我天天写的 prompt 到底差在哪？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>血脉相同、机制不同。</strong>本质都是「把任务塞进一段连续 token 序列」喂给同一个 decoder，差别在「怎么让模型知道要它干嘛」：</p>
+      <table>
+        <tr><th>维度</th><th>GPT-1 输入变换（2018）</th><th>你写 prompt（今天）</th></tr>
+        <tr><td>怎么表达任务</td><td>靠<strong>特殊分隔符</strong>拼结构：<code>[起始] 前提 [分隔] 假设 [抽取]</code></td><td>靠<strong>自然语言</strong>描述任务</td></tr>
+        <tr><td>模型怎么响应</td><td><strong>必须微调</strong>（改权重 + 接分类头）</td><td><strong>不改任何权重</strong>，零样本/少样本直接出</td></tr>
+        <tr><td>谁适配谁</td><td><strong>改模型</strong>去吃任务</td><td><strong>改输入</strong>去够模型</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">核心差别一句话：GPT-1 是「改模型吃任务」，你写 prompt 是「改输入够模型」。能从前者跳到后者，靠的不是机制变聪明，<strong>而是规模</strong>——这正是 P08 GPT-3 的 <strong>in-context learning</strong>，你 prompt 工程的理论根。你写的每条 prompt，都是 GPT-1「把任务塞进序列」的直系后代。🔮</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Radford et al. —
+      <a href="https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf">Improving Language Understanding by Generative Pre-Training（GPT-1, 2018）</a>。
+    </p>
+    <p style="margin:0.3rem 0">
+      建立直觉首选：Jay Alammar — <a href="https://jalammar.github.io/illustrated-gpt2/">The Illustrated GPT-2</a>（图解 decoder-only 与自回归生成，同样适用于 GPT-1 直觉）。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      下一篇 <strong>P07 GPT-2</strong>：把这条路「放大」——参数和数据一起加码，世界第一次看到「不微调、光靠提示就能干活」的苗头。规模，开始变成魔法。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「『压缩即理解』到底什么意思？」「为什么 decoder 用因果掩码就等于单向？」
+    「GPT-1 的输入变换和我写 prompt 到底差在哪？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0006-bert.html">&#8592; 第 6 课：BERT (P05)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P06</code> → 明天 P07（GPT-2）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Radford et al., <em>Improving Language Understanding by Generative Pre-Training</em>, 2018；Alammar, <em>The Illustrated GPT-2</em>.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 「猜准下一个词」到底逼模型学了什么 —— */
+(function () {
+  var EX = [
+    {
+      head: "他从冰箱里拿出一瓶冰镇的",
+      blank: "可乐",
+      cap: "语法 + 常识",
+      why: "要填名词（语法约束），还得是「冰箱里冰镇的、能拿出一瓶」的东西（生活常识）。猜准它，模型被逼着学会<strong>词性规则 + 物理常识</strong>。"
+    },
+    {
+      head: "法国的首都是",
+      blank: "巴黎",
+      cap: "世界事实",
+      why: "没有任何语法线索能帮你——只能<strong>真的知道这条事实</strong>。想稳定猜对，模型必须把世界知识<strong>压进权重</strong>里。"
+    },
+    {
+      head: "3 加 5 等于",
+      blank: "8",
+      cap: "推理 / 计算",
+      why: "语料里不可能列尽所有算式。唯一能稳定答对的办法，是<strong>真学会加法这个规则</strong>。这就是「猜下一个词」逼出<strong>推理能力</strong>的样子。"
+    },
+    {
+      head: "电影烂到我中途就走了，体验非常",
+      blank: "糟糕",
+      cap: "情感 / 语境",
+      why: "前文「烂、中途就走」定了负面基调，下一个词必须顺着情感走。猜准它，模型学会了<strong>追踪整段的情绪与语境一致性</strong>。"
+    },
+    {
+      head: "医生让病人张开嘴，拿起手电检查他的",
+      blank: "喉咙",
+      cap: "场景 / 长程依赖",
+      why: "要综合「医生、张嘴、手电检查」整个场景才填得准。猜准它，模型被逼着<strong>跨多个词整合上下文</strong>——正是注意力的用武之地。"
+    }
+  ];
+  var ebtns = document.getElementById("ebtns");
+  var sentEl = document.getElementById("esent");
+
+  function render(idx) {
+    var e = EX[idx];
+    sentEl.innerHTML = '<span style="background:#ffe9cf;border-radius:3px;padding:0 3px">' + e.head +
+      '</span> <span style="color:#d2691e;font-weight:700;border-bottom:2px solid #d2691e">　▢　</span>';
+    document.getElementById("eans").innerHTML =
+      '模型要猜的词 → <strong>' + e.blank + '</strong>　｜　被逼着学会：<span style="background:#ffe0c2;border-radius:3px;padding:0 5px">' + e.cap + '</span>';
+    document.getElementById("ewhy").innerHTML = e.why;
+    Array.prototype.forEach.call(ebtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  EX.forEach(function (e, i) {
+    var b = document.createElement("button");
+    b.textContent = e.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    ebtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>

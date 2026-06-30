@@ -91,6 +91,45 @@
     <tr><td>词序信息</td><td>天然自带</td><td>要额外加位置编码</td></tr>
   </table>
 
+  <h2>四·五、换个画面：蒙眼传话 vs 圆桌会议</h2>
+  <p class="interactive-hint cite">
+    上面那张表有点干。把 RNN 和 Transformer 各还原成<strong>一个画面</strong>，区别就立起来了——而且表里每一条，都是画面的直接后果。
+  </p>
+
+  <table>
+    <tr><th></th><th>RNN / LSTM = 蒙眼接力</th><th>Transformer = 圆桌会议</th></tr>
+    <tr>
+      <td><strong>画面</strong></td>
+      <td>你蒙着眼，别人一个词一个词念给你听，你边听边在<strong>唯一的一页笔记</strong>上更新（这页笔记 = 隐状态 h）。</td>
+      <td>每个词变成一个人，<strong>全坐圆桌、同时在场</strong>；谁想了解谁，<strong>直接转头问</strong>，一步到位。</td>
+    </tr>
+    <tr>
+      <td>所以<br>并行</td>
+      <td>第 100 个词得等前 99 个听完 → <strong>必须排队</strong>，GPU 喂不饱。</td>
+      <td>大家同时开问 → <strong>整句并行</strong>，GPU 喂得饱。</td>
+    </tr>
+    <tr>
+      <td>所以<br>长距离</td>
+      <td>第 1 个词的信息在笔记上被覆盖、稀释 99 次 → <strong>越传越糊</strong>。</td>
+      <td>第 100 个人转头就问第 1 个人，<strong>不过中间 99 人</strong> → 不衰减。</td>
+    </tr>
+    <tr>
+      <td>所以<br>成本</td>
+      <td>每词只更新一次笔记 → <strong>O(n)，便宜</strong>。</td>
+      <td>人人互相握一次手 → <strong>O(n²)，人多就贵</strong>。</td>
+    </tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">一个反转：别把 RNN 当「被淘汰的旧东西」</div>
+    <p style="margin:0.3rem 0">
+      注意：Transformer 不是全面碾压。它 <strong>O(n²) 更贵</strong>，还<strong>天生不知道词序</strong>——圆桌上大家同时在场、没有先来后到，所以才要额外发个「座位号」（positional encoding）。这两点上 RNN 反而天然占优。
+    </p>
+    <p style="margin:0.3rem 0">
+      正因为 RNN 推理是 <strong>O(n) 便宜</strong>、Transformer 是 O(n²) 烧钱，这两年有了「<strong>RNN 复兴</strong>」——<strong>Mamba、RWKV</strong> 这类架构想把线性成本捡回来，专攻超长序列。判断这类「线性注意力 / 状态空间模型」的卖点，核心就一句：<strong>要 RNN 的便宜，又不想丢 Transformer 的并行。</strong>
+    </p>
+  </div>
+
   <h2>五、映射到你的项目</h2>
   <table>
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
@@ -131,6 +170,48 @@
     <button class="quiz-opt">因为多头之间需要对齐各自位置</button>
     <div class="quiz-fb"></div>
   </div>
+
+  <h2>七、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">课上被问到、值得单独记一笔的点。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">整句有多个 token，每个 token 的 Q 是怎么一起处理的？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>不是轮流当 Q（那就退回 RNN 了），是所有 token 同时各生成自己的 Q/K/V、并行各查各的。</strong>n 个 token 就有 n 个 Q、K、V，摞成矩阵一次算完：</p>
+      <pre style="margin:0.4rem 0"><code>Attention(Q,K,V) = softmax( Q·Kᵀ / √d_k ) · V</code></pre>
+      <p style="margin:0.3rem 0"><code>Q·Kᵀ</code> 是一张 <strong>n×n 注意力分数矩阵</strong>（第 i 行第 j 列 = token i 对 token j 的相关度）；<strong>每一行</strong>做 softmax = 该 token「把注意力分给谁、各多少」，再加权求和对应的 V 得到它的新表示。单 token 那五步（Q·K → ÷√d_k → softmax → 加权 V），只是把「向量」换成「矩阵」一次并行做完。</p>
+      <p style="margin:0.3rem 0">🔮 那张 <strong>n×n 矩阵</strong>就是本课「圆桌握手」的真身、也是 <strong>O(n²)</strong> 的出处——你问「多个 Q 怎么办」，答案本身就解释了长上下文为什么又慢又贵。生成时新 token 只给矩阵<strong>加最后一行</strong>，旧 K/V 缓存不重算，就是 <strong>KV cache</strong>。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">softmax 到底是啥？为什么 attention 非要它不可？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">一句话：<strong>把「一串大小不一的分数」换算成「一组加起来正好 = 1 的百分比」。</strong></p>
+      <pre style="margin:0.4rem 0"><code>小猫 3.0， 因为 0.2， 累了 1.0 …   ← 原始分数，可大可小、可正可负
+        ↓ softmax
+小猫 0.70， 因为 0.05， 累了 0.15 …  ← 变成百分比，加起来 = 1</code></pre>
+      <p style="margin:0.3rem 0">两步：① 每个分数取 <code>e^x</code>（指数 → 都变正数、且<strong>放大差距</strong>）；② 各自除以总和（归一化到「和 = 1」）。</p>
+      <p style="margin:0.3rem 0"><strong>attention 为什么非要它：</strong>下一步「加权 V」做的是<strong>加权平均</strong>，权重必须是「加起来 = 1 的比例」才行。<code>Q·K</code> 出来的是任意分数（可能 17、-3），直接加权尺度就乱了——softmax 是把「原始好感分」规整成「合法权重」的那道工序。</p>
+      <p style="margin:0.3rem 0">💡 名字直觉：<strong>soft + max = 软性取最大</strong>。硬 max 只给最高分 100%；softmax 让高分拿大头、低分拿一点——正是注意力该有的样子。（它和最后出 token 时是<strong>同一个运算</strong>，见 <code>GLOSSARY.md</code>。）</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">用「它」走一遍：五步串联，以及「新表示 ≠ V」</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>先澄清一个易混点：新表示 ≠ V。V 是原料，新表示是成品。</strong>每个 token 有自己的 V（它的「货」）；某个 token 的<strong>新表示</strong>是把全场所有 V <strong>按权重 α 混合</strong>出来的（<code>Σ α·V</code>）。谁权重高，成品里谁的货占大头。</p>
+      <p style="margin:0.3rem 0">句子「小猫 … 它 …」里的「<strong>它</strong>」，走完整五步：</p>
+      <ol style="margin:0.3rem 0 0.3rem 1.2rem;padding:0">
+        <li>「它」带着原始 embedding 进来，生成它的 <strong>Q</strong>；</li>
+        <li>它的 Q 和<strong>全场每个 token 的 K</strong> 点积 → 一串相关度分数（<code>Q·K</code>）；</li>
+        <li><strong>÷√d_k</strong> 缩放，免得分数太大让 softmax 饱和；</li>
+        <li><strong>softmax</strong> → 分数变成和为 1 的权重 α（小猫 ≈ 0.7，其它零碎）；</li>
+        <li><strong>加权 V</strong>：按 α 把全场的 V 混合 → 「它」的<strong>新表示</strong>（小猫的货占大头）→ 它现在「知道」自己指代小猫。</li>
+      </ol>
+      <p style="margin:0.3rem 0">所以<strong>同一个「它」，在不同句子里会吸收不同的词</strong>，得到不同的新表示——这就是 self-attention 的终极目的：<strong>让每个词的表示，按上下文动态吸收它该吸收的信息</strong>。</p>
+    </div>
+  </details>
 
   <div class="callout primary">
     <div class="label">本课主源</div>

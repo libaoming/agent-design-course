@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 6 课 · BERT：把「双向」夺回来，预训练-微调成为范式</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 6 课 / 经典论文 <strong>P05</strong> &nbsp;·&nbsp; 阶段二：预训练范式（Devlin et al., 2018）</div>
+
+  <h1>BERT：<br>把「双向」夺回来<br><span style="font-size:0.6em;color:#a8521a">——你 RAG 里那个 embedding 模型，根在这</span></h1>
+
+  <div class="mission">
+    前五课你拼齐了零件：<a href="0002-attention-is-all-you-need.html">self-attention</a>（按语境取信息）、<a href="0004-sequence-to-sequence-learning.html">encoder-decoder</a>（序列变序列）、<a href="0005-word2vec.html">embedding</a>（语义=几何）。这一课起，零件要拼成<b>真正能预训练的语言模型</b>。
+    BERT 回答一个你天天受益却没拆过的问题：<b>为什么我们现在不用从零训模型，下载一个预训练权重微调一下就能用？</b>而且——<b>为什么做检索/embedding 几乎都用 BERT 系，而不是 GPT 系？</b>
+  </div>
+
+  <div class="big-idea">
+    self-attention 本来能看<strong>整句</strong>（双向）。<br>
+    但只要你的训练目标是「<em>预测下一个词</em>」，就必须挡住右边——<strong>看右边=偷看答案</strong>，于是被迫单向。<br>
+    BERT 的洞见：<strong>换一个不怕偷看的目标（完形填空），双向就夺回来了。</strong>
+  </div>
+
+  <h2>一、立靶：「双向」为什么会丢？</h2>
+
+  <p>
+    self-attention 的本事是<strong>每个 token 同时看全序列</strong>。照理说，理解「它」是什么、「bank」是哪个 bank，<strong>左右都看才看得准</strong>。可此前的语言模型（以及马上要学的 GPT）几乎都<strong>单向</strong>——只看左边。为什么自废一半武功？
+  </p>
+
+  <div class="callout">
+    <div class="label">根因：目标函数把手脚绑住了</div>
+    <p style="margin:0.3rem 0">
+      传统语言模型的训练目标是<strong>「预测下一个词」</strong>（自回归）。要预测位置 <code>i</code> 的词，就<strong>绝不能让模型看到位置 i 及右边</strong>——否则答案就在输入里，模型直接抄，啥也学不到。
+      所以单向不是技术做不到双向，是<strong>「预测下一个词」这个目标本身，逻辑上要求挡住右边</strong>。
+    </p>
+  </div>
+
+  <p>论文要的：<strong>一个既能用上「左右两边语境」、又不会偷看答案的自监督目标。</strong></p>
+
+  <h2>二、抽框架：BERT 的三步换装</h2>
+
+  <table>
+    <tr><th>换什么</th><th>怎么换</th><th>解决了什么</th></tr>
+    <tr><td><strong>① 换目标 → MLM</strong></td><td>随机盖住 15% 的词，让模型用<strong>左右两边</strong>一起猜被盖的（完形填空）</td><td>答案被盖住了，看全句不算偷看 → <strong>双向解锁</strong></td></tr>
+    <tr><td><strong>② 加目标 → NSP</strong></td><td>给两句话，判断 B 是不是 A 的真实下一句</td><td>学<strong>句子间关系</strong>，服务问答/推理</td></tr>
+    <tr><td><strong>③ 换架构 → encoder-only</strong></td><td>只堆 Transformer 的<strong>编码器</strong>，扔掉 decoder</td><td>不生成、只<strong>理解</strong>，每层都真双向</td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">MLM 的细节（论文的讲究处）</div>
+    <p style="margin:0.3rem 0">
+      盖住的 15% 里，并不是全换成 <code>[MASK]</code>：<strong>80% 换 <code>[MASK]</code>、10% 换一个随机词、10% 保持原词不动</strong>。
+      为什么这么拧？因为微调时根本没有 <code>[MASK]</code> 这个符号——如果预训练只见过 <code>[MASK]</code>，一到下游就「水土不服」。这 80/10/10 是为了<strong>缩小预训练和微调之间的差距</strong>。这种「为了对齐两个阶段而做的小设计」，正是你做 prompt/eval 时该有的嗅觉。
+    </p>
+  </div>
+
+  <h2>二·五、换个说法：完形填空 vs 接龙（通俗版）</h2>
+  <table>
+    <tr><th>两种做题方式</th><th>对应模型</th><th>能看到的语境</th></tr>
+    <tr><td><strong>句子接龙</strong>：只给你上半句，往下接</td><td>GPT（单向语言模型）</td><td>只有<strong>左边</strong></td></tr>
+    <tr><td><strong>完形填空</strong>：整段挖几个空，前后文都给你</td><td>BERT（MLM）</td><td><strong>左右都有</strong></td></tr>
+  </table>
+  <p class="interactive-hint cite">
+    做完形填空，你当然两边都瞄——这正是 BERT 比单向模型「理解」更全的来源。但完形填空的人，<strong>不擅长从头编一篇连贯长文</strong>（那是接龙的活）。一个目标的差别，决定了两条路线的性格。
+  </p>
+
+  <h2>三、动手玩：盖住一个词，看「单向 vs 双向」能用的语境差多少</h2>
+  <p class="interactive-hint cite">
+    同一句话盖住中间一个词，切换两种模式，看高亮的「可利用语境」范围——以及单向模式下，为什么常常<strong>填不准</strong>。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.6rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      模式：　<span id="mbtns"></span>
+    </div>
+    <div id="sent" class="mono" style="font-size:1.05rem;line-height:2.1;text-align:center;margin:0.6rem 0"></div>
+    <div id="guess" style="text-align:center;font-size:0.95rem;margin:0.4rem 0;color:#a8521a;font-weight:600"></div>
+    <div id="why" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <h2>四、对照表（一）：三大路线在这里分叉</h2>
+  <table>
+    <tr><th>维度</th><th>BERT<br>encoder-only（本篇 P05）</th><th>GPT<br>decoder-only（下一篇 P06）</th><th>seq2seq<br>encoder-decoder（P03）</th></tr>
+    <tr><td>看的方向</td><td><strong>双向</strong></td><td>单向（只看左）</td><td>编码双向 + 解码单向</td></tr>
+    <tr><td>预训练目标</td><td><strong>MLM（完形填空）</strong></td><td>预测下一个词（接龙）</td><td>翻译/重建目标</td></tr>
+    <tr><td>最擅长</td><td><strong>理解</strong>：分类、抽取、检索</td><td><strong>生成</strong>：续写、对话、写代码</td><td>转换：翻译、摘要</td></tr>
+    <tr><td>能直接聊天吗</td><td>不能（不是生成型）</td><td><strong>能</strong>（ChatGPT 这一支）</td><td>能，但偏定向转换</td></tr>
+  </table>
+  <p class="cite">
+    记住这张分叉表：你日常用的 <strong>ChatGPT/Claude 是 decoder-only 那一支</strong>，而你 RAG 里的 <strong>embedding 模型是 BERT 这一支</strong>——它们血统不同，是因为<strong>预训练目标不同</strong>。
+  </p>
+
+  <h2>五、对照表（二）：预训练-微调，凭什么成了范式</h2>
+  <table>
+    <tr><th></th><th>BERT 之前：每个任务从头训</th><th>BERT 之后：预训练-微调</th></tr>
+    <tr><td>怎么开工</td><td>每个任务收一批标注数据，<strong>从零训一个模型</strong></td><td>下载一份<strong>预训练权重</strong>，接个小任务头微调</td></tr>
+    <tr><td>要多少标注</td><td>大量（每任务都要）</td><td><strong>少量</strong>（通用知识已在预训练里）</td></tr>
+    <tr><td>效果</td><td>受限于单任务数据量</td><td>一次预训练，<strong>多任务全面刷新 SOTA</strong>（GLUE 等）</td></tr>
+  </table>
+  <p class="cite">
+    BERT 用 <strong>BooksCorpus + 英文维基</strong>预训练（base 版 12 层/1.1 亿参数，large 版 24 层/3.4 亿），然后在 11 个任务上微调全部刷榜。这一下把<strong>「预训练-微调」</strong>钉成了行业默认姿势——你今天「拉个权重微调」的工作流，起点就在这。
+  </p>
+
+  <h2>六、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>RAG 里 <code>bge-small-zh</code> 把句子编码成向量</td><td>它是 <strong>BERT 系 encoder</strong> 的直系后代。检索要「双向理解整句」，正是 <strong>MLM 训出来</strong>的本事——这就是为什么编码用 BERT 系、不用 GPT 系。</td></tr>
+    <tr><td>「句向量 / 整段的语义表示」从哪来</td><td>BERT 的 <code>[CLS]</code> 输出向量 = <strong>整句语义浓缩</strong>，正是句向量最早的来源（现代多用 mean-pooling 改进）。</td></tr>
+    <tr><td>你 <a href="../rag-供料层选型/MISSION.md">供料层选型</a>里纠结的「切块 vs 整段」</td><td>BERT 类编码器有<strong>固定长度上限</strong>（经典 512 token），长文必须切——你那个老约束，根在编码器的双向注意力 O(n²) 成本。</td></tr>
+    <tr><td>「为什么不从零训，拉个权重就微调」</td><td>就是 BERT 钉下的<strong>预训练-微调</strong>范式。你用过的所有 fine-tune，都站在这套范式上。</td></tr>
+  </table>
+
+  <h2>七、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：单向是被『预测下一个词』这个目标逼出来的——看右边等于偷看答案。不是技术做不到双向。"
+       data-no="回看第一节：根因是目标函数。『预测下一个词』逻辑上要求挡住右边，否则答案就在输入里。">
+    <div class="quiz-q">1. 传统语言模型为什么只能「单向」？</div>
+    <button class="quiz-opt">attention 算不了双向</button>
+    <button class="quiz-opt">双向太慢太贵</button>
+    <button class="quiz-opt">目标是「预测下一个词」，看右边等于偷看答案</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：MLM 把词盖住做完形填空，答案被遮了，所以看全句不算偷看——双向就解锁了。这是 BERT 的核心招。"
+       data-no="看第二节：MLM=盖住 15% 的词做完形填空。因为答案被盖住，模型才能放心看左右两边，于是双向解锁。">
+    <div class="quiz-q">2. BERT 靠什么把「双向」夺回来？</div>
+    <button class="quiz-opt">用了两个反向的 RNN 拼接</button>
+    <button class="quiz-opt">换目标为 MLM（完形填空），盖住的词不怕被看到</button>
+    <button class="quiz-opt">把序列倒过来再训一遍</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：BERT 是 encoder-only、双向、为理解而生（分类/抽取/检索）；GPT 是 decoder-only、单向、为生成而生。预训练目标的差别决定了路线性格。"
+       data-no="看第四节分叉表：BERT=encoder-only 擅长理解，所以做检索/embedding；GPT=decoder-only 擅长生成，所以做对话。">
+    <div class="quiz-q">3. 为什么 RAG 的 embedding 模型用 BERT 系而不是 GPT 系？</div>
+    <button class="quiz-opt">BERT 双向、为「理解」而生，编码整句更准</button>
+    <button class="quiz-opt">BERT 参数更大</button>
+    <button class="quiz-opt">GPT 不能算向量</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>八、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">为什么做检索/embedding 几乎都是 BERT 系，而 ChatGPT/Claude 却是 GPT 系？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>一句话：编码要「理解」，对话要「生成」，两件事的最优训练目标不同。</strong></p>
+      <p style="margin:0.3rem 0">检索的核心是把一段话压成一个<strong>能代表整句语义的向量</strong>。要压得准，得<strong>左右双向</strong>地理解全句——这正是 MLM（BERT）练出来的本事。所以 <code>bge</code> / <code>e5</code> / <code>gte</code> 这些 embedding 模型，几乎都是 BERT 系 encoder。</p>
+      <p style="margin:0.3rem 0">对话/续写要的是<strong>一个词一个词往下生成</strong>，天然是单向自回归——这是 GPT（decoder-only）的主场。</p>
+      <p style="margin:0.3rem 0">注：近年也有用大 decoder 模型抽 embedding 的做法（如某些 LLM-based embedder），但主流检索栈仍以 BERT 系为骨干。<strong>路线选择 = 预训练目标选择</strong>，这是你做技术判断时最该握住的一条线。🔮</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">NSP 后来被「淘汰」了，那还要学它吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">要——但要知道它的归宿。BERT 原论文用 NSP 学句子间关系，但后续的 <strong>RoBERTa</strong> 做消融实验发现：去掉 NSP、把 MLM 训得更狠，效果反而更好。所以现代很多 BERT 变体<strong>移除了 NSP</strong>。</p>
+      <p style="margin:0.3rem 0">学它的价值在于：理解 BERT 当年「为下游问答/推理铺路」的设计动机，以及——<strong>一个看似合理的预训练任务，要靠消融实验才能验证它到底有没有用</strong>。这正是你「重证据、轻断言」的那套做派在论文里的样子。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">理解一定用 encoder、生成一定用 decoder 吗？那为什么现在大模型几乎都是 decoder-only？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>大方向对，但不是铁律。</strong>先说 encoder 和 decoder 的真正区别——不是两种神秘零件，结构高度雷同（都是 self-attention + FFN），<strong>核心差别就一条：self-attention 让不让看右边</strong>。encoder 不挡（双向）、decoder 用因果掩码挡住右边（单向）。decoder 的「因果掩码」，就是「预测下一个词不能偷看答案」的物理实现。</p>
+      <p style="margin:0.3rem 0">为什么不是铁律：<strong>decoder-only 也能做理解</strong>（分类/抽取靠 in-context learning 现场学）。事实上<strong>现在通用大模型几乎全是 decoder-only</strong>（GPT/Claude/Llama），理解生成一把抓；encoder-only（BERT 系）如今主要活在 <strong>embedding/检索</strong>这种纯理解、要双向、又不需生成的场景（你的 <code>bge</code>）。</p>
+      <p style="margin:0.3rem 0"><strong>为什么 decoder 赢了通用赛道？</strong>两个性质不对称：</p>
+      <table>
+        <tr><th></th><th>单向（decoder）</th><th>双向（encoder）</th></tr>
+        <tr><td>对生成</td><td><strong>硬约束</strong>（必须单向）</td><td>做不了流畅生成</td></tr>
+        <tr><td>对理解</td><td>够用（也能理解）</td><td><strong>是优势，但非必需</strong></td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">一句话：<strong>生成离不开单向，理解离得开双向</strong> → 那把生成扛起来、理解也凑合的 decoder-only，成了更通用的路。所以纯检索还用 encoder，通用大模型都走 decoder-only。🔮</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">seq2seq 的「编码双向 + 解码单向」是什么意思？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>seq2seq 是同一个模型里有两半——读的那半双向，写的那半单向。</strong>因为「读」和「写」任务性质不同。以翻译 <code>我爱你 → I love you</code> 为例：</p>
+      <table>
+        <tr><th></th><th>Encoder（读源句"我爱你"）</th><th>Decoder（写译文"I love you"）</th></tr>
+        <tr><td>在干嘛</td><td><strong>理解</strong>已给定的输入</td><td><strong>逐词生成</strong>输出</td></tr>
+        <tr><td>信息全不全</td><td>源句<strong>整句在手</strong></td><td>写到 "love" 时，后面<strong>还没写出</strong></td></tr>
+        <tr><td>能否双向</td><td><strong>能</strong>（理解越全越好）</td><td><strong>不能</strong>（看右边=偷看没写的词）</td></tr>
+      </table>
+      <p style="margin:0.3rem 0">关键：<strong>读「已知的东西」可以双向（信息全在）；写「还没写完的东西」必须单向（不偷看未来）</strong>。</p>
+      <p style="margin:0.3rem 0">而且 decoder 写每个词时<strong>同时看两处</strong>：① <strong>masked self-attention</strong> 看自己已写的左边目标词；② <strong>cross-attention</strong> 回头看 encoder 对整句源句的理解——第 ② 条就是 <a href="0003-neural-machine-translation-align-translate.html">P02 Bahdanau「align and translate」</a>的起源（生成 "love" 时对齐到源句的"爱"）。</p>
+      <p style="margin:0.3rem 0" class="cite">所以三条路线统一在「哪半双向」一个维度上：encoder-only(BERT)=只读·双向；decoder-only(GPT)=只写·单向；<strong>encoder-decoder(seq2seq/T5)=读双向+写单向</strong>，是前两条的组合，不是第三种零件。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Devlin et al. —
+      <a href="https://arxiv.org/abs/1810.04805">BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding (arXiv:1810.04805)</a>。
+    </p>
+    <p style="margin:0.3rem 0">
+      建立直觉首选：Jay Alammar — <a href="https://jalammar.github.io/illustrated-bert/">The Illustrated BERT</a>（图解 MLM、预训练-微调、特征抽取）。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      下一篇 <strong>P06 GPT-1</strong>：走另一条岔路——decoder-only、单向、为生成而生。BERT（理解）与 GPT（生成）两条路线，从这里分开，最终各成一片天。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「<code>[CLS]</code> 向量为什么能代表整句？」「BERT 的 512 token 上限是哪来的、能不能突破？」
+    「既然 BERT 更懂理解，为什么 RAG 的『生成』那一步又回到 GPT？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0005-word2vec.html">&#8592; 第 5 课：word2vec (P04)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P05</code> → 明天 P06（GPT-1）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Devlin et al., <em>BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding</em>, 2018；Liu et al., <em>RoBERTa</em>, 2019；Alammar, <em>The Illustrated BERT</em>.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 单向 vs 双向：可利用语境演示 —— */
+(function () {
+  // 句子拆成词；MASK 的位置盖住，看两种模式分别能用到哪些词
+  var WORDS = ["我", "把", "钱", "存", "进", "了", "___", "的", "保", "险", "柜"];
+  var MASK = 6; // ___ 的位置
+  var MODES = {
+    "双向 (BERT)": {
+      lit: function (i) { return i !== MASK; },              // 除了被盖的，全可见
+      guess: "银行 ✓",
+      why: "左边有「把钱存进了」，右边有「的保险柜」——<strong>两边夹击</strong>，几乎只能是「银行」。这就是 MLM 双向的威力。"
+    },
+    "单向 (GPT 式)": {
+      lit: function (i) { return i < MASK; },                // 只能看左边
+      guess: "银行？商场？家？……不确定",
+      why: "只有左边「把钱存进了」，<strong>右边的「保险柜」被挡住了</strong>。能存钱的地方太多，单向模型容易填偏——这就是它「理解」上的先天劣势。"
+    }
+  };
+  var KEYS = ["双向 (BERT)", "单向 (GPT 式)"];
+  var mbtns = document.getElementById("mbtns");
+  var sentEl = document.getElementById("sent");
+
+  function render(k) {
+    var m = MODES[k];
+    var html = "";
+    WORDS.forEach(function (w, i) {
+      if (i === MASK) {
+        html += '<span style="color:#d2691e;font-weight:700;border-bottom:2px solid #d2691e">　▢　</span>';
+      } else if (m.lit(i)) {
+        html += '<span style="background:#ffe9cf;border-radius:3px;padding:0 2px">' + w + '</span>';
+      } else {
+        html += '<span style="color:#c8bca6">' + w + '</span>'; // 看不到的，灰掉
+      }
+    });
+    sentEl.innerHTML = html;
+    document.getElementById("guess").innerHTML = "模型猜被盖的词 → " + m.guess;
+    document.getElementById("why").innerHTML = m.why;
+    Array.prototype.forEach.call(mbtns.children, function (b) {
+      b.style.background = (b.textContent === k) ? "#d2691e" : "#fff";
+      b.style.color = (b.textContent === k) ? "#fff" : "#a8521a";
+    });
+  }
+  KEYS.forEach(function (k) {
+    var b = document.createElement("button");
+    b.textContent = k;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.7rem;margin:0 0.25rem;cursor:pointer;font-size:0.82rem;font-family:inherit";
+    b.addEventListener("click", function () { render(k); });
+    mbtns.appendChild(b);
+  });
+  render("双向 (BERT)");
+})();
+</script>
+</body>
+</html>

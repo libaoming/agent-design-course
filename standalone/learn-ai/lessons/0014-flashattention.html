@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 14 课 · FlashAttention：attention 慢不是因为算得多，是因为大矩阵在慢显存里反复搬——长上下文与低延迟能落地的工程底</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 14 课 / 经典论文 <strong>P13</strong> &nbsp;·&nbsp; 阶段三：规模与效率（Dao et al., 2022）</div>
+
+  <h1>FlashAttention：<br>attention 慢，不是因为算得多<br><span style="font-size:0.55em;color:#a8521a">是因为那张大矩阵在慢显存里反复搬——长上下文与低延迟能落地的工程底</span></h1>
+
+  <div class="mission">
+    上一课 <a href="0013-lora.html">LoRA</a> 省的是<b>微调成本</b>（改 <u>什么</u>——只训低秩补丁）。这一课 FlashAttention 省的是<b>跑 attention 时的显存与时间</b>（改 <u>怎么算</u>——同样的结果、更聪明的内存顺序）。
+    它戳破一个流行的误解：<b>attention 慢，大家以为卡在 O(N²) 的「计算量」上，真相却是卡在「把那张 N×N 大矩阵在 GPU 慢速显存里反复读写」的<u>搬运</u>上。</b>
+    这直接对应你 realtime 语音链路天天纠结的事：<b>为什么上下文一长，延迟和显存就爆？怎么在不牺牲效果的前提下把它压下去？</b>
+  </div>
+
+  <div class="big-idea">
+    FlashAttention 的一句话：<strong>attention 是「内存瓶颈」(memory-bound)，不是「算力瓶颈」。</strong><br>
+    标准做法会把那张 N×N 的注意力矩阵<strong>整个物化到慢速大显存 HBM</strong> 里、再反复读写——时间全耗在搬运上。FlashAttention 用<strong>分块（tiling）+ 在线 softmax</strong>，让这张矩阵<strong>根本不落到慢显存</strong>，在片上高速缓存 SRAM 里算完。
+    结果<strong>完全一样（精确，不是近似！）</strong>，但快好几倍、显存从 O(N²) 降到 O(N)。<em>这就是长上下文和低延迟能落地的工程底。</em>
+  </div>
+
+  <h2>一、立靶：attention 到底慢在哪、贵在哪？</h2>
+
+  <p>
+    回忆 <a href="0002-attention-is-all-you-need.html">self-attention</a>：算 <code>softmax(QKᵀ)·V</code>，中间那个 <code>QKᵀ</code> 是一张 <strong>N×N 的注意力矩阵</strong>（N=序列长度）。直觉上大家把矛头指向<strong>计算量</strong>——N² 个分数要算，序列翻倍、计算量四倍。
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：瓶颈真的是「算得多」吗？</div>
+    <p style="margin:0.3rem 0">
+      FlashAttention 的作者实测发现：GPU 的算力其实<strong>富余</strong>，真正卡脖子的是<strong>内存搬运</strong>——那张 N×N 矩阵要<strong>写进</strong>慢速大显存（HBM），softmax 时<strong>读出来</strong>，再写回、再读……
+      attention 的大部分时间，GPU 不是在算，而是<strong>在等数据搬来搬去</strong>。
+      <strong>既然瓶颈是搬运，那提速的正确方向就不是「少算」，而是「少搬」。</strong>
+    </p>
+  </div>
+
+  <h2>二、抽框架：GPU 的两层内存，和被忽视的「搬运」</h2>
+
+  <p>要懂 FlashAttention，先懂 GPU 的内存层级——这是全篇的物理基础：</p>
+
+  <table>
+    <tr><th>内存</th><th>容量</th><th>速度</th><th>类比</th></tr>
+    <tr><td><strong>SRAM</strong>（片上）</td><td>很小（~20MB）</td><td><strong>极快</strong>（~10–20×）</td><td>你的<strong>书桌</strong>，伸手就拿，但放不下几本书</td></tr>
+    <tr><td><strong>HBM</strong>（显存）</td><td>大（40–80GB）</td><td>慢（带宽受限）</td><td>书架<strong>仓库</strong>，啥都放得下，但来回取很费时</td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">关键：标准 attention 把大矩阵堆进了「仓库」，于是不停跑仓库</div>
+    <p style="margin:0.3rem 0">
+      标准实现把整张 N×N 矩阵<strong>物化在 HBM（仓库）</strong>：算 QKᵀ 写进去 → 读出来做 softmax → 写回 → 再读出来乘 V。
+      <strong>每一步都在书桌和仓库之间长途搬运</strong>，而矩阵是 N²大的——序列一长，搬运量爆炸。这就是慢和吃显存的真因，和「算力」关系不大。
+    </p>
+  </div>
+
+  <h2>三、核心洞察：让大矩阵「永不落仓库」+ 结果还分毫不差</h2>
+
+  <p class="interactive-hint cite">
+    FlashAttention 三招连用，核心目标只有一个：<strong>别把 N×N 矩阵整个写进 HBM</strong>。
+  </p>
+
+  <table>
+    <tr><th>招</th><th>做什么</th></tr>
+    <tr><td><strong>① 分块（tiling）</strong></td><td>把 Q、K、V 切成小块，<strong>一次只搬一小块进 SRAM（书桌）</strong>，在书桌上把这块的注意力算完，永不物化整张大矩阵。</td></tr>
+    <tr><td><strong>② 在线 softmax</strong></td><td>softmax 本需要看完一整行才能归一化。FlashAttention <strong>边流过小块边算</strong>，靠维护「running max + running sum」两个跑动统计量，逐块累加、动态校正——<strong>不必先存下整行</strong>。</td></tr>
+    <tr><td><strong>③ 反向重计算</strong></td><td>训练反向传播本需那张大矩阵。FlashAttention <strong>不存它，需要时用统计量当场重算</strong>——多花一点点计算，换巨量显存节省。因为本就是内存瓶颈，这笔交易稳赚。</td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">最关键的一点：结果<strong>精确相同</strong>，不是近似</div>
+    <p style="margin:0.3rem 0">
+      FlashAttention <strong>没有改任何数学</strong>——它算出的结果和标准 attention <strong>逐位相同</strong>，只是把计算<strong>重排成对硬件友好的顺序</strong>。
+      这和你在 <a href="0009-gpt-3.html">GPT-3</a> 见的<strong>稀疏注意力</strong>（少算一些对、近似、有损）是<strong>两条路</strong>：稀疏改数学换速度；FlashAttention 数学不动、只改 IO 顺序，<strong>白赚速度和显存、零质量损失</strong>。
+    </p>
+  </div>
+
+  <h2>四、动手玩：序列拉长，看「显存」怎么爆 vs 怎么不爆</h2>
+  <p class="interactive-hint cite">
+    点不同的序列长度 N。看标准 attention 要物化的<strong>注意力矩阵显存（∝ N²）</strong>怎么指数爆炸，而 FlashAttention 的额外开销只是 <strong>∝ N</strong>。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选序列长度 N：　<span id="fbtns"></span>
+    </div>
+    <div style="margin:0.6rem 0">
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.2rem"><span>标准 attention（物化 N×N 矩阵）</span><span class="mono" id="fstd" style="color:#b23"></span></div>
+      <div style="height:12px;background:#eadfca;border-radius:6px;overflow:hidden;margin-bottom:0.5rem"><div id="fstdbar" style="height:100%;background:#b23;width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.2rem"><span>FlashAttention（O(N) 额外开销）</span><span class="mono" id="fflash" style="color:#2a7"></span></div>
+      <div style="height:12px;background:#eadfca;border-radius:6px;overflow:hidden"><div id="fflashbar" style="height:100%;background:#2a7;width:0%"></div></div>
+    </div>
+    <div id="fwhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>序列越长，标准做法的矩阵显存按 N² 爆炸，FlashAttention 按 N 线性走。</strong>这就是为什么「几万、几十万 token 上下文」从不可行变可行——不是 GPU 变大了，是别再把那张大矩阵堆进仓库了。
+  </p>
+
+  <h2>五、对照表（一）：标准 attention vs FlashAttention</h2>
+  <table>
+    <tr><th>维度</th><th>标准 attention</th><th>FlashAttention</th></tr>
+    <tr><td>瓶颈认知</td><td>以为是算力（O(N²) FLOPs）</td><td><strong>看穿是内存搬运（IO）</strong></td></tr>
+    <tr><td>N×N 矩阵</td><td>整个物化到 HBM</td><td><strong>分块进 SRAM，永不物化</strong></td></tr>
+    <tr><td>显存</td><td>O(N²)</td><td><strong>O(N)（线性）</strong></td></tr>
+    <tr><td>速度</td><td>基准</td><td><strong>快数倍（长序列更明显）</strong></td></tr>
+    <tr><td>结果</td><td>—</td><td><strong>逐位精确相同（无损）</strong></td></tr>
+  </table>
+
+  <h2>六、对照表（二）：三条「让 attention 更快」的路</h2>
+  <table>
+    <tr><th>路线</th><th>怎么做</th><th>代价</th></tr>
+    <tr><td><a href="0009-gpt-3.html">稀疏注意力</a></td><td>每个 token 只看一部分，<strong>少算</strong></td><td>近似、<strong>有损</strong>（改了数学）</td></tr>
+    <tr><td>低秩 / 线性近似</td><td>用低秩结构逼近注意力</td><td>近似、<strong>有损</strong></td></tr>
+    <tr><td><strong>FlashAttention</strong></td><td><strong>不少算，只改内存搬运顺序</strong></td><td><strong>无损、精确</strong>，纯白赚</td></tr>
+  </table>
+  <p class="cite">
+    🔮 FlashAttention 是「<strong>系统/硬件视角</strong>」的胜利：同样的数学，懂 GPU 内存层级就能快好几倍。它现在是几乎所有 LLM 训练/推理栈的默认件，后续还有 <strong>FlashAttention-2 / -3</strong> 继续榨硬件。它和 <a href="0013-lora.html">LoRA</a> 合起来，是阶段三「效率」的两面：<strong>LoRA 改「算什么」、FlashAttention 改「怎么算」。</strong>
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>realtime 语音链路「上下文一长，延迟就飙」</td><td>正是 attention 的<strong>内存搬运瓶颈</strong>——FlashAttention 直接压低这块延迟，是长上下文低延迟的工程底</td></tr>
+    <tr><td>你算「这个长上下文请求要吃多少显存 / 能不能放下」</td><td>记住：标准是 <strong>O(N²)</strong>、Flash 是 <strong>O(N)</strong>——长上下文能不能落地，差别全在这</td></tr>
+    <tr><td>纠结「为了省钱要不要上稀疏/近似注意力，会不会掉效果」</td><td>先确认有没有用上 FlashAttention：<strong>它是无损白赚的</strong>，该先吃干净；近似方案是有损的，最后再考虑</td></tr>
+    <tr><td>工程师说「换上 FlashAttention 快了 3 倍」，你想判断真假</td><td>合理——它不改结果、只改 IO，长序列上数倍提速是常态，且<strong>不该有质量变化</strong>（若效果变了，那不是 FlashAttention 的锅）</td></tr>
+    <tr><td>更通用的判断力</td><td>「慢」未必是「算得多」——<strong>先分清 compute-bound 还是 memory-bound</strong>，再决定优化方向。拍脑袋优化常优化错地方</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：attention 是内存瓶颈（memory-bound）——时间耗在 N×N 矩阵在 HBM 的反复读写，不是算力。"
+       data-no="看第一/二节：FlashAttention 的核心发现是 attention 卡在内存搬运（IO），不是计算量。">
+    <div class="quiz-q">1. FlashAttention 看穿的真正瓶颈是？</div>
+    <button class="quiz-opt">计算量太大（FLOPs 不够）</button>
+    <button class="quiz-opt">内存搬运：N×N 矩阵在慢速 HBM 反复读写</button>
+    <button class="quiz-opt">模型参数太多</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：分块 + 在线 softmax 让 N×N 矩阵永不整个写进 HBM，在快速 SRAM 里分块算完。"
+       data-no="看第三节：靠分块(tiling)进 SRAM + 在线 softmax，避免把整张矩阵物化到 HBM。">
+    <div class="quiz-q">2. FlashAttention 怎么避开瓶颈？</div>
+    <button class="quiz-opt">把序列截短，少算一些 token</button>
+    <button class="quiz-opt">用更大的 GPU 显存</button>
+    <button class="quiz-opt">分块进 SRAM + 在线 softmax，让大矩阵永不物化到 HBM</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：FlashAttention 结果逐位精确相同（只改 IO 顺序）；稀疏注意力是近似、有损（改了数学）。"
+       data-no="看第三节末/第六节：FlashAttention 精确无损，稀疏注意力是有损近似——两条不同的路。">
+    <div class="quiz-q">3. FlashAttention 和稀疏注意力的根本区别？</div>
+    <button class="quiz-opt">FlashAttention 精确无损（只改 IO），稀疏是有损近似（改数学）</button>
+    <button class="quiz-opt">两者都是近似方法，只是实现不同</button>
+    <button class="quiz-opt">FlashAttention 会降低模型质量换速度</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">FlashAttention 把显存降到 O(N)，那「长上下文很贵」是不是就解决了？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>解决了一大块，但没全解决。</strong>FlashAttention 让<strong>注意力矩阵</strong>的显存从 O(N²) 降到 O(N)，这是长上下文的最大拦路虎之一，被它搬走了。但还有两笔账它管不到：<strong>① 计算量仍是 O(N²)</strong>（少搬不等于少算，长序列的 FLOPs 还在涨，所以更长还是更慢、更贵，只是不再爆显存）；<strong>② 推理时的 <a href="0002-attention-is-all-you-need.html">KV cache</a></strong> 随上下文线性增长，仍占大量显存。</p>
+      <p style="margin:0.3rem 0" class="cite">所以长上下文是「多线作战」：FlashAttention 砍注意力矩阵显存，KV cache 压缩 / 量化是另一条线，稀疏 / 线性注意力又是一条（用质量换 FLOPs）。<strong>FlashAttention 是其中最该先吃的那口——因为它无损白赚。</strong></p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">「在线 softmax」凭什么不看完整行就能算对？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">softmax 要除以「一整行 exp 之和」，看着必须先有整行。诀窍是<strong>维护两个跑动统计量、边走边校正</strong>：当前见过的<strong>最大值</strong>和当前的<strong>exp 之和</strong>。每来一个新块，若出现更大的值，就把<strong>之前累计的结果按比例缩放</strong>一下（用新旧最大值之差校正），再把新块累加进去。</p>
+      <p style="margin:0.3rem 0" class="cite">直觉：<strong>不是「先收齐再算」，而是「来一块算一块，发现算多了/少了就回头按比例修正」</strong>。流过所有块后，结果和「一次看整行」分毫不差——这就是它能既分块、又精确的数学保证。（减最大值那步同时也是数值稳定的标准技巧。）</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">这是纯训练优化，还是推理时我也享得到？我不训模型有关系吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>训练和推理都享得到</strong>（重计算那招只在训练反向用，前向的分块+在线 softmax 推理同样生效）。你不训模型也直接受益：你调的几乎所有现代推理引擎（vLLM、TGI 等）<strong>底层默认就用 FlashAttention（或其变体）</strong>——你的每一次长上下文请求，延迟和显存都被它压过了。</p>
+      <p style="margin:0.3rem 0" class="cite">对你做产品的实际意义：<strong>选推理框架/服务时，确认它用了 FlashAttention-2/3 是个基本盘</strong>。这也是为什么同样的模型，不同推理栈延迟能差很多——底层 attention 内核的工程水平是关键变量之一。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">怎么判断一个算子是 compute-bound 还是 memory-bound？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">看<strong>算术强度（arithmetic intensity）= 计算量 ÷ 搬运字节数</strong>（FLOP/byte），和这台 GPU 的「平衡点」（峰值算力÷峰值带宽，roofline 脊点，如 A100 ≈150 FLOP/byte）比：高于它 → <strong>compute-bound</strong>；低于它 → <strong>memory-bound</strong>。</p>
+      <p style="margin:0.3rem 0">秒判法则——<strong>「每个加载进来的数被反复用很多次，还是碰一次就扔？」</strong>反复复用 → compute-bound（大稠密矩阵乘 GEMM）；碰一次就过 → memory-bound（elementwise、LayerNorm、softmax、reshape、<strong>attention 矩阵的读写</strong>）。attention 落在后者，因为矩阵「瘦」（head_dim 小）、耗时在 softmax+搬运。</p>
+      <p style="margin:0.3rem 0" class="cite">实测：profiler 看「SM 计算利用率 vs DRAM 带宽利用率」哪个贴近 100%。快速验证：降精度没变快、但<strong>算子融合减少搬运就变快 → memory-bound</strong>。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">为什么 GPU 算力会富余、带宽反而是瓶颈？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">一个词：<strong>内存墙（memory wall）</strong>——几代 GPU 下来，<strong>算力增长远快于带宽</strong>。V100→A100→H100 峰值 FLOPs 靠 tensor core + 低精度（fp16/bf16/fp8）翻了几十倍，HBM 带宽只涨几倍。于是「FLOP/byte 平衡点」被越推越高，<strong>越来越多算子掉到脊点以下、变 memory-bound</strong>。</p>
+      <p style="margin:0.3rem 0" class="cite">为什么涨得不一样快：堆算力（加 ALU）便宜可扩展；提带宽受物理限制（引脚、信号、功耗、内存接口），追不上。所以「算力富余」不是算力无限，而是<strong>芯片每秒能做的数学远超它每秒能供上的数据</strong>——算术强度不够，ALU 就空等 HBM。这正是近年 LLM 系统工作（融合、FlashAttention、量化）几乎都在优化「搬运」而非「计算量」的原因。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">FlashAttention 和 PagedAttention / KV cache 是一回事吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>不是，三件不同的事，叠着用，各打长上下文成本的一部分：</strong></p>
+      <table>
+        <tr><th></th><th>管的是</th><th>解决什么</th><th>阶段</th></tr>
+        <tr><td>FlashAttention</td><td><strong>怎么算</strong> attention</td><td>注意力矩阵的搬运</td><td>训练+推理</td></tr>
+        <tr><td>KV cache</td><td><strong>存什么</strong>避免重算</td><td>decode 每步重算历史 K/V</td><td>推理(decode)</td></tr>
+        <tr><td>PagedAttention</td><td><strong>怎么管</strong> KV cache 显存</td><td>显存碎片/浪费、提并发</td><td>推理服务</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite"><strong>KV cache</strong>：缓存历史 token 的 K/V 免重算，但随上下文线性增长、是显存大户——FlashAttention 不缩它。<strong>PagedAttention</strong>（vLLM）：借操作系统分页思路，把 KV cache 切成固定页非连续存放，消碎片、相同前缀跨请求共享页、塞更多并发。一句话：<strong>FlashAttention 管「算」、KV cache 管「存」、PagedAttention 管「这块显存怎么排布」。</strong></p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Dao et al. —
+      <a href="https://arxiv.org/abs/2205.14135">FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness（2022）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      想看后续榨硬件：搜 <strong>FlashAttention-2</strong>（2023）/ <strong>FlashAttention-3</strong>（2024，针对新一代 GPU）。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      阶段三「规模与效率」收尾在即：<strong>LoRA 省微调 · FlashAttention 省 attention 显存/延迟</strong>。下一篇 <strong>P14 MoE / Switch Transformers</strong>：为什么前沿模型能又大又（相对）便宜——靠「每次只激活一部分专家」。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「compute-bound 和 memory-bound 我怎么判断一个算子是哪种？」「为什么 GPU 算力会富余、带宽反而是瓶颈？」
+    「FlashAttention 和 PagedAttention / KV cache 优化是一回事吗？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0013-lora.html">&#8592; 第 13 课：LoRA (P12)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P13</code> → 明天 P14（MoE / Switch Transformers）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Dao et al., <em>FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</em>, 2022.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 序列拉长：标准 O(N²) 显存 vs Flash O(N)（以单个注意力头、fp16 为例） —— */
+(function () {
+  var F = [
+    { cap: "N=512", n: 512 },
+    { cap: "N=2K", n: 2048 },
+    { cap: "N=8K", n: 8192 },
+    { cap: "N=32K", n: 32768 }
+  ];
+  // 注意力矩阵 = N×N 个 fp16(2字节)；Flash 额外开销 ∝ N（这里按 N×(一个块宽,示意取 128) 估个小量）
+  function stdMB(n) { return n * n * 2 / (1024 * 1024); }
+  function flashMB(n) { return n * 128 * 2 / (1024 * 1024); }
+  var MAXREF = stdMB(32768); // 满格基准 = 最长序列的标准占用
+  function fmt(mb) {
+    if (mb >= 1024) return (mb / 1024).toFixed(2) + " GB";
+    if (mb >= 1) return mb.toFixed(1) + " MB";
+    return (mb * 1024).toFixed(0) + " KB";
+  }
+  var fbtns = document.getElementById("fbtns");
+  function render(idx) {
+    var n = F[idx].n;
+    var s = stdMB(n), fl = flashMB(n);
+    document.getElementById("fstd").textContent = fmt(s);
+    document.getElementById("fflash").textContent = fmt(fl);
+    document.getElementById("fstdbar").style.width = Math.min(100, s / MAXREF * 100).toFixed(2) + "%";
+    document.getElementById("fflashbar").style.width = Math.min(100, fl / MAXREF * 100).toFixed(3) + "%";
+    var ratio = Math.round(s / fl);
+    document.getElementById("fwhy").innerHTML =
+      "N=" + n + " 时，标准做法要物化的注意力矩阵 ≈ <strong>" + fmt(s) +
+      "</strong>，FlashAttention 额外开销仅 ≈ <strong>" + fmt(fl) + "</strong>——相差约 <strong>" + ratio +
+      " 倍</strong>。（单个头、fp16；乘上多头 × batch 会更夸张。）N 每翻倍，标准按 <strong>4 倍</strong>涨、Flash 只按 <strong>2 倍</strong>涨。";
+    Array.prototype.forEach.call(fbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  F.forEach(function (item, i) {
+    var b = document.createElement("button");
+    b.textContent = item.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    fbtns.appendChild(b);
+  });
+  render(2);
+})();
+</script>
+</body>
+</html>

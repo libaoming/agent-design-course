@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 15 课 · MoE / Switch Transformers：每个 token 只走一两个「专家」——前沿模型能又大又便宜的根</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 15 课 / 经典论文 <strong>P14</strong> &nbsp;·&nbsp; 阶段三：规模与效率（收官 · Fedus et al., 2021）</div>
+
+  <h1>MoE / Switch Transformers：<br>每个 token 只走一两个「专家」<br><span style="font-size:0.55em;color:#a8521a">——前沿模型能又大又便宜的根</span></h1>
+
+  <div class="mission">
+    <a href="0011-scaling-laws.html">Scaling Laws</a> 说越大越好，<a href="0012-chinchilla.html">Chinchilla</a> 修了配比，<a href="0014-flashattention.html">FlashAttention</a> 压了 attention 的成本。但还剩最后一道墙：<b>常规（dense）模型里，每个参数对每个 token 都要算一遍——参数翻倍，每个 token 的计算成本也翻倍。</b>
+    这一课 MoE 给出一条绕墙的路：<b>能不能让参数量（模型懂多少）疯涨，但每个 token 实际花的算力（多贵）几乎不涨？</b>
+    它回答你看模型发布时最该懂的一个反直觉：<b>为什么有的模型号称上千亿、上万亿参数，跑起来却没那么贵、没那么慢？</b>
+  </div>
+
+  <div class="big-idea">
+    MoE（Mixture of Experts，混合专家）的一句话：<strong>把 Transformer 里那块「人人都过」的 FFN，换成几十上百个并行的「专家」FFN，再加一个小路由器，让每个 token 只走其中一两个专家。</strong><br>
+    于是<strong>总参数量能涨到上万亿（容量、知识量），但每个 token 实际过的计算只相当于一个小模型（成本）</strong>。Switch Transformer 更激进——每个 token 只走 <strong>1 个</strong>专家。
+    <em>MoE 把「模型多大」和「每个 token 多贵」<strong>解耦</strong>了——这就是前沿模型能又大又（相对）便宜的根。</em>
+  </div>
+
+  <h2>一、立靶：dense 模型的墙——参数涨，每 token 成本同步涨</h2>
+
+  <p>
+    你学过的所有模型（GPT-3、BERT…）都是 <strong>dense（稠密）</strong>的：<strong>每一个参数，对每一个 token，都参与计算</strong>。这很「公平」，但也意味着——<strong>模型越大，每生成一个 token 要做的计算就越多，成本严格随参数量涨</strong>。
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：知识量和计算量，能不能拆开？</div>
+    <p style="margin:0.3rem 0">
+      人脑不是每想一件事都点亮整个大脑——你算数学时不太用到管音乐的区域。
+      MoE 把这个直觉搬进模型：<strong>模型可以很大（存很多本事），但每个 token 只调用其中一小部分</strong>。
+      于是「<strong>模型懂多少</strong>」（总参数）和「<strong>处理一个 token 要算多少</strong>」（激活参数）<strong>第一次被拆开</strong>——这就是「条件计算 / 稀疏激活」。
+    </p>
+  </div>
+
+  <h2>二、抽框架：FFN 换成「专家群 + 路由器」</h2>
+
+  <p>改动只在每个 Transformer 块的 <a href="0006-bert.html">FFN 子层</a>（attention 部分不动）：</p>
+
+  <table>
+    <tr><th>组件</th><th>dense 模型</th><th>MoE 模型</th></tr>
+    <tr><td>FFN 子层</td><td>1 个 FFN，所有 token 都过</td><td><strong>N 个并行专家 FFN</strong>（如 8、64、128…）</td></tr>
+    <tr><td>谁来算</td><td>固定那一个</td><td><strong>路由器（小网络）按 token 挑 top-k 个专家</strong></td></tr>
+    <tr><td>每 token 激活</td><td>全部 FFN 参数</td><td><strong>只有被选中的 k 个专家</strong>（其余闲置）</td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">关键：总参数 ∝ 专家数 N，但算力 ∝ 激活数 k</div>
+    <p style="margin:0.3rem 0">
+      每个 token 来了，<strong>路由器看一眼，把它发给最合适的 k 个专家</strong>（Switch Transformer 取 <strong>k=1</strong>，最简最省；常见 MoE 取 k=2）。
+      只有这 k 个专家为它计算，其余几十上百个<strong>纹丝不动</strong>。
+      所以你可以堆到 <strong>1.6 万亿</strong>参数（Switch-C），而每个 token 的计算量，还停在一个小模型的水平。<strong>容量和成本，就这样解耦了。</strong>
+    </p>
+  </div>
+
+  <h2>三、核心洞察：解耦容量与算力 + 必须付的工程税</h2>
+
+  <p class="interactive-hint cite">
+    一个洞察让它成立，几个工程难题让它「真能训起来」——后者是这篇论文真正的硬功夫。
+  </p>
+
+  <table>
+    <tr><th>点</th><th>说明</th></tr>
+    <tr><td><strong>① 稀疏激活 = 容量与算力解耦</strong></td><td>不同 token 走不同专家（条件计算）。总参数决定「模型能装多少本事」，激活参数决定「每 token 多少算力」——两者第一次能分开调。<strong>同样算力下，MoE 能塞进远多于 dense 的参数，质量更高 / 达到同质量更快。</strong></td></tr>
+    <tr><td><strong>② 工程税一：负载均衡</strong></td><td>路由器若偏心，把大多 token 都发给少数几个「明星专家」，其余专家闲死、白占显存。Switch 加一个<strong>辅助的负载均衡 loss</strong>，逼路由器把 token 摊匀。</td></tr>
+    <tr><td><strong>③ 工程税二：容量因子 / 丢 token</strong></td><td>每个专家有固定的「接客上限」（容量）。某专家被挤爆时，<strong>溢出的 token 会被丢弃</strong>（跳过该 FFN，靠残差直通）。容量因子调大些更安全但更费，是个取舍旋钮。</td></tr>
+  </table>
+
+  <h2>四、动手玩：调专家数与激活数，看「容量」和「成本」怎么分家</h2>
+  <p class="interactive-hint cite">
+    只看一个 FFN 子层。点不同配置，对比<strong>总参数（容量）↑↑、每 token 激活（算力成本）几乎不动、显存随总参数涨</strong>——这就是 MoE 的解耦。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选配置：　<span id="mbtns"></span>
+    </div>
+    <div style="margin:0.6rem 0;font-size:0.92rem">
+      <div style="display:flex;justify-content:space-between;padding:0.15rem 0"><span>总参数（容量／模型懂多少）</span><span class="mono" id="mtotal" style="color:#d2691e;font-weight:700"></span></div>
+      <div style="display:flex;justify-content:space-between;padding:0.15rem 0"><span>每 token 激活（算力／多贵）</span><span class="mono" id="mactive" style="color:#2a7;font-weight:700"></span></div>
+      <div style="display:flex;justify-content:space-between;padding:0.15rem 0"><span>显存占用（要存所有专家）</span><span class="mono" id="mmem" style="color:#b23;font-weight:700"></span></div>
+    </div>
+    <div id="mwhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>绿色（算力）几乎钉死，橙色（容量）和红色（显存）一起飞涨。</strong>MoE 是用<strong>显存换算力</strong>——存得起一大堆专家，但每次只点亮一两个，所以又大又便宜……只要你显存够。
+  </p>
+
+  <h2>五、对照表（一）：dense vs sparse（MoE）</h2>
+  <table>
+    <tr><th>维度</th><th>dense（稠密，如 GPT-3）</th><th>sparse / MoE（如 Switch、Mixtral）</th></tr>
+    <tr><td>每 token 用多少参数</td><td>全部</td><td><strong>只用 top-k 个专家</strong></td></tr>
+    <tr><td>总参数 vs 算力</td><td>绑死（参数↑则成本↑）</td><td><strong>解耦（参数可↑↑，算力几乎不动）</strong></td></tr>
+    <tr><td>同算力下的质量</td><td>基准</td><td><strong>更高（塞得进更多参数）</strong></td></tr>
+    <tr><td>显存</td><td>正常</td><td><strong>大（所有专家都要常驻）</strong></td></tr>
+    <tr><td>麻烦事</td><td>少</td><td>负载均衡、通信、训练不稳</td></tr>
+  </table>
+
+  <h2>六、对照表（二）：MoE 的代价、命名解读、与前沿</h2>
+  <p>天下没有白吃的午餐，MoE 省算力是拿这些换的：</p>
+  <table>
+    <tr><th>代价</th><th>说明</th></tr>
+    <tr><td>显存暴涨</td><td>每 token 只用 k 个专家，但<strong>所有专家都得常驻显存</strong>——省了算力，没省显存</td></tr>
+    <tr><td>通信开销</td><td>专家常分布在多张卡上，token 要被<strong>路由/搬运到对应卡</strong>（all-to-all），通信变重</td></tr>
+    <tr><td>训练不稳 + 负载均衡</td><td>路由是离散选择，训练更难调；要靠辅助 loss 防专家「旱涝不均」</td></tr>
+  </table>
+  <p class="cite">
+    读懂命名：<strong>Mixtral 8x7B</strong> = 8 个专家、每个约 7B、每 token 激活 2 个 → <strong>总参数 ~47B，但激活只 ~13B</strong>（不是 56B，因为 attention 等是共享的）。所以它「跑起来像 13B 那么快，肚子里却有 47B 的本事」。
+  </p>
+  <p class="cite">
+    🔮 阶段三收官：<strong>Scaling 立范式 → Chinchilla 修配比 → LoRA 省微调 → FlashAttention 省 attention → MoE 解耦容量与算力</strong>。业界普遍相信 <strong>GPT-4 等前沿模型就是 MoE</strong>，DeepSeek、Mixtral 等已公开是 MoE——「又大又便宜」基本是这条路。下一阶段进入<strong>对齐与推理</strong>（P15 InstructGPT/RLHF）：模型够强了，怎么让它<strong>听话</strong>。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>看到「某模型 1.6 万亿参数」就以为它一定超贵超慢</td><td>它可能是 <strong>MoE</strong>——看<strong>激活参数</strong>而非总参数。参数量现在连「成本」都不是好代理了（Chinchilla 说它不是「能力」代理，MoE 再补一刀）</td></tr>
+    <tr><td>读 Mixtral / DeepSeek 这类「NxB」命名</td><td>就是 MoE：<strong>NxB = N 个专家、每个约 B</strong>，真实成本看每 token 激活几个</td></tr>
+    <tr><td>你做选型，算「这个模型部署要多少显存 / 多少钱」</td><td>MoE 的账要分开算：<strong>算力（按激活参数，便宜）vs 显存（按总参数，贵）</strong>——它省的是算力不是显存，自建部署要掂量得起那堆专家</td></tr>
+    <tr><td>你以为「专家」是按主题分工的（这个管代码、那个管医学）</td><td>别想当然：<strong>路由是学出来的，专家通常<u>不</u>按人能理解的主题分工</strong>，常按 token/语法层面的模式分。这是常见误解</td></tr>
+    <tr><td>更通用：你判断「大模型」的两把尺</td><td>合起来记：<strong>多大（总参数）≠ 多强（看训了多少数据，Chinchilla）≠ 多贵（看激活多少，MoE）</strong></td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：MoE 把 FFN 换成多个专家 + 路由器，每 token 只激活 top-k 个，解耦了总参数与每 token 算力。"
+       data-no="看第二节：MoE 用「多个专家 FFN + 路由器，每 token 只走 top-k 个」来解耦容量和算力。">
+    <div class="quiz-q">1. MoE 的核心机制是？</div>
+    <button class="quiz-opt">把模型层数加深一倍</button>
+    <button class="quiz-opt">压缩每个参数的精度</button>
+    <button class="quiz-opt">FFN 换成多个专家 + 路由器，每 token 只激活 top-k 个</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：总参数 ∝ 专家数（容量），算力 ∝ 激活数 k（成本）——MoE 把两者解耦，所以又大又便宜。"
+       data-no="看第二/四节：MoE 解耦了『总参数（容量）』和『每 token 激活（算力成本）』，前者可暴涨、后者几乎不动。">
+    <div class="quiz-q">2. MoE「又大又便宜」靠的是解耦什么？</div>
+    <button class="quiz-opt">总参数（容量）与每 token 算力（成本）解耦</button>
+    <button class="quiz-opt">训练成本与推理成本解耦</button>
+    <button class="quiz-opt">注意力与 FFN 解耦</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：每 token 只激活 k 个专家省了算力，但所有专家都要常驻显存——MoE 省算力不省显存。"
+       data-no="看第六节：MoE 的主要代价之一是显存——所有专家都得常驻，它省的是算力不是显存。">
+    <div class="quiz-q">3. MoE 省了算力，但主要代价是什么？</div>
+    <button class="quiz-opt">质量必然下降</button>
+    <button class="quiz-opt">显存暴涨（所有专家都要常驻）+ 通信/负载均衡</button>
+    <button class="quiz-opt">没法做长上下文</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">「专家」真的各有专长吗（一个管代码、一个管数学）？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>基本不是——这是最常见的误解。</strong>专家不是人为按主题划分的，路由是<strong>训练中学出来的</strong>，怎么分工由「降 loss」驱动，不由「人类语义」驱动。实测发现专家更多是按<strong>token / 语法 / 表层模式</strong>聚集（比如某些标点、某类词形），而不是「这个专家懂医学」。同一句话里相邻的词都可能被发去不同专家。</p>
+      <p style="margin:0.3rem 0" class="cite">所以「专家」是个比喻，别按字面理解。正确心智：<strong>它是「一堆可被条件调用的参数库」，路由器学会了「什么样的 token 该查哪几本」</strong>，而那个分类标准通常不对人类可读。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">MoE 既然这么省算力，为什么不是所有模型都用它？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">因为它<strong>省算力却很费显存、很难训、部署复杂</strong>：① 所有专家都得常驻显存，<strong>显存门槛极高</strong>——一张卡放不下，得多卡，小团队/端侧吃不消；② 路由是离散选择，<strong>训练更不稳</strong>，要负载均衡、容量因子一堆旋钮；③ 多卡间 token 路由的 <strong>all-to-all 通信</strong>是新瓶颈。</p>
+      <p style="margin:0.3rem 0" class="cite">所以选型是<strong>算力 vs 显存 vs 复杂度</strong>的权衡：你算力紧、显存富、追极致质量 → MoE 划算；你要在<strong>单卡 / 端侧 / 低显存</strong>跑，一个喂饱的 dense 小模型（LLaMA 路线）反而更合适。<strong>没有绝对更优，看你卡在哪种资源上。</strong></p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">阶段三这五篇（Scaling / Chinchilla / LoRA / FlashAttention / MoE）怎么串成一张图？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">一条主线：<strong>「想要更强，但别让成本失控」</strong>，五篇各攻一个成本维度：</p>
+      <table>
+        <tr><th>论文</th><th>回答的问题</th><th>动的是</th></tr>
+        <tr><td>Scaling(P10)</td><td>放大到底涨多少</td><td>把「大力出奇迹」量成可外推曲线</td></tr>
+        <tr><td>Chinchilla(P11)</td><td>钱该砸模型还是数据</td><td>修正配比（数据被低估）</td></tr>
+        <tr><td>LoRA(P12)</td><td>怎么便宜微调</td><td>改「算<strong>什么</strong>」（低秩补丁）</td></tr>
+        <tr><td>FlashAttention(P13)</td><td>attention 怎么更快省显存</td><td>改「<strong>怎么</strong>算」（IO 顺序，无损）</td></tr>
+        <tr><td><strong>MoE(P14)</strong></td><td>怎么又大又便宜</td><td>改「<strong>算多少</strong>」（稀疏激活，解耦容量与算力）</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">合起来给你三把判断模型的尺：<strong>多大（总参数）、多强（数据/训练充分度）、多贵（激活参数 + 显存）</strong>——这三个数现在你都知道分别该去哪看了。下一阶段换主题：模型够强了，<strong>怎么让它听话（对齐）</strong>。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">Switch 为什么敢用 top-1，不怕路由错了没救？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">MoE 鼻祖 Shazeer(2017) 坚持 top-2，理由是「要两个专家对比，路由器才有梯度学谁更好」。Switch 证明 top-1 也行，四个底气：</p>
+      <p style="margin:0.3rem 0">① <strong>路由器照样有梯度</strong>——被选专家的输出乘上路由器给的概率(gate)，gate 在计算图里、照样回传，单选也能越路越准；② <strong>深度给了无数次重来</strong>——token 穿过几十个 MoE 层、每层独立重路由，<strong>单层错不致命</strong>，后面能补救；③ <strong>残差是安全地板</strong>——服务得差甚至被丢，残差也原样带向下一层，永有直通兜底；④ <strong>省下的算力买更多容量</strong>——top-1 比 top-2 砍半路由/通信，同算力能塞更多专家，增益盖过偶尔误路由。</p>
+      <p style="margin:0.3rem 0" class="cite">一句话：这是<strong>「多次便宜决策胜过少数昂贵决策」的赌注</strong>——靠层数冗余+残差兜底+路由持续学习，单次错根本不需要「有救」，因为从不靠那一次。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">丢 token 会不会伤质量、怎么缓解？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>「丢」是什么</strong>：每个专家有接客上限（容量=容量因子×平均每专家 token 数）；被挤爆时溢出 token <strong>跳过该 FFN、靠残差直通</strong>——不是删除，是这一层少做一次 FFN 加工。<strong>伤不伤：有限且可控</strong>（残差兜底+层数多，漏一层可恢复；但大量丢会掉质量）；且主要发生在<strong>训练早期</strong>，随均衡生效丢弃率下降。</p>
+      <p style="margin:0.3rem 0">四个缓解（治标→治本）：① <strong>调大容量因子</strong>（丢得少但 padding 更费；推理时常拉高甚至不丢）；② <strong>负载均衡辅助 loss</strong>（根因是不均衡，这是主杠杆）；③ <strong>换路由算法</strong>（如 Expert Choice：专家挑 token，结构上零丢弃+完美均衡）；④ <strong>推理时干脆不丢</strong>。</p>
+      <p style="margin:0.3rem 0" class="cite">一句话：丢 token 本质是<strong>「训练吞吐」的妥协，不是非有不可</strong>，且大半能工程掉。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">MoE、LoRA 多补丁、稀疏注意力都叫「稀疏」，是一回事吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>不是，而且关键纠错：LoRA 根本不是「稀疏」，是「低秩」。</strong>三者沿完全不同的轴省东西：</p>
+      <table>
+        <tr><th></th><th>在什么上省</th><th>精确/近似</th><th>目的</th></tr>
+        <tr><td>稀疏注意力</td><td>token 间注意力对（只看部分）</td><td><strong>近似(有损)</strong></td><td>省 attention 算力</td></tr>
+        <tr><td>MoE(稀疏激活)</td><td>每 token 激活的专家（只点亮 top-k）</td><td><strong>精确</strong>(选中的全算)</td><td>解耦容量与算力</td></tr>
+        <tr><td>LoRA</td><td>其实是<strong>低秩</strong>非稀疏（ΔW 低秩）</td><td>近似(拟合全量微调)</td><td>省微调成本</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">分清两词：<strong>稀疏 = 大部分是 0、只少数在动</strong>（稀疏注意力、MoE 符合）；<strong>低秩 = 矩阵塞满非零、但能写成两片瘦矩阵之积</strong>（LoRA 的 B·A 是稠密的，只是秩低）。<strong>低秩 ≠ 稀疏。</strong>共同精神是「别做满」，但省的维度/是否有损/为啥而省全不同——只有前两个是真稀疏，LoRA 是低秩。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Fedus et al. —
+      <a href="https://arxiv.org/abs/2101.03961">Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity（2021）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      想看 MoE 起源：Shazeer et al.（2017，top-2 路由的稀疏 MoE 层）；想看现代落地：搜 <strong>Mixtral 8x7B</strong> / <strong>DeepSeek-MoE</strong> 的技术报告。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      <strong>阶段三「规模与效率」到此收官。</strong>下一阶段「对齐与推理」开篇 <strong>P15 InstructGPT / RLHF</strong>：为什么 ChatGPT 会听话——直接对上你「prompt 控不住行为」的老困惑。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「Switch 为什么敢用 top-1，不怕路由错了没救？」「丢 token 会不会伤质量、怎么缓解？」
+    「MoE 和我学的 LoRA 多补丁、稀疏注意力，都叫『稀疏』，是一回事吗？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0014-flashattention.html">&#8592; 第 14 课：FlashAttention (P13)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P14</code> → 明天 P15（InstructGPT / RLHF）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Fedus et al., <em>Switch Transformers</em>, 2021；Shazeer et al., <em>Outrageously Large Neural Networks</em>, 2017.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 调专家数/激活数：容量 vs 成本 vs 显存怎么分家（仅看一个 FFN 子层，相对 dense=1×） —— */
+(function () {
+  var M = [
+    { cap: "Dense（基准）", e: 1, k: 1,
+      note: "常规模型：1 个 FFN，所有 token 都过。总参数=激活=显存=1×，全绑死。" },
+    { cap: "Switch (E=64,k=1)", e: 64, k: 1,
+      note: "每 token 只走 1 个专家。总参数 64×、显存 64×，但<strong>算力还是 1×</strong>——Switch 的极致省算力。" },
+    { cap: "Mixtral (E=8,k=2)", e: 8, k: 2,
+      note: "每 token 走 2 个专家。总参数 8×、显存 8×，算力仅 2×。真实 Mixtral 8x7B：总~47B、激活~13B。" },
+    { cap: "巨型 (E=128,k=2)", e: 128, k: 2,
+      note: "总参数/显存 128×，算力仍只 2×。容量(橙)和显存(红)起飞，算力(绿)几乎不动。" }
+  ];
+  function x(n) { return n + "×"; }
+  var mbtns = document.getElementById("mbtns");
+  function render(idx) {
+    var m = M[idx];
+    document.getElementById("mtotal").textContent = x(m.e);   // 总参数 ∝ 专家数
+    document.getElementById("mactive").textContent = x(m.k);  // 激活 ∝ top-k
+    document.getElementById("mmem").textContent = x(m.e);     // 显存 ∝ 总参数
+    document.getElementById("mwhy").innerHTML =
+      m.note + "　<span class='cite'>（仅 FFN 子层、相对 dense；attention 等共享，整模型倍数没这么极端。）</span>";
+    Array.prototype.forEach.call(mbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  M.forEach(function (m, i) {
+    var b = document.createElement("button");
+    b.textContent = m.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    mbtns.appendChild(b);
+  });
+  render(2);
+})();
+</script>
+</body>
+</html>

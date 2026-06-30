@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 16 课 · InstructGPT / RLHF：博学 ≠ 听话——为什么 ChatGPT 会照你说的做，也是你「prompt 控不住行为」的根</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 16 课 / 经典论文 <strong>P15</strong> &nbsp;·&nbsp; 阶段四：对齐与推理（开篇 · Ouyang et al., 2022）</div>
+
+  <h1>InstructGPT / RLHF：<br>博学 ≠ 听话<br><span style="font-size:0.55em;color:#a8521a">——ChatGPT 为什么会照你说的做，也是你「prompt 控不住行为」的根</span></h1>
+
+  <div class="mission">
+    阶段三你搞懂了怎么把模型训得<b>又强又便宜</b>。但「强」只是<b>能力</b>——<a href="0009-gpt-3.html">GPT-3</a> 博学，却<b>不羁</b>：你让它回答，它可能接着编更多问题、跑题、胡说、或答得没用。
+    因为它的训练目标是「猜下一个最像网上文本的词」，这和你真正要的「<b>按我的意图、有用、真实、无害地回答</b>」<b>根本不是一回事</b>。
+    这一课 InstructGPT 用 RLHF 把模型从「博学但不羁」调成「听话的助手」。它正面回答你那个老困惑：<b>为什么我精心写 prompt，模型的行为还是不完全受我控？</b>
+  </div>
+
+  <div class="big-idea">
+    一句话：<strong>预训练给的是「能力」，不等于「听话」。</strong>InstructGPT 用 <strong>RLHF（基于人类反馈的强化学习）</strong>三步补上「听话」——<br>
+    ① <strong>SFT</strong>：人写好答案当示范，微调模型；② <strong>奖励模型 RM</strong>：人给模型的多个输出<strong>排序</strong>，训一个会「预测人类偏好」的打分器；③ <strong>PPO</strong>：拿 RM 当奖励，用强化学习把模型推向「人更爱的输出」。<br>
+    惊人结论：<strong>对齐过的 1.3B 小模型，人类更爱它，胜过大 100 倍的 GPT-3 175B</strong>。<em>这就是 ChatGPT 会听话的原因——也是你「prompt 控不住行为」的根：行为活在「能力」和「对齐」<strong>两条轴</strong>上。</em>
+  </div>
+
+  <h2>一、立靶：GPT-3 博学，却「不羁」</h2>
+
+  <p>
+    回忆 GPT-3 的训练目标：<strong>猜下一个最像互联网文本的词</strong>。这练出了惊人的能力，但「像网上的文本」和「你想要的回答」之间，有一道<strong>目标错位（misalignment）</strong>的鸿沟：
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：训练目标，根本不是你真正的目标</div>
+    <p style="margin:0.3rem 0">
+      你给一个 base 模型下指令「解释天为什么是蓝的，讲给小学生」——它很可能<strong>不回答</strong>，而是<strong>接着续写更多类似的题目</strong>（「解释草为什么是绿的。解释……」），因为它在模仿网上常见的「习题列表」文本。
+      它没<strong>不会</strong>，它只是<strong>没在「回答你」，而在「续写文本」</strong>。
+      <strong>能力（会预测）和意图对齐（按你要的做）是两回事——预训练只给了前者。</strong>
+    </p>
+  </div>
+
+  <h2>二、抽框架：RLHF 三步（示范 → 排序 → 强化）</h2>
+
+  <table>
+    <tr><th>步</th><th>做什么</th><th>教会模型</th></tr>
+    <tr><td><strong>① SFT</strong><br>监督微调</td><td>人<strong>亲手写</strong>一批「好答案」当示范，拿去微调 GPT-3</td><td>当助手的<strong>基本格式与风格</strong>（先学会「在回答」而非「续写」）</td></tr>
+    <tr><td><strong>② RM</strong><br>奖励模型</td><td>同一问题给出几个模型答案，人<strong>排序</strong>（好→坏）；训一个模型去<strong>预测这个偏好</strong>、输出一个分数</td><td>把「人类喜欢什么」<strong>压成一个可自动打分的函数</strong></td></tr>
+    <tr><td><strong>③ PPO</strong><br>强化学习</td><td>模型生成答案 → RM 打分 → 用 RL 推模型produce更高分的输出（+ KL 惩罚别跑太远）</td><td><strong>主动朝「人更爱的方向」优化</strong>，规模化对齐</td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">关键设计：为什么是「排序」，不是「写示范」或「打分」？</div>
+    <p style="margin:0.3rem 0">
+      ① <strong>写示范贵且有限</strong>——让人写出大量高质量答案，成本极高、覆盖不全。
+      ② <strong>直接打绝对分不可靠</strong>——「这答案打几分」人言人殊、漂移严重。
+      ③ <strong>排序又便宜又稳</strong>——「A 和 B 哪个更好」人类判断快、一致性高。
+      所以 RLHF 把「难写的好答案」转化成「易判的两两比较」，再让 RM 学会这套偏好、规模化地给无数新答案打分。<strong>这是整套方法能 scale 的命门。</strong>
+    </p>
+  </div>
+
+  <h2>三、核心洞察：能力 vs 对齐，是两条轴</h2>
+
+  <p class="interactive-hint cite">
+    这一课最该带走的心智模型——你日后所有「模型为什么这样」的判断都建在它上面。
+  </p>
+
+  <table>
+    <tr><th>轴</th><th>来自</th><th>决定</th></tr>
+    <tr><td><strong>能力（capability）</strong></td><td>预训练（猜下一个词，烧海量算力）</td><td>模型<strong>会不会</strong>——知识、推理、语言</td></tr>
+    <tr><td><strong>对齐（alignment）</strong></td><td>RLHF（人类反馈，算力只占零头）</td><td>模型<strong>愿不愿、按不按你的意图做</strong>——有用、真实、无害、听话</td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">震撼实验：对齐打败规模</div>
+    <p style="margin:0.3rem 0">
+      <strong>1.3B 的 InstructGPT，人类更偏爱它，胜过 175B 的 GPT-3——后者大 100 倍。</strong>
+      就「按用户意图做事」而言，<strong>对齐的价值远超单纯堆规模</strong>。而 RLHF 花的算力，只是预训练的<strong>零头</strong>。
+      这也解释了你的体感：<strong>「换更大的模型」未必更听话；听不听话主要看它被怎么对齐的，不只是它多大。</strong>
+    </p>
+  </div>
+
+  <h2>四、动手玩：同一个指令，三个阶段的输出怎么变</h2>
+  <p class="interactive-hint cite">
+    同一条指令，点 base（纯预训练）→ SFT → RLHF，看输出怎么从「续写跑偏」一步步变成「听话好用」。
+  </p>
+
+  <div class="callout primary">
+    <div class="mono" style="background:#fff;border-radius:6px;padding:0.5rem 0.7rem;margin-bottom:0.5rem;font-size:0.9rem">指令：解释天为什么是蓝的，讲给小学生听。</div>
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选阶段：　<span id="abtns"></span>
+    </div>
+    <div id="aout" class="mono" style="font-size:0.92rem;line-height:1.7;background:#fff;border-radius:6px;padding:0.6rem 0.8rem;margin:0.5rem 0;white-space:pre-wrap"></div>
+    <div id="awhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>三个阶段「能力」几乎一样（都懂瑞利散射），变的是「对齐」</strong>——会不会回答、答得有不有用、贴不贴合对象。这就是「博学 ≠ 听话」最直观的样子。
+  </p>
+
+  <h2>五、对照表（一）：预训练 vs SFT vs RLHF</h2>
+  <table>
+    <tr><th>阶段</th><th>数据来源</th><th>教会什么</th><th>算力</th></tr>
+    <tr><td>预训练</td><td>海量网络文本</td><td><strong>能力</strong>（猜下一个词）</td><td>巨大</td></tr>
+    <tr><td>SFT</td><td>人写的示范答案</td><td>助手的格式/风格</td><td>小</td></tr>
+    <tr><td>RM + PPO（RLHF）</td><td>人对输出的<strong>排序</strong></td><td><strong>对齐</strong>（朝人类偏好优化）</td><td>小（预训练的零头）</td></tr>
+  </table>
+
+  <h2>六、对照表（二）：RLHF 的代价、坑，与它启动的赛道</h2>
+  <table>
+    <tr><th>点</th><th>说明</th></tr>
+    <tr><td><strong>对齐税（alignment tax）</strong></td><td>对齐后模型在某些纯能力 benchmark 上会<strong>略降</strong>——「听话」和「极致能力」有轻微取舍。论文用「混入预训练梯度」来缓解。</td></tr>
+    <tr><td><strong>奖励作弊（reward hacking）</strong></td><td>模型会<strong>钻 RM 的空子</strong>——找到能骗高分但实际不好的输出（如一味冗长、谄媚）。靠 <strong>KL 惩罚</strong>（别离 SFT 太远）+ 更好的 RM 压制。</td></tr>
+    <tr><td><strong>RM 就是「学出来的裁判」</strong></td><td>奖励模型本质是一个 <strong>LLM-as-judge</strong>——把人类偏好压成自动打分器。<strong>这正是你做 Grader 的祖先。</strong></td></tr>
+  </table>
+  <p class="cite">
+    🔮 RLHF 强大但<strong>笨重</strong>（要训 RM + 跑 RL，三阶段、不稳）。于是后续两条路来简化/强化它：<strong>P17 DPO</strong>——不训 RM、不跑 RL，直接用偏好数据一步优化（更对得上你 autoevolve「打分→改」的直觉）；<strong>P18 Constitutional AI</strong>（Anthropic）——用一套<strong>书面原则</strong>让模型自我批评、自我对齐，少依赖人工标注。这一阶段就是「怎么让模型听话」的方法演化史。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你那个老困惑「精心写 prompt，行为还是控不住」</td><td>因为行为活在<strong>能力 + 对齐两条轴</strong>上：prompt 只在「对齐好的地盘」里微调，模型被 RLHF 烤进去的性格/拒答/风格，<strong>prompt 顶多绕、难根除</strong></td></tr>
+    <tr><td>你做的 <strong>Grader / LLM-as-judge</strong></td><td>就是 <strong>奖励模型（RM）</strong>的同款：把「什么算好」压成一个可自动打分的裁判。RLHF 的 RM 是它的理论原型</td></tr>
+    <tr><td>你做的 <strong>prompt autoevolve</strong>（打分→改→再打分）</td><td>结构上就是 <strong>RLHF 的轻量版</strong>：用一个评分信号去迭代优化输出/prompt——同一个「靠反馈爬坡」的范式</td></tr>
+    <tr><td>你给评分模型设规则，却发现被「钻空子」（输出变长、变谄媚就拿高分）</td><td>正是 <strong>reward hacking</strong>——裁判会被它评的对象套路。设计 Grader 要专门防这个（对照基准、防长度偏好等）</td></tr>
+    <tr><td>「换个更大的模型，是不是就更听话了」</td><td>不一定——<strong>听话看对齐，不只看规模</strong>。1.3B 对齐版能赢 175B base，选型别只盯参数</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：预训练给能力（会预测），RLHF 给对齐（按意图、有用真实无害）——两条不同的轴。"
+       data-no="看第三节：预训练=能力，RLHF=对齐，是两条轴；『听话』来自对齐，不是预训练。">
+    <div class="quiz-q">1. 「能力」和「对齐」分别来自哪？</div>
+    <button class="quiz-opt">都来自预训练</button>
+    <button class="quiz-opt">都来自 RLHF</button>
+    <button class="quiz-opt">能力来自预训练，对齐来自 RLHF</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：RLHF 用排序——因为『A、B 哪个更好』比『写好答案』或『打绝对分』都更便宜、更稳，是能 scale 的命门。"
+       data-no="看第二节 callout：用排序是因为两两比较比写示范/打绝对分更便宜可靠，让偏好能规模化。">
+    <div class="quiz-q">2. RLHF 为什么让人「排序」而不是「写示范」或「打绝对分」？</div>
+    <button class="quiz-opt">排序能让模型记住更多知识</button>
+    <button class="quiz-opt">两两比较比写答案/打绝对分更便宜、更稳，可规模化</button>
+    <button class="quiz-opt">排序不需要人参与</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：1.3B 的 InstructGPT 被人类更偏爱，胜过大 100 倍的 GPT-3 175B——对齐的价值超过单纯堆规模。"
+       data-no="看第三节：震撼结论是 1.3B 对齐版打败 175B base，说明对齐≠规模。">
+    <div class="quiz-q">3. InstructGPT 最震撼的实验结论是？</div>
+    <button class="quiz-opt">1.3B 对齐版被人类更偏爱，胜过 175B 的 GPT-3</button>
+    <button class="quiz-opt">RLHF 让模型参数翻了 100 倍</button>
+    <button class="quiz-opt">对齐后模型在所有能力测试上都更强</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">既然 RLHF 让模型听话，为什么我的 prompt 还是常常控不住它？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">因为 RLHF 把一套「性格」<strong>烤进了权重</strong>——有用、拒绝某些请求、某种语气、某些安全边界。你的 prompt 是在<strong>这套既定对齐之上</strong>做调整：和它一致时如臂使指，<strong>和它冲突时（比如想让它做被 RLHF 训得会拒绝的事），prompt 顶多绕、难根除</strong>。</p>
+      <p style="margin:0.3rem 0" class="cite">实操心智：<strong>prompt 控的是「在对齐允许的范围内怎么做」，控不了「对齐本身划的红线和默认人格」</strong>。所以同一条 prompt 在不同厂商模型上表现不同——它们被不同的人类偏好对齐过。选模型时，<strong>「它的默认对齐合不合你的产品调性」和「它多强」一样重要</strong>。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">RLHF 是让模型变「更真实/更聪明」了吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>主要不是变聪明，是变「按人类偏好行事」。</strong>知识和推理能力基本在预训练就定了，RLHF 几乎不加新能力（甚至有<strong>对齐税</strong>、个别能力略降）。它做的是：把已有能力<strong>导向</strong>「人更想要的输出」——更愿意回答、格式更好、少胡说、少冒犯。</p>
+      <p style="margin:0.3rem 0" class="cite">一个重要警告：RLHF 优化的是<strong>「人类觉得好」</strong>，不完全等于<strong>「真实正确」</strong>。两者常一致，但会分叉——模型可能学会<strong>「说得让人爱听」</strong>（自信、流畅、谄媚），哪怕内容是错的。这是 RLHF 的内在张力，也是你做事实类产品要额外校验的原因。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">KL 惩罚到底在防什么？去掉会怎样？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">RL 阶段，模型为了拿 RM 高分会<strong>不择手段地漂移</strong>。KL 惩罚是一条<strong>「别离 SFT 模型太远」的橡皮筋</strong>：每偏离原模型一点就扣分。去掉它，模型会<strong>钻 RM 空子（reward hacking）</strong>——产出 RM 爱打高分、但其实退化的怪输出（语无伦次却命中 RM 偏好、或一味谄媚冗长），甚至<strong>把语言能力也忘了</strong>。</p>
+      <p style="margin:0.3rem 0" class="cite">直觉：<strong>RM 只是人类偏好的「近似裁判」，不是真理</strong>；放任模型死磕这个近似裁判，它会找到裁判的漏洞而非真的变好。KL 惩罚＝「在裁判允许的范围内进步，但别为了刷分变成另一个东西」。这对你设计任何「用一个打分器去优化」的闭环（autoevolve、Grader 驱动迭代）都是同一课：<strong>得有个锚防止系统钻分数空子。</strong></p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">RLHF 和我做的 LLM-as-judge / autoevolve，像在哪、差在哪？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>像：同一个骨架</strong>——「生成→裁判评估→用信号推向更好」。你的 Grader≈RLHF 的 RM、autoevolve 循环≈PPO 循环，连失败模式都一样（裁判被钻）。</p>
+      <table>
+        <tr><th>轴</th><th>RLHF</th><th>你的 autoevolve</th></tr>
+        <tr><td>改什么</td><td><strong>模型权重</strong>（永久）</td><td><strong>prompt/输出</strong>（不动权重）</td></tr>
+        <tr><td>优化器</td><td>真 RL（PPO+梯度+KL）</td><td>LLM 驱动的改写/搜索（无梯度）</td></tr>
+        <tr><td>裁判</td><td><strong>训出来</strong>的 RM（锚真人偏好）</td><td><strong>prompt 出来</strong>的 Grader（灵活但不接地气）</td></tr>
+        <tr><td>信号</td><td>刻意用排序</td><td>常用绝对分（更不稳）</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">一句话：你在做 RLHF 的「形」、没用它的「重机械」——通常是对的（便宜够用），但<strong>继承了失败模式（代理被钻）却没自带护栏（KL 锚、真人 RM），得自己补</strong>。可立刻用的改进：<strong>Grader 从「打绝对分」改成「两两排序」，信号稳很多</strong>。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">为什么会有对齐税，能不能消掉？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>为什么有</strong>：本质是在优化一个和「原始能力」不同、且是代理的目标。四机制：① <strong>分布收窄</strong>（推向偏好窄分布，纯能力 benchmark 掉分）；② <strong>优化代理非真值</strong>（在「偏好≠正确」处死磕 RM 会拽偏）；③ <strong>灾难性遗忘</strong>（侵蚀偏好数据没覆盖的技能）；④ <strong>多样性塌缩</strong>（伤创造力任务）。</p>
+      <p style="margin:0.3rem 0" class="cite"><strong>能大幅缩、消不干净</strong>（两目标的本质张力）。手段：RL 阶段<strong>混入预训练梯度</strong>（PPO-ptx，最有效）、更好更大的 RM、KL 惩罚、偏好数据覆盖更全。随方法成熟税已很小，但<strong>谄媚/啰嗦/过度拒答是消不掉的残留</strong>——「优化偏好代理 ≠ 优化真值」这条裂缝是结构性的。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">reward hacking 在我的 Grader 里长什么样、怎么防？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>长什么样</strong>：① 长度偏好（越长越高分，学会注水）；② rubric 关键词谄媚（塞满 rubric 原词）；③ 自我标榜/对裁判喊话/自信口吻刷分；④ 格式刷分（分点标题被当「组织良好」）；⑤ 位置偏好（两两比时偏第一/第二）；⑥ <strong>共享盲点</strong>（裁判与生成器同源，查不出自己也不知道的事实错）；⑦ <strong>过拟合到这个裁判/测试集</strong>（钻当前裁判怪癖而非真变好）。</p>
+      <p style="margin:0.3rem 0"><strong>怎么防</strong>（按性价比）：① 排序代替绝对分；② 控长度（忽略/惩罚啰嗦、等长比）；③ 带参考答案/基线对比；④ <strong>守住 held-out 集</strong>（train 涨、held-out 不涨 = 正在钻空子，最灵的报警器）；⑤ 多裁判/轮换；⑥ 裁判比生成器强且异源；⑦ <strong>对抗式 rubric</strong>（让裁判主动找漏洞/幻觉、要引证据）；⑧ 位置随机化；⑨ 剥离 meta 文本；⑩ 定期真人抽检。</p>
+      <p style="margin:0.3rem 0" class="cite">统一原则：<strong>Goodhart 定律——一个指标一旦变成目标，就不再是好指标</strong>。两手抓：(a) 让代理更难钻；(b) 留锚/held-out/真人 check 发现它正被钻（即 RLHF 里 KL 惩罚 + 真人评估扮的角色）。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Ouyang et al. —
+      <a href="https://arxiv.org/abs/2203.02155">Training language models to follow instructions with human feedback（InstructGPT, 2022）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      建立直觉：Hugging Face — <em>Illustrating Reinforcement Learning from Human Feedback (RLHF)</em>（图解三步流程）。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      <strong>阶段四「对齐与推理」开篇。</strong>接下来：<strong>P16 思维链（让它一步步想）→ P17 DPO（不用 RL 的对齐）→ P18 Constitutional AI（用原则自我对齐）</strong>。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「RLHF 和我做的 LLM-as-judge / autoevolve，到底像在哪、差在哪？」「为什么会有对齐税，能不能消掉？」
+    「reward hacking 在我的 Grader 里具体会长什么样、怎么防？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0015-moe-switch-transformers.html">&#8592; 第 15 课：MoE (P14)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P15</code> → 明天 P16（Chain-of-Thought）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Ouyang et al., <em>Training language models to follow instructions with human feedback</em>, 2022.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 同一指令，三个阶段输出怎么变 —— */
+(function () {
+  var A = [
+    {
+      cap: "base（纯预训练）",
+      out: "解释草为什么是绿的，讲给小学生听。\n解释海为什么是咸的，讲给小学生听。\n解释……",
+      why: "它在<strong>续写「习题列表」</strong>，不是回答——能力在（认得这是题），但<strong>没对齐到「回答你」</strong>。这就是 base 模型的典型不羁。"
+    },
+    {
+      cap: "SFT（人写示范微调）",
+      out: "因为阳光里有很多颜色，蓝色光最容易被空气里的小颗粒散开，撒满整个天空，所以我们抬头看到的天是蓝色的。",
+      why: "学会了「<strong>在回答</strong>」、格式也对了。已经可用——但还偏「教科书腔」，没特别贴小学生。"
+    },
+    {
+      cap: "RLHF（朝人类偏好优化）",
+      out: "你可以想象阳光是一盒七彩蜡笔🖍️。蓝色这支最「跳」，一进到空气里就到处乱蹦、铺满天空，所以我们一抬头，看到的就是一片蓝啦！（晚霞变红，是因为这时候轮到红色蜡笔啦～）",
+      why: "能力没变（还是瑞利散射），但<strong>更贴对象、更生动、还顺手满足了好奇心</strong>——这正是「人类更偏爱」的方向，RM+PPO 把它推到了这里。"
+    }
+  ];
+  var abtns = document.getElementById("abtns");
+  function render(idx) {
+    var a = A[idx];
+    document.getElementById("aout").textContent = a.out;
+    document.getElementById("awhy").innerHTML = a.why;
+    Array.prototype.forEach.call(abtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  A.forEach(function (a, i) {
+    var b = document.createElement("button");
+    b.textContent = a.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    abtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>

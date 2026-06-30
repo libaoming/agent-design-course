@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 8 课 · GPT-2：规模一上，「猜下一个词」自己长出了多任务能力</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 8 课 / 经典论文 <strong>P07</strong> &nbsp;·&nbsp; 阶段二：预训练范式（Radford et al., 2019）</div>
+
+  <h1>GPT-2：<br>规模一上，「猜下一个词」<br><span style="font-size:0.6em;color:#a8521a">——自己长出了多任务能力，还不用微调</span></h1>
+
+  <div class="mission">
+    上一课 <a href="0007-gpt-1.html">GPT-1</a> 立了范式：生成式预训练 + <b>每个任务还要微调</b>。这一课 GPT-2 几乎<b>没动架构</b>，只做了三件事——<b>放大规模、提纯数据、把任务当成输入的一部分</b>——结果世界第一次看到：<b>不微调、光给一句提示，模型就能切换去做摘要、翻译、问答。</b>
+    它回答你一个天天在用却没拆过的问题：<b>为什么我换个更大的模型、改改 prompt，它就「啥都会一点」，而我根本没训练它？</b>
+  </div>
+
+  <div class="big-idea">
+    GPT-1 赌的是「猜下一个词能学出通用能力」。GPT-2 把这句话<strong>再推一步</strong>：<br>
+    <strong>海量真实文本里，任务本身就以文字形式存在</strong>（「翻译成法语：…」「TL;DR:」就明晃晃写在网页上）。<br>
+    所以在大语料上学「预测下一个词」，<strong>等于隐式地把无数任务一起学了</strong>——<em>语言建模本身就是多任务学习</em>。规模越过门槛，这些能力自己<strong>涌现</strong>出来。
+  </div>
+
+  <h2>一、立靶：GPT-1 还要微调，凭什么 GPT-2 不微调就能干活？</h2>
+
+  <p>
+    GPT-1 的剧本是「预训练一个通用底座，<strong>每来一个任务，拿标注数据微调一次</strong>」。能用，但每个任务都要一套标注 + 一次训练，<strong>笨重</strong>。GPT-2 提出一个激进得多的问题：
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：能不能一次预训练，之后<strong>啥也不训</strong>，靠提示直接做任意任务？</div>
+    <p style="margin:0.3rem 0">
+      GPT-2 的答案是「能，只要够大、数据够好」。它把任务从「<strong>要微调的目标</strong>」降级成「<strong>提示里的一句话</strong>」：
+      给模型喂 <code>……文章正文 TL;DR:</code>，它就接着生成摘要；喂 <code>……英文句子 翻译成法语：</code>，它就接着吐法语。
+      <strong>没有梯度更新、没有任务头、没有标注数据</strong>——这就是 <strong>zero-shot task transfer（零样本任务迁移）</strong>。
+    </p>
+  </div>
+
+  <h2>二、抽框架：GPT-2 到底改了什么？（几乎没动架构）</h2>
+
+  <p>这是这课最反直觉的地方：<strong>GPT-2 的骨架和 GPT-1 基本一样</strong>（还是 decoder-only + 因果掩码 + 预测下一个词）。真正的杠杆是另外三根：</p>
+
+  <table>
+    <tr><th>改动的杠杆</th><th>GPT-1 → GPT-2 怎么变的</th><th>带来什么</th></tr>
+    <tr><td><strong>① 规模</strong></td><td>参数 117M → <strong>1.5B</strong>（约 13 倍）；层数最深 48 层；上下文 512 → 1024</td><td>容量够大，才装得下「无数任务」</td></tr>
+    <tr><td><strong>② 数据质量</strong></td><td>BooksCorpus（书）→ <strong>WebText</strong>：靠 Reddit 高赞外链筛出的 40GB 高质量网页</td><td>任务示范更丰富、更干净</td></tr>
+    <tr><td><strong>③ 任务条件化</strong></td><td>把任务从「微调目标」变成「<strong>提示里的文字</strong>」，建模 <code>P(输出 | 输入, 任务)</code></td><td>不微调，靠提示就能切任务</td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">记牢这句：GPT-2 没有「更聪明的设计」，它赌的是「规模 × 数据 × 把任务塞进提示」</div>
+    <p style="margin:0.3rem 0">
+      架构上唯一的小动作是把 <strong>LayerNorm 挪到每个子层前面（pre-LN）</strong>、残差按层数缩放——为的是<strong>把更深的网络训稳</strong>，不是新增能力。
+      真正的故事全在「<strong>同一个老目标 + 放大</strong>」上。这正是你下一课 <a href="0007-gpt-1.html">scaling</a> 系列的序章：<strong>不改方法，光加规模，能力自己长。</strong>
+    </p>
+  </div>
+
+  <h2>三、核心洞察：语言建模本身就是多任务学习</h2>
+
+  <p class="interactive-hint cite">
+    GPT-1 的暗线是「通用能力＝猜下一个词的副产品」。GPT-2 把它升级成一句更强的话——
+    <strong>因为任务本身就写在文本里，所以「猜下一个词」不只是学能力，是直接在学「无数个具体任务」。</strong>
+  </p>
+
+  <p>
+    想想训练语料里天然存在这样的句子：<br>
+    「……这部电影节奏拖沓、剧情老套。<strong>总结：差评。</strong>」← 这一句，就是一条<strong>情感分类的示范</strong>。<br>
+    「<strong>Q:</strong> 法国首都是哪？ <strong>A:</strong> 巴黎。」← 这就是一条<strong>问答示范</strong>。<br>
+    模型为了把这些句子的「下一个词」猜准，<strong>被迫学会了总结、问答这些任务的模式</strong>。任务不是额外教的，是<strong>顺着预测目标白捡的</strong>。
+  </p>
+
+  <h2>四、动手玩：同一段文本，换个提示后缀，模型就换了任务</h2>
+  <p class="interactive-hint cite">
+    下面是<strong>同一篇短文</strong>。点不同的「提示触发器」，看模型 zero-shot 切换成不同任务——<strong>没换模型、没微调、没给例子，只改了最后那句提示</strong>。这就是 GPT-2 让世界惊到的瞬间。
+  </p>
+
+  <div class="callout primary">
+    <div class="mono" style="font-size:0.92rem;line-height:1.7;background:#fff;border-radius:6px;padding:0.6rem 0.8rem;margin-bottom:0.6rem">
+      上周末我去了城郊的农夫市集，买了新鲜草莓和一束向日葵，还和摊主聊了很久关于天气的事。
+    </div>
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      加一句提示：　<span id="tbtns"></span>
+    </div>
+    <div id="tprompt" class="mono" style="font-size:0.98rem;text-align:center;margin:0.6rem 0;color:#d2691e;font-weight:700"></div>
+    <div id="tout" style="text-align:center;font-size:0.98rem;margin:0.4rem 0;color:#333"></div>
+    <div id="twhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出来了吗：<strong>同一个模型、同一段输入，仅靠提示后缀就在摘要 / 翻译 / 问答 / 情感之间自由切换。</strong>因为这些任务模式它在 WebText 里全见过。这就是你写 prompt 的史前史。
+  </p>
+
+  <h2>五、对照表（一）：GPT-1 → GPT-2 的「同一条路，放大一档」</h2>
+  <table>
+    <tr><th>维度</th><th>GPT-1（P06）</th><th>GPT-2（本篇 P07）</th></tr>
+    <tr><td>架构</td><td>decoder-only，12 层，117M</td><td><strong>decoder-only，最深 48 层，1.5B</strong>（同骨架，放大）</td></tr>
+    <tr><td>数据</td><td>BooksCorpus（约 5GB 书）</td><td><strong>WebText（40GB 高质量网页）</strong></td></tr>
+    <tr><td>怎么做下游任务</td><td>每个任务<strong>微调一次</strong> + 接任务头</td><td><strong>不微调</strong>，靠提示 zero-shot</td></tr>
+    <tr><td>任务怎么表达</td><td>特殊分隔符拼序列（输入变换）</td><td><strong>自然语言提示</strong>（TL;DR: / 翻译成…）</td></tr>
+    <tr><td>核心论点</td><td>生成式预训练能学出通用能力</td><td><strong>语言建模本身就是多任务学习</strong></td></tr>
+  </table>
+
+  <h2>六、对照表（二）：「涌现」——能力随规模冒出来</h2>
+  <p>
+    GPT-2 一口气放出 4 个尺寸（117M / 345M / 762M / 1.5B）。把同一个 zero-shot 任务的表现对模型大小画曲线，会看到：<strong>小模型几乎不会，越大越行</strong>。这就是<strong>涌现（emergence）</strong>的早期证据——规模本身在变出能力。
+  </p>
+  <table>
+    <tr><th>模型尺寸</th><th>zero-shot 多任务表现</th><th>给你的信号</th></tr>
+    <tr><td>117M（最小）</td><td>勉强、不稳</td><td rowspan="2" style="vertical-align:middle">能力不是「有/无」<br>而是随规模<strong>单调爬升</strong></td></tr>
+    <tr><td>345M / 762M</td><td>稳步变好</td></tr>
+    <tr><td><strong>1.5B（最大）</strong></td><td><strong>多个任务接近甚至逼近专门模型</strong></td><td>规模＝可买的能力</td></tr>
+  </table>
+  <p class="cite">
+    🔮 这条曲线就是下一阶段 <strong>Scaling Laws（P10）</strong> 的引子：能力和规模的关系不是玄学，是<strong>可测、可外推的幂律</strong>。「大力出奇迹」从 GPT-2 这里第一次有了实证味道。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你换个更大的模型，发现它「啥都会一点」、根本没训它</td><td>就是 GPT-2 的 <strong>zero-shot 多任务</strong>——能力是「猜下一个词 + 规模」涌现出来的，不是谁专门教的</td></tr>
+    <tr><td>你写 <code>TL;DR:</code> / 「请翻译：」/「判断情感：」就让模型干活</td><td><strong>任务条件化</strong>的直系应用——你在用一句提示选中模型早已学会的某个任务</td></tr>
+    <tr><td>你做 RAG 供料层 / 数据集时纠结「要质还是要量」</td><td>GPT-2 用 <strong>WebText（Reddit 高赞过滤）</strong>立的范式：<strong>数据质量 ≥ 数据数量</strong></td></tr>
+    <tr><td>你按 token 计费、算上下文窗口</td><td>那个 token 来自 GPT-2 的 <strong>byte-level BPE</strong>（词表 50257）——一个词常是多个 token</td></tr>
+    <tr><td>「换大模型常常一换就好」的玄学体感</td><td>就是 <strong>涌现</strong>：能力越过规模门槛才冒出来。下节 scaling laws 把它量化</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：GPT-2 几乎没动架构，杠杆是『规模 × 数据质量 × 把任务塞进提示（任务条件化）』。"
+       data-no="看第二节：GPT-2 骨架和 GPT-1 基本一样，真正变的是规模、数据质量、任务条件化三根杠杆。">
+    <div class="quiz-q">1. 相比 GPT-1，GPT-2 最关键的改动是什么？</div>
+    <button class="quiz-opt">换成了 encoder-only 双向架构</button>
+    <button class="quiz-opt">发明了全新的注意力机制</button>
+    <button class="quiz-opt">放大规模 + 提纯数据 + 把任务当提示（架构几乎没变）</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：因为任务本身就以文字形式出现在海量文本里，学『猜下一个词』就等于隐式地学无数任务——语言建模本身就是多任务学习。"
+       data-no="看第三节：任务（『总结：』『Q:…A:…』）就写在训练文本里，猜准下一个词＝顺带学会了这些任务。">
+    <div class="quiz-q">2. GPT-2 为什么不微调、靠提示就能做摘要/翻译/问答？</div>
+    <button class="quiz-opt">因为它偷偷在每个任务上微调过</button>
+    <button class="quiz-opt">因为任务就藏在文本里，预测下一个词＝隐式多任务学习</button>
+    <button class="quiz-opt">因为它用了 BERT 的双向能力</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：把同一 zero-shot 任务对模型尺寸画曲线，小模型几乎不会、越大越行——这就是涌现，scaling laws 的引子。"
+       data-no="看第六节：能力随规模单调爬升、越过门槛才冒出来，这叫涌现（emergence）。">
+    <div class="quiz-q">3. GPT-2 放出 4 个尺寸，揭示了什么现象？</div>
+    <button class="quiz-opt">能力随规模单调爬升、越大越强（涌现）</button>
+    <button class="quiz-opt">参数越多越过拟合、越差</button>
+    <button class="quiz-opt">规模和能力无关，全靠数据</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">GPT-2 的 zero-shot 和 GPT-3 的 few-shot / in-context learning 到底差在哪？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">同一条轴上的两档，差在「<strong>提示里给不给例子</strong>」：</p>
+      <table>
+        <tr><th>范式</th><th>提示里有什么</th><th>出处</th></tr>
+        <tr><td><strong>zero-shot</strong></td><td>只有一句指令（<code>TL;DR:</code>），<strong>0 个例子</strong></td><td>GPT-2（本课）</td></tr>
+        <tr><td><strong>few-shot / ICL</strong></td><td>指令 + <strong>几个示范</strong>，照葫芦画瓢</td><td>GPT-3（P08）</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">两者都<strong>不更新权重</strong>。GPT-2 先证明「不微调能干活」，GPT-3 再发现「给几个例子能干得好得多」——你日常 prompt 里塞示例，吃的就是 GPT-3 这口红利。🔮</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">为什么数据质量这么关键？多堆点数据不行吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">关键在「<strong>任务示范的密度和干净度</strong>」。随便爬全网会混进大量垃圾、重复、机器生成的低质文本，模型学到的「下一个词分布」被污染。GPT-2 用 <strong>Reddit karma（高赞）</strong>当人工质量代理，等于让人群先帮你筛了一遍——筛出的 WebText 里，<strong>高质量的任务示范（总结、问答、翻译）密度更高</strong>。</p>
+      <p style="margin:0.3rem 0" class="cite">迁移到你：做 RAG 供料层 / 微调数据集时，<strong>「先狠狠过滤再喂」往往比「多喂」回报高</strong>——脏数据不是中性的，它会主动拉低分布质量。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">一个词为什么会是「多个 token」？这跟我有什么关系？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">GPT-2 用 <strong>byte-level BPE</strong>：从字符起步，反复把「最常一起出现的相邻片段」合并。常见词（the、是）成一整块 token，生僻词（antidisestablishmentarianism）被拆成好几块，<strong>中文常一字一到多个 token</strong>。词表固定 50257，好处是任何字符串都能编码、永不 OOV。</p>
+      <p style="margin:0.3rem 0" class="cite">对你的直接影响：<strong>① 计费按 token 不按词</strong>，中文/代码往往比你以为的更费 token；<strong>② 上下文窗口（如 128k）是 token 数</strong>；<strong>③ 模型「看不见字母」</strong>——它看的是 token，所以「strawberry 有几个 r」这类问题它天生容易错。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">「涌现」和「过拟合」怎么区分？都是表现变好啊</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">方向<strong>相反</strong>，判据是<strong>「在哪个数据上、画哪条曲线」</strong>：</p>
+      <table>
+        <tr><th></th><th>涌现（emergence）</th><th>过拟合（overfitting）</th></tr>
+        <tr><td>测在哪</td><td><strong>没见过的新任务</strong>（zero-shot）</td><td>训练集↑、<strong>测试集↓</strong> 的裂口</td></tr>
+        <tr><td>画哪条线</td><td>对<strong>模型规模</strong>画 → 越门槛能力冒出</td><td>对<strong>训练步数</strong>画 → 训练 loss↓ 验证 loss↑</td></tr>
+        <tr><td>泛化</td><td>更会举一反三（学到<strong>真规律</strong>）</td><td>更不会（<strong>背住了样本</strong>）</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">一句话：<strong>过拟合是「测试集上露馅」，涌现是「全新任务上惊喜」</strong>。GPT-2 的 zero-shot 测的是训练时根本没优化过的任务，能做出来只能是学到了可迁移规律——不可能是背的。映射你：微调后「训练分飙高但线上变差」=过拟合（学窄了）；换大基座「没专门调的任务都变好」=涌现。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">pre-LN 为什么能把几十层的深网络训稳？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">深网络的命门是<strong>梯度穿过几十层时会爆炸/消失</strong>。残差连接 <code>输出=输入+子层(输入)</code> 那条「+输入」的<strong>恒等通路</strong>本是救星，让梯度能抄近道直达底层。关键就看 LayerNorm 摆哪：</p>
+      <table>
+        <tr><th>摆法</th><th>公式</th><th>后果</th></tr>
+        <tr><td>post-LN（原版）</td><td><code>LN(输入 + 子层(输入))</code></td><td>LN 卡在<strong>主干道</strong>上，梯度每过一层被揉一次，深了难训</td></tr>
+        <tr><td><strong>pre-LN（GPT-2）</strong></td><td><code>输入 + 子层(LN(输入))</code></td><td>LN 挪进<strong>支路</strong>，残差恒等通路<strong>纯净无缩放</strong>，梯度几乎无损直达底层</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">一句话：<strong>把归一化从「主干道」挪到「辅路」，保住残差那条恒等高速公路畅通，梯度才能稳穿几十层。</strong>它不增加能力，是「让规模这根杠杆能继续拉下去」的承重墙——GPT-2 敢堆 48 层、后来大模型动辄上百层，靠的就是它。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">zero-shot 既然这么强，为什么后来还要 RLHF？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">因为<strong>会做 ≠ 愿意好好做</strong>。预训练目标只有「预测下一个词」=逼近<strong>互联网文本分布</strong>，模型学的是「人在网上会怎么接着写」，<strong>不是「对我最有用、最真实、最安全的回答」</strong>。于是纯预训练模型会：你问问题它<strong>反问/跑题</strong>（网上问题后常跟更多问题）、自信地<strong>编造</strong>（流畅文本概率高，真不真它不在乎）、照做<strong>有害请求</strong>（只是在模仿分布）。</p>
+      <p style="margin:0.3rem 0">这点破一个根本区分——<strong>能力（capability）vs 对齐（alignment）是两个独立的轴</strong>：</p>
+      <table>
+        <tr><th>阶段</th><th>解决什么</th></tr>
+        <tr><td>预训练（GPT-2/3）</td><td><strong>能力</strong>：模型会不会做（zero-shot 证明了它会）</td></tr>
+        <tr><td>指令微调 + RLHF（P15）</td><td><strong>对齐</strong>：把「续写互联网」掰成「做有用/诚实/无害的助手」</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">一句话：<strong>预训练给了「能做」的本事，RLHF 教会「该怎么做、该不该做」——前者是潜力，后者是教养。</strong>你「prompt 控不住行为」的困惑根源就在此：模型性格是 RLHF 训练时焊死的，光靠推理时的 prompt 有上限。RLHF 本质＝「人类打分→把模型往偏好推」，正是你 autoevolve 的工业化版。P15 InstructGPT 正式拆。🔮</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Radford et al. —
+      <a href="https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf">Language Models are Unsupervised Multitask Learners（GPT-2, 2019）</a>。
+    </p>
+    <p style="margin:0.3rem 0">
+      建立直觉首选：Jay Alammar — <a href="https://jalammar.github.io/illustrated-gpt2/">The Illustrated GPT-2</a>（图解 decoder-only 自回归生成，正是 GPT-2）。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      下一篇 <strong>P08 GPT-3</strong>：再放大 100 倍（175B），发现「<strong>在提示里给几个例子</strong>」就能让模型当场学会任务——<strong>in-context learning</strong>，你 prompt 工程真正的理论根。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「『涌现』和『过拟合』怎么区分？」「pre-LN 为什么能把深网络训稳？」
+    「zero-shot 既然这么强，为什么后来还要 RLHF？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0007-gpt-1.html">&#8592; 第 7 课：GPT-1 (P06)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P07</code> → 明天 P08（GPT-3）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Radford et al., <em>Language Models are Unsupervised Multitask Learners</em>, 2019；Alammar, <em>The Illustrated GPT-2</em>.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 同一段文本 + 不同提示后缀 → zero-shot 切换任务 —— */
+(function () {
+  var BASE = "上周末我去了城郊的农夫市集，买了新鲜草莓和一束向日葵，还和摊主聊了很久关于天气的事。";
+  var T = [
+    {
+      cap: "TL;DR:（摘要）",
+      prompt: BASE + "　TL;DR：",
+      out: "周末逛农夫市集，买了草莓和向日葵。",
+      why: "<code>TL;DR:</code> 在网络文本里几乎总跟着一段摘要出现。模型为了猜准它后面的词，学会了<strong>摘要</strong>这个任务——你没微调，只是用提示<strong>选中</strong>了它。"
+    },
+    {
+      cap: "翻译成英文：",
+      prompt: BASE + "　翻译成英文：",
+      out: "Last weekend I went to a suburban farmers' market, bought fresh strawberries and a bunch of sunflowers...",
+      why: "双语对照（原文 + 「翻译：」+ 译文）在语料里大量存在。模型把<strong>翻译</strong>当作一种「下一个词的接法」学了下来。"
+    },
+    {
+      cap: "问：我买了什么花？答：",
+      prompt: BASE + "　问：我买了什么花？答：",
+      out: "向日葵。",
+      why: "「问：…答：…」是文本里最常见的问答模式。模型靠猜准「答：」后面的词，顺带学会了<strong>抽取式问答</strong>。"
+    },
+    {
+      cap: "情感：",
+      prompt: BASE + "　这段话的情感是：",
+      out: "正面 / 愉悦。",
+      why: "「……评论。情感：正面」这类句子让模型学会<strong>情感分类</strong>。注意——切换任务全靠最后这句提示，模型和输入<strong>一个字没变</strong>。"
+    }
+  ];
+  var tbtns = document.getElementById("tbtns");
+  function render(idx) {
+    var t = T[idx];
+    document.getElementById("tprompt").textContent = t.prompt;
+    document.getElementById("tout").innerHTML = '模型零样本续写 → <strong style="color:#a8521a">' + t.out + '</strong>';
+    document.getElementById("twhy").innerHTML = t.why;
+    Array.prototype.forEach.call(tbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  T.forEach(function (t, i) {
+    var b = document.createElement("button");
+    b.textContent = t.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    tbtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>

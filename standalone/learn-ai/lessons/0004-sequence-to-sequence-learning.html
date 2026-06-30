@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 课 · Seq2Seq：把一个序列翻成另一个序列</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 4 课 / 经典论文 <strong>P03</strong> &nbsp;·&nbsp; 阶段一：地基（Sutskever, Vinyals &amp; Le, 2014）</div>
+
+  <h1>Sequence to Sequence Learning：<br>把「一个序列」翻成「另一个序列」<br><span style="font-size:0.6em;color:#a8521a">——你刚修好的那台机器的本体</span></h1>
+
+  <div class="mission">
+    <a href="0003-neural-machine-translation-align-translate.html">上一课（P02）</a>立的那个靶——「整句被压进<b>一个固定向量</b>」——
+    这一课你正面把那台机器拆开。它叫 <b>encoder–decoder</b>（seq2seq），是
+    <b>翻译、摘要、语音转写、对话、代码生成</b>的共同祖宗框架，也是你每天用的 GPT「生成」那一半的<b>正源</b>。
+    P02 是给它装了 attention；这一课你看它<b>没装之前长什么样、为什么必然有那个瓶颈</b>。
+  </div>
+
+  <div class="big-idea">
+    用两台 LSTM 接力：<br>
+    第一台<strong>读完整句源文，压成一个向量</strong>（"意思"）；<br>
+    第二台<strong>拿着这个向量，一个词一个词吐出译文</strong>。<br>
+    第一次证明：纯神经网络端到端，能翻得过几十年的统计翻译。
+  </div>
+
+  <h2>一、立靶：神经网络做不了「变长 → 变长」</h2>
+
+  <p>
+    2014 年之前，深度网络（DNN）很能打，但有个硬限制：<strong>输入和输出都得是定长向量</strong>——图片分类（一张图 → 一个标签）、打分（一段特征 → 一个数）都行。
+  </p>
+
+  <table>
+    <tr><th>任务</th><th>形状</th><th>DNN 能不能</th></tr>
+    <tr><td>图片分类</td><td>定长 → 定长</td><td>能</td></tr>
+    <tr><td><strong>机器翻译</strong></td><td><strong>变长 → 变长</strong>（源句 7 词，译文 10 词，长度还不固定）</td><td><strong>不能</strong></td></tr>
+  </table>
+
+  <p>
+    翻译是<strong>序列到序列</strong>：长度不定、词序还会重排。DNN 那套「定长进定长出」根本套不上。
+    论文的问题就一句：<strong>怎么用神经网络，把一个不定长序列映射成另一个不定长序列？</strong>
+  </p>
+
+  <h2>二、抽框架：两台 LSTM 接力</h2>
+
+  <table>
+    <tr><th>角色</th><th>在干什么</th></tr>
+    <tr><td><strong>Encoder LSTM</strong></td><td>逐词读源句，每读一词更新自己的记忆。读到结尾标记 <code>&lt;EOS&gt;</code> 时，把<strong>最后那一刻的 hidden state 当成整句的"意思向量" v</strong>（业界叫 thought vector）。</td></tr>
+    <tr><td><strong>Decoder LSTM</strong></td><td>以 <strong>v 为起点</strong>，自回归地一个词一个词生成译文：每生成一个词，再喂回去当下一步的输入，直到自己吐出 <code>&lt;EOS&gt;</code> 才停。</td></tr>
+  </table>
+
+  <p>训练目标朴素直接——<strong>最大化"给定源句，正确译文的概率"</strong>：</p>
+  <pre><code>P(译文 | 源句) = ∏  P(下一个译词 | v, 已生成的译词)
+                t
+读源句 → 压成 v → 从 v 解出译文，一步步算概率，整条最大化。</code></pre>
+
+  <p>
+    这套 <strong>encoder–decoder</strong> 就此定下来。注意 decoder 那一半——<strong>「拿一个向量，自回归吐 token，吐到 &lt;EOS&gt; 停」</strong>——
+    正是<strong>今天每个 GPT 在做的事</strong>。GPT 约等于"砍掉 encoder、只留 decoder、把 attention 加满"的 seq2seq。
+  </p>
+
+  <div class="callout">
+    <div class="label">论文里三个关键点，少一个都会理解偏</div>
+    <p style="margin:0.3rem 0"><strong>① 固定向量瓶颈（承 P02 的靶）：</strong> 整句压进 <strong>v 这一个定长向量</strong>。短句够用，长句信息装不下——论文自己就观察到长句翻译质量下滑。<strong>这正是 P02 attention 来修的病</strong>。先有这台机器的瓶颈，才有 attention 的必然。</p>
+    <p style="margin:0.3rem 0"><strong>② 倒序输入 trick（最反直觉、最有记忆点）：</strong> 把源句<strong>反过来</strong>喂进 encoder（"a b c" → "c b a"）。就这一下，BLEU 大涨约 4~5 分。下一节你亲手玩它为什么有效。</p>
+    <p style="margin:0.3rem 0"><strong>③ 句子变成了空间里一个点：</strong> 学出来的 v，意思相近的句子<strong>聚在一起</strong>，对词序敏感、对主动/被动相对不变。第一次让人看到"<strong>一句话 = 一个向量</strong>"——这就是今天 sentence embedding 的雏形。</p>
+  </div>
+
+  <h2>二·五、换个说法：打包成一个 .zip，再解压成另一种语言（通俗版）</h2>
+  <p class="interactive-hint cite">
+    嫌上面抽象？把 seq2seq 想成<strong>压缩与解压</strong>。
+  </p>
+
+  <table>
+    <tr><th></th><th>对应 seq2seq 的</th></tr>
+    <tr><td><strong>打包</strong>：把一整段中文话压成<strong>一个固定大小的 .zip 文件</strong></td><td>Encoder 把源句压成意思向量 <strong>v</strong></td></tr>
+    <tr><td><strong>解压</strong>：搭档拿到这个 .zip，照着把内容用<strong>英文</strong>复述出来</td><td>Decoder 从 v 自回归生成译文</td></tr>
+    <tr><td><strong>瓶颈</strong>：.zip 大小<strong>写死了</strong>，话越长越塞不下，解压出来缺斤少两</td><td>固定向量装不下长句 → P02 attention 来救</td></tr>
+    <tr><td><strong>倒序 trick</strong>：打包时把<strong>开头</strong>放在离"解压起点"最近的地方，搭档一上手就够得着</td><td>反转源句，缩短首词到首译词的距离</td></tr>
+  </table>
+
+  <h2>三、动手玩：倒序输入为什么有效</h2>
+  <p class="interactive-hint cite">
+    源句 <strong>The · cat · sat</strong>，decoder 要先生成第一个译词。点切换<strong>正序 / 倒序</strong>，看源句<strong>首词 The</strong> 到<strong>第一个译词</strong>之间隔了几步——步数越短，LSTM 越容易把这对词学对齐。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.7rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      喂进 encoder 的顺序：　<span id="qbtns"></span>
+    </div>
+    <div id="seq-row" style="font-family:-apple-system,'PingFang SC',sans-serif;font-size:0.9rem;margin:0.6rem 0"></div>
+    <div id="seq-note" class="cite" style="margin-top:0.7rem"></div>
+  </div>
+
+  <h2>四、对照表：这台机器的三代演化</h2>
+  <table>
+    <tr><th>维度</th><th>Seq2Seq<br>(本篇 P03, 2014)</th><th>+ Attention<br>(P02, 2014)</th><th>Transformer<br>(P01, 2017)</th></tr>
+    <tr><td>源句怎么表示</td><td>压成<strong>一个</strong> v</td><td>每个源词留一个 h，<strong>按需重算 c</strong></td><td>每个 token、每层都重算</td></tr>
+    <tr><td>长句</td><td>装不下，会掉链子</td><td>不掉链子</td><td>受限于 O(n²) 成本</td></tr>
+    <tr><td>底座</td><td>两台 LSTM</td><td>双向 LSTM + 对齐网络</td><td><strong>无 RNN</strong>，纯 attention</td></tr>
+    <tr><td>decoder 的活</td><td colspan="3" style="text-align:center"><strong>都一样：拿向量，自回归吐 token，到 &lt;EOS&gt; 停 ← 今天 GPT 在做的事</strong></td></tr>
+  </table>
+
+  <h2>五、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你每天用的 LLM「生成」</td><td>就是 <strong>decoder 那一半</strong>：拿着上下文向量，自回归一个 token 一个 token 往外吐。GPT = 长满 attention 的 decoder。</td></tr>
+    <tr><td>你调的 <code>max_tokens</code> / <code>stop</code></td><td>本质是在管这台 decoder「<strong>什么时候吐 &lt;EOS&gt; / 该不该停</strong>」——停止机制就是这篇定的。</td></tr>
+    <tr><td>语音招聘里的 ASR / 翻译 / 摘要</td><td>全是 <strong>seq2seq</strong>：语音序列 → 文字序列、长文 → 摘要，同一个 encoder-decoder 框架。</td></tr>
+    <tr><td>RAG 把一段话编码成<strong>一个向量</strong>做检索</td><td>就是这篇的 <strong>thought vector</strong> 直系后代——也<strong>继承了它的瓶颈</strong>：一个 dense 向量压不下长文档，这正是你<a href="../rag-供料层选型/MISSION.md">供料层选型</a>要切块、要聚合的根。</td></tr>
+  </table>
+
+  <h2>六、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：DNN 只能定长进定长出，而翻译是变长→变长（长度不定、词序重排）。seq2seq 用两台 LSTM 解决了这件事。"
+       data-no="回看第一节：DNN 的硬限制是『输入输出都得定长』，翻译却是变长到变长。seq2seq 就是来破这个的。">
+    <div class="quiz-q">1. seq2seq 出现前，普通 DNN 做不了翻译，卡在哪？</div>
+    <button class="quiz-opt">没有 GPU，算不动 LSTM</button>
+    <button class="quiz-opt">缺少注意力机制，无法对齐</button>
+    <button class="quiz-opt">只能定长进定长出，套不上变长→变长</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：整句被 encoder 压进一个定长的 v，长句信息装不下——这正是 P02 attention 要修的病。先有这瓶颈，才有 attention 的必然。"
+       data-no="再想细节①：seq2seq 把整句压成一个固定向量 v，长句装不下。P02 的 attention 正是来救这个的。">
+    <div class="quiz-q">2. seq2seq 留给 P02 attention 去修的「病」是什么？</div>
+    <button class="quiz-opt">整句被压进一个固定向量，长句装不下</button>
+    <button class="quiz-opt">decoder 不知道何时停止生成</button>
+    <button class="quiz-opt">两台 LSTM 之间无法传递梯度</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：倒序让源句开头离译文开头更近，制造更多短程依赖，梯度好传、SGD 更易学对齐——一个简单 hack 换来约 4~5 BLEU。"
+       data-no="看第三节那个互动：倒序把源首词挪到离首译词更近的位置，短程依赖变多，更好学。这是它有效的原因。">
+    <div class="quiz-q">3. 「把源句倒过来输入」为什么能涨分？</div>
+    <button class="quiz-opt">倒序后句子更短，计算更省</button>
+    <button class="quiz-opt">缩短源首词与首译词的距离，短程依赖更好学</button>
+    <button class="quiz-opt">倒序自带了位置编码信息</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>七、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">课上被问到、值得单独记一笔的几个点。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">为什么用 LSTM，不用普通 RNN？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">普通 RNN 反向传播靠梯度<strong>连乘</strong>，序列一长就<strong>梯度消失 / 爆炸</strong>，实际只记得住三五步。LSTM 多挂一条<strong>「记忆传送带」（cell state）</strong>：信息靠<strong>加法</strong>近乎无损地流很多步，三个门控制写入 / 遗忘 / 读出——所以扛得住长距离。seq2seq 要把整句信息一路扛到句尾，正需要它。</p>
+      <p style="margin:0.3rem 0">🔮 现代 Transformer 干脆用 attention 让任意两词一步直连，从根上绕过梯度消失。「为什么用 LSTM」是 2014 年的答案；2017 年起的答案是<strong>「都不用，用 attention」</strong>。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">thought vector 和 sentence embedding 是一回事吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>同源，但训练目标分了家。</strong>两者都是「一句话 → 一个定长向量」。但 thought vector 为<strong>生成 / 翻译</strong>顺带产生（够 decoder 解出译文就行）；sentence embedding（你 RAG 用的 <code>bge-small-zh</code>）为<strong>检索</strong>专门用对比学习训，目标是「语义相近 = 距离近」。</p>
+      <p style="margin:0.3rem 0">所以 RAG 里那个向量是 embedding、不是 thought vector，但同一血脉，也<strong>继承同一瓶颈</strong>：一个定长向量装不下长文——这就是你<a href="../rag-供料层选型/MISSION.md">供料层选型</a>要切块、要召回后聚合的根。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">decoder 生成时是贪心还是 beam search？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">P03 原论文用 <strong>beam search</strong>（贪心 = beam width 1 的特例）。<strong>贪心</strong>每步只取概率最高的词，可能一步选错、满盘皆输；<strong>beam search</strong> 保留 top-k 条候选路径，最后挑<strong>整句总概率最高</strong>的那条。</p>
+      <p style="margin:0.3rem 0">🔮 你今天调的 <strong>temperature / top-p</strong> 是第三条路——不求最高概率，而是<strong>随机采样</strong>求多样性。有标准答案的任务（翻译 / 摘要）偏 beam，开放生成（聊天 / 写作）偏采样；你 agent 输出<strong>不稳定</strong>就因为用采样、<code>temperature&gt;0</code> 有随机性。这块 <strong>W8「推理与采样」</strong>会一次拆透。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Sutskever, Vinyals &amp; Le —
+      <a href="https://arxiv.org/abs/1409.3215">Sequence to Sequence Learning with Neural Networks (arXiv:1409.3215)</a>——
+      重点读第 2 节（模型）和第 3.3 节（<strong>倒序输入</strong>那段实验）。
+    </p>
+    <p style="margin:0.3rem 0">
+      建立直觉可配：Jay Alammar — <a href="https://jalammar.github.io/visualizing-neural-machine-translation-mechanics-of-seq2seq-models-with-attention/">Visualizing seq2seq</a>（先看没 attention 的纯 seq2seq 部分）。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      下一篇 <strong>P04 (word2vec, 2013)</strong> 往更底走一层：这篇里那个"意思向量"，词一级的版本是怎么来的。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「为什么用 LSTM 不用普通 RNN？」「thought vector 和 sentence embedding 是一回事吗？」
+    「decoder 生成时是贪心还是 beam search？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0003-neural-machine-translation-align-translate.html">&#8592; 第 3 课：Bahdanau Attention (P02)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P03</code> → 明天 P04</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Sutskever, Vinyals &amp; Le, <em>Sequence to Sequence Learning with Neural Networks</em>, NeurIPS 2014；Alammar, <em>Visualizing A Neural Machine Translation Model</em>.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 倒序输入 trick 距离演示 —— */
+(function () {
+  var SRC = ["The", "cat", "sat"];
+  var MODES = ["正序输入", "倒序输入"];
+  var qbtns = document.getElementById("qbtns");
+  var row = document.getElementById("seq-row");
+  var note = document.getElementById("seq-note");
+
+  function chip(txt, hl) {
+    return '<span style="display:inline-block;padding:0.25rem 0.6rem;margin:0.15rem;border-radius:6px;'
+      + 'border:1.5px solid ' + (hl ? '#d2691e' : '#d8cbb4') + ';'
+      + 'background:' + (hl ? '#fbe9d8' : '#fff') + ';'
+      + 'font-weight:' + (hl ? '700' : '500') + ';color:' + (hl ? '#a8521a' : '#2b2620') + '">' + txt + '</span>';
+  }
+
+  function render(mode) {
+    var enc = (mode === "倒序输入") ? SRC.slice().reverse() : SRC.slice();
+    // encoder 读入序列 + <EOS>，然后 decoder 生成第一个译词
+    var seq = enc.concat(["&lt;EOS&gt;"]);
+    var html = '';
+    seq.forEach(function (t) { html += chip(t, t === "The"); });
+    html += '<span style="margin:0 0.3rem;color:#bb8d5e">▶</span>';
+    html += chip("【第一个译词】", true);
+    row.innerHTML = html;
+
+    // 计算 The 到 第一个译词 的步数：The 的索引到末尾(生成位)的距离
+    var idx = seq.indexOf("The");
+    var dist = seq.length - idx; // 跨过剩余 token 到达生成位
+    var msg;
+    if (mode === "倒序输入") {
+      msg = '倒序后，源首词 <b>The</b> 被挪到离 &lt;EOS&gt; 最近处——到第一个译词只隔 <b>' + dist + ' 步</b>。'
+          + '源句开头和译文开头<b>离得近</b>，短程依赖多，梯度好传，LSTM 更容易把这对词学对齐 → 实测约 <b>+4~5 BLEU</b>。';
+    } else {
+      msg = '正序时，源首词 <b>The</b> 要跨过 cat、sat、&lt;EOS&gt; 才到第一个译词，隔了 <b>' + dist + ' 步</b>。'
+          + '开头对开头<b>离得远</b>，信息要在 LSTM 记忆里多撑几步才用上，更难学。';
+    }
+    note.innerHTML = msg;
+
+    Array.prototype.forEach.call(qbtns.children, function (b) {
+      b.style.background = (b.textContent === mode) ? "#d2691e" : "#fff";
+      b.style.color = (b.textContent === mode) ? "#fff" : "#a8521a";
+    });
+  }
+
+  MODES.forEach(function (m) {
+    var b = document.createElement("button");
+    b.textContent = m;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.7rem;margin:0 0.25rem;cursor:pointer;font-size:0.82rem;font-family:inherit";
+    b.addEventListener("click", function () { render(m); });
+    qbtns.appendChild(b);
+  });
+  render("倒序输入");
+})();
+</script>
+</body>
+</html>

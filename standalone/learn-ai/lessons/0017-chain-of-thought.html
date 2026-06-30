@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 17 课 · Chain-of-Thought：让它「一步步想」再答——给模型开草稿纸，也是推理模型(o1/R1)的根</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 17 课 / 经典论文 <strong>P16</strong> &nbsp;·&nbsp; 阶段四：对齐与推理（Wei et al., 2022）</div>
+
+  <h1>Chain-of-Thought：<br>让它「一步步想」再答<br><span style="font-size:0.55em;color:#a8521a">——给模型开草稿纸，也是推理模型 (o1 / R1) 的根</span></h1>
+
+  <div class="mission">
+    上一课 <a href="0016-instructgpt-rlhf.html">RLHF</a> 靠<b>训练</b>让模型「听话」。这一课换个杠杆：<b>不改一个权重，只改 prompt</b>，就能让模型的<b>推理能力</b>大幅跳升。
+    现象很反直觉：再大的模型，碰到要拐几道弯的题（应用题、多步逻辑），<b>让它直接说答案常常错</b>；但只要让它<b>先把推理一步步写出来再给答案</b>，准确率就暴涨。
+    它回答你天天在 prompt 里用、却没拆过原理的一招：<b>为什么「让我想一下 / 一步步来」这句话，真能让模型答得更对？</b>
+  </div>
+
+  <div class="big-idea">
+    一句话：<strong>让模型在给答案前「把推理过程一步步写出来」，多步任务的准确率就大幅提升——只改 prompt，不训练。</strong><br>
+    原理硬核：<strong>一次前向推理的「思考深度」是固定的</strong>，硬题没法在一步里算完。把中间步骤写出来 = ① <strong>拿 token 换「思考算力」</strong>（写得越多、算得越多）；② <strong>把难题拆成一串单步能做的小题</strong>；③ <strong>中间结果回喂进上下文</strong>，当自己的草稿纸。
+    <em>这就是「let's think step by step」、推理模式、乃至 o1 / DeepSeek-R1 这类<strong>推理模型</strong>的根——也是你任何多步任务、LLM-as-judge 都该「先想后答」的原因。</em>
+  </div>
+
+  <h2>一、立靶：大模型也会在「多步推理」上翻车</h2>
+
+  <p>
+    你学过 <a href="0009-gpt-3.html">few-shot</a>：给几个 Q→A 示范，模型照做。但对<strong>需要拐几道弯</strong>的题（算术应用题、符号推理、多跳常识），哪怕给了示范、哪怕模型很大，<strong>直接输出答案的正确率依然很低</strong>。
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：是「不会」，还是「没给它想的空间」？</div>
+    <p style="margin:0.3rem 0">
+      模型在<strong>一次前向推理</strong>里、要<strong>一口气</strong>从问题跳到答案——相当于让你<strong>心算</strong>一道多步应用题、还不许打草稿、立刻报数。
+      人都会错，何况它每一步的「算力」是固定的。
+      Wei 等人的赌注：<strong>问题可能不是模型不会推理，而是我们没给它「把推理写出来」的空间。</strong>给它草稿纸试试？
+    </p>
+  </div>
+
+  <h2>二、抽框架：把示范从「Q→A」改成「Q→推理→A」</h2>
+
+  <table>
+    <tr><th></th><th>标准 prompting</th><th>Chain-of-Thought prompting</th></tr>
+    <tr><td>示范长什么样</td><td>问题 → <strong>直接答案</strong></td><td>问题 → <strong>一步步推理</strong> → 答案</td></tr>
+    <tr><td>模型学到</td><td>「看到问题就吐答案」</td><td>「看到问题<strong>先写推理</strong>再吐答案」</td></tr>
+    <tr><td>多步题表现</td><td>常错（硬算一步到位）</td><td><strong>大幅提升</strong>（拆步、有草稿）</td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">关键：你只改了「示范的形状」，没碰任何权重</div>
+    <p style="margin:0.3rem 0">
+      和 <a href="0016-instructgpt-rlhf.html">RLHF</a> 对照——RLHF 是<strong>训练</strong>（改权重、永久）；CoT 是<strong>prompt 技巧</strong>（不改权重、当场生效）。
+      它不给模型<strong>新增</strong>推理能力，而是<strong>把模型本就潜藏的推理能力「引出来」</strong>——靠的是给它腾出「把中间步骤写下来」的空间。
+      所以零成本、即插即用：你在 prompt 里要一句「请一步步推理」，吃的就是这口红利。
+    </p>
+  </div>
+
+  <h2>三、核心洞察：写出来的中间步骤，就是「思考算力」</h2>
+
+  <p class="interactive-hint cite">
+    为什么「写出来」就管用？三层，从浅到深——第三层是这门课最该带走的硬通货。
+  </p>
+
+  <table>
+    <tr><th>层</th><th>说明</th></tr>
+    <tr><td><strong>① 拆解</strong></td><td>把一道要拐五道弯的难题，拆成五道各拐一道弯的小题——每道都在模型「一步能力」之内。</td></tr>
+    <tr><td><strong>② 草稿纸（回喂上下文）</strong></td><td>每写出一个中间结果，它都<strong>变成后续生成的输入</strong>（自回归）。模型读着自己的草稿往下推，而不是把一切压在脑子里。</td></tr>
+    <tr><td><strong>③ 拿 token 换算力（test-time compute）</strong></td><td><strong>一次前向推理的计算深度是固定的</strong>——硬题在一步里算不完。每多生成一个推理 token，就多一次前向、多一截「思考算力」。<strong>CoT 的本质，是用「输出更多 token」换「更多思考」。</strong></td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">而且：CoT 是「大模型才有的涌现能力」</div>
+    <p style="margin:0.3rem 0">
+      和 <a href="0009-gpt-3.html">in-context learning</a> 一样，CoT <strong>只对足够大的模型有用</strong>（~100B 级才明显）。小模型让它「一步步想」，会写出<strong>看着通顺、逻辑却错乱</strong>的推理链，帮不上忙甚至更差。
+      <strong>推理是随规模涌现的，CoT 只是把这份涌现的能力「解锁」出来。</strong>
+    </p>
+  </div>
+
+  <h2>四、动手玩：同一道题，直接答 vs 一步步想</h2>
+  <p class="interactive-hint cite">
+    一道要拐几道弯的题。点不同方式，看「直接答」怎么翻车、「写出推理」怎么救回来（示意 2022 年 GPT-3 级模型上的典型现象）。
+  </p>
+
+  <div class="callout primary">
+    <div class="mono" style="background:#fff;border-radius:6px;padding:0.5rem 0.7rem;margin-bottom:0.5rem;font-size:0.9rem">题目：停车场有 23 辆车，开走了 15 辆，又开来 18 辆，之后现有车的一半离开。现在有几辆？</div>
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选方式：　<span id="cbtns"></span>
+    </div>
+    <div id="cout" class="mono" style="font-size:0.92rem;line-height:1.7;background:#fff;border-radius:6px;padding:0.6rem 0.8rem;margin:0.5rem 0;white-space:pre-wrap"></div>
+    <div id="cwhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>「直接答」逼模型一步到位，错在没地方算；「写出来」让它一步一锚，每步都在能力之内。</strong>而且——<strong>只加一句「一步步想」就能触发，连示范都不用给</strong>（下一节）。
+  </p>
+
+  <h2>五、对照表（一）：标准 prompting vs CoT</h2>
+  <table>
+    <tr><th>维度</th><th>标准 prompting</th><th>Chain-of-Thought</th></tr>
+    <tr><td>给模型的</td><td>问题（+ Q→A 示范）</td><td>问题 + <strong>Q→推理→A 示范</strong>（或一句触发）</td></tr>
+    <tr><td>输出</td><td>直接答案</td><td><strong>推理过程 + 答案</strong></td></tr>
+    <tr><td>多步任务准确率</td><td>低</td><td><strong>大幅提升</strong></td></tr>
+    <tr><td>代价</td><td>快、省 token</td><td><strong>慢、多花 token</strong>（推理也占输出）</td></tr>
+    <tr><td>改了什么</td><td>—</td><td>只改 prompt（不训练，能力是涌现的）</td></tr>
+  </table>
+
+  <h2>六、对照表（二）：CoT 的变体与它长成的「推理模型」</h2>
+  <table>
+    <tr><th>招</th><th>做什么</th><th>关系</th></tr>
+    <tr><td><strong>zero-shot CoT</strong></td><td>不给示范，只在问题后加一句 <strong>「Let's think step by step」</strong></td><td>惊人地有效——一句话就触发推理（Kojima et al.）</td></tr>
+    <tr><td><strong>self-consistency（自洽）</strong></td><td>采样<strong>多条</strong>不同推理链，对最终答案<strong>投票</strong>取多数</td><td>多想几遍取共识，再涨一截准确率</td></tr>
+    <tr><td><strong>推理模型（o1 / R1）</strong></td><td>用 <a href="0016-instructgpt-rlhf.html">RL</a> 把「生成长 CoT」直接训进模型</td><td><strong>把 CoT 从 prompt 技巧升级成模型的内建本能</strong></td></tr>
+  </table>
+  <p class="cite">
+    🔮 这条线把「<strong>test-time compute（推理时算力）</strong>」推成了新的 scaling 维度：<a href="0011-scaling-laws.html">Scaling Laws</a> 是「训练时」砸算力，CoT/推理模型是「<strong>推理时</strong>」多花算力（多想）换准确率。<strong>o1、DeepSeek-R1 的「思考越久越准」，根就在这一课。</strong>它和 RLHF 合流：用 RL 奖励「想得对的长 CoT」——对齐与推理在前沿汇成一条河。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你写 prompt 时加「请一步步分析 / 先说理由再给结论」</td><td>就是 <strong>CoT</strong>——最便宜、最高杠杆的提质招，对任何多步任务都该默认开</td></tr>
+    <tr><td>你的 <strong>LLM-as-judge / Grader</strong> 让它先打分</td><td>反了！应让它<strong>先写评判理由、再给分</strong>——CoT 同款。直接出分=逼它心算，先推理再裁决质量更稳（呼应上一课 RM 设计）</td></tr>
+    <tr><td>你的 <strong>agent</strong> 先「想计划」再行动</td><td>就是 CoT 的 agent 版（下一课 <a href="#">ReAct</a> 会把「想」和「做」交错）——先推理再动手</td></tr>
+    <tr><td>你的 <strong>realtime 语音</strong>链路纠结延迟</td><td>正面取舍：CoT 提准确率，但<strong>多出的推理 token = 多出的延迟</strong>。realtime 要么用隐式/简短推理，要么把「想」放到不卡用户的环节</td></tr>
+    <tr><td>「为什么有时模型加了思考反而更啰嗦、还可能更错」</td><td>① 小模型/简单题用 CoT 无益甚至有害；② 推理链本身可能错（写得通顺≠逻辑对）——要 self-consistency 或校验兜底</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：CoT 让模型先写出一步步推理再给答案，多步任务准确率大幅提升——只改 prompt，不训练。"
+       data-no="看第二节：CoT 是把示范改成『问题→推理→答案』，让模型先写推理再答，不动权重。">
+    <div class="quiz-q">1. Chain-of-Thought 的核心做法是？</div>
+    <button class="quiz-opt">用更多数据微调模型的推理能力</button>
+    <button class="quiz-opt">让模型在给答案前先写出一步步推理（只改 prompt）</button>
+    <button class="quiz-opt">把问题拆给多个模型分别回答</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：一次前向计算深度固定，写出中间步=拿 token 换思考算力 + 拆解 + 草稿回喂上下文。"
+       data-no="看第三节：CoT 有用是因为写出中间步等于『拿 token 换思考算力』、拆解难题、把草稿回喂上下文。">
+    <div class="quiz-q">2. CoT 为什么管用？最深的一层原因是？</div>
+    <button class="quiz-opt">推理过程让答案看起来更可信</button>
+    <button class="quiz-opt">模型偷偷查了外部知识库</button>
+    <button class="quiz-opt">一次前向算力固定，多写 token = 多换「思考算力」（test-time compute）</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：CoT 是大模型才有的涌现能力——小模型写的推理链通顺但逻辑错乱，帮不上忙。"
+       data-no="看第三节末：CoT 只对足够大的模型有用，小模型会写出通顺但错乱的链——是涌现能力。">
+    <div class="quiz-q">3. 小模型用 CoT 会怎样？</div>
+    <button class="quiz-opt">没用甚至更差——CoT 是大模型才涌现的能力</button>
+    <button class="quiz-opt">和大模型一样有效</button>
+    <button class="quiz-opt">会让小模型变成大模型</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">模型写出来的推理链，就是它「真正的思考过程」吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>不一定。</strong>CoT 文本是「有用的草稿」，但<strong>未必忠实反映模型内部真实的计算</strong>。研究发现模型有时<strong>先「想」出答案、再编一段看似合理的推理来圆</strong>（post-hoc rationalization），推理链甚至可能和最终答案矛盾、或受无关提示左右却不在链里承认。</p>
+      <p style="margin:0.3rem 0" class="cite">对你的含义：<strong>别把 CoT 当「可信的解释」直接展示给用户当依据</strong>，它是提升准确率的手段、不是审计模型的窗口。要可信，得靠 self-consistency、外部校验、或可执行的步骤（如让它写代码跑出结果），而不是「它说它这么想的」。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">既然 CoT 几乎总有帮助，是不是该无脑给所有任务都加？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>不是。</strong>三种情况别加或要权衡：① <strong>简单/单步任务</strong>（分类、抽取、查表）——CoT 没收益，白白多花 token、增延迟，有时还把简单题想复杂了；② <strong>延迟敏感场景</strong>（你的 realtime 语音）——推理 token 直接变延迟，得掂量；③ <strong>小模型</strong>——涌现门槛没到，无益甚至有害。</p>
+      <p style="margin:0.3rem 0" class="cite">判据：<strong>任务要不要「拐弯」？</strong>需要多步推理/计算/规划 → 上 CoT；一步能答的 → 直接答更省更快。成本意识：<strong>CoT 是用 token（钱+延迟）买准确率，要看这道题值不值这笔买卖。</strong></p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">CoT 和「推理模型」(o1/R1) 是一回事吗？我还需要自己写 CoT 吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>同根，不同形态。</strong>CoT 是<strong>prompt 技巧</strong>（你手动要求它一步步想，不改模型）；推理模型（o1、DeepSeek-R1）是<strong>用 RL 把「生成长 CoT 并自我检查」训进了权重</strong>——它<strong>默认就会大段思考</strong>，还学会回溯、验算。等于把这节课的手动招式，升级成了模型的内建本能。</p>
+      <p style="margin:0.3rem 0" class="cite">实操：<strong>用推理模型时，通常不必再手写「一步步想」</strong>（它自己会，硬塞反而可能干扰）；用普通模型做多步任务时，<strong>手动 CoT 仍是高杠杆招</strong>。选型新维度：难推理任务可选推理模型（准但慢且贵），简单任务用普通模型（快省）——又一个「准确率 vs 成本/延迟」的取舍。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">test-time compute 和训练时 scaling，前沿现在更看重哪个？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>不是二选一，但边际注意力明显转向 test-time compute。</strong>2020-2023 训练时 scaling 当家；2024 前后预训练边际递减（数据快用光、成本天文、收益变薄）；2024 底起前沿急转向「推理时多花算力（长推理链/搜索/自我验证）→ 更准」，这条曲线新、陡、还同样平滑可外推（o1、DeepSeek-R1）。</p>
+      <p style="margin:0.3rem 0"><strong>关键 nuance：相乘不相争。</strong>能力天花板仍来自预训练（底子弱想再久也推不对），test-time compute 把底子榨出来；当下真正烧钱出差异的是<strong>用 RL 教模型高效花 test-time compute</strong>（reasoning RL）——一种新的训练时投入、回报在推理能力上。</p>
+      <p style="margin:0.3rem 0" class="cite">做产品最该抓：成本结构变了——训练是<strong>一次性(capex)</strong>，test-time compute 是<strong>每查询都付(opex)</strong>。但给了新旋钮：<strong>按 query 难度动态买准确率</strong>（简单短想、难题长想）。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">self-consistency 为什么比单条 CoT 准，代价是什么？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>本质是「对自己的多次采样做集成投票」。</strong>单条 CoT 是一条随机路径，中途一错就锁死。self-consistency 用较高温度采 N 条不同链、对最终答案<strong>投票取多数</strong>。洞察：<strong>通往正确的路径殊途同归，而错误各式各样互不一致</strong>——正确答案被多路汇聚、错误四散，取众数更可能对（=重复测量消噪，前提是每条对的概率>随机且错误多样）。</p>
+      <p style="margin:0.3rem 0" class="cite">代价三笔：① <strong>N 倍算力/延迟</strong>（典型 5-40 条）；② <strong>只适用有离散答案可投票</strong>的任务（开放式生成不行）；③ <strong>治不了系统性错误</strong>（一致地同样错，投票只会更确信）。收益随 N 递减，大头在前 5-10 条。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">把 Grader 改成「先理由后打分」，怎么排版最稳？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">可直接抄的模板：</p>
+      <pre class="mono" style="background:#fff;border-radius:6px;padding:0.6rem 0.8rem;font-size:0.82rem;white-space:pre-wrap;line-height:1.5">你是严格的评审。务必"先逐条分析、最后打分"，不许先给分再补理由。
+
+# 评分维度（每维给锚点，别用空泛的1-10）
+- 准确性(0-3): 0=有事实错误; 1=多处可疑; 2=基本正确; 3=完全正确且有依据
+- 完整性(0-3): 0=答非所问; 1=漏关键点; 2=覆盖主要; 3=全面无遗漏
+# 待评内容
+&lt;question&gt;…&lt;/question&gt;  &lt;answer&gt;…&lt;/answer&gt;
+# 输出（严格按序）
+## 1. 逐条分析
+- 准确性: &lt;先主动找错/可疑，再判断&gt;…
+## 2. 主要缺陷  &lt;列1-3个；没有写"无"&gt;
+## 3. 评分（JSON，放最后） {"准确性":x,"完整性":y,"总分":t}</pre>
+      <p style="margin:0.3rem 0" class="cite">每个选择的理由：① <strong>理由在分数前</strong>（否则理由是 post-hoc 圆场）；② <strong>维度拆开+0-3 锚点</strong>（压绝对分漂移）；③ <strong>先逼它找缺陷</strong>（对抗式，防谄媚刷分）；④ <strong>分数放最后、JSON 包</strong>（好解析、保证分数从分析算出）；⑤ <strong>显式"不因长短加减分"</strong>（堵长度偏好）；⑥ 温度 0-0.3 求稳，要更准上 self-consistency；⑦ 别让被评答案看到 rubric。若分数仍不稳 → <strong>从「打绝对分」升级成「两两排序哪个更好」</strong>（最稳）。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Wei et al. —
+      <a href="https://arxiv.org/abs/2201.11903">Chain-of-Thought Prompting Elicits Reasoning in Large Language Models（2022）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      延伸：Kojima et al. — <em>Large Language Models are Zero-Shot Reasoners</em>（「Let's think step by step」）；Wang et al. — <em>Self-Consistency</em>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      阶段四推进：<strong>RLHF（对齐）→ CoT（推理）</strong>。下一篇 <strong>P17 DPO</strong>：不训奖励模型、不跑 RL，直接用偏好数据对齐——更对得上你 autoevolve 的直觉。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「test-time compute 和训练时 scaling，前沿现在更看重哪个？」「self-consistency 为什么比单条 CoT 准，代价是什么？」
+    「我的 Grader 改成『先理由后打分』，具体怎么排版最稳？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0016-instructgpt-rlhf.html">&#8592; 第 16 课：InstructGPT/RLHF (P15)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P16</code> → 明天 P17（DPO）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Wei et al., <em>Chain-of-Thought Prompting Elicits Reasoning in Large Language Models</em>, 2022.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 同一道多步题，直接答 vs 一步步想 —— */
+(function () {
+  var C = [
+    {
+      cap: "直接答",
+      out: "26 辆。",
+      why: "逼模型<strong>一步到位心算</strong>——它常漏掉「最后一半离开」这步，或把顺序搞乱。<strong>没草稿纸，错在没地方算。</strong>（正确是 13）"
+    },
+    {
+      cap: "思维链（给推理示范）",
+      out: "先算开走后：23 − 15 = 8 辆。\n再算开来后：8 + 18 = 26 辆。\n一半离开，剩一半：26 ÷ 2 = 13 辆。\n答案：13 辆。",
+      why: "每一步都在「一步能力」之内，且<strong>中间结果(8、26)被写下、回喂给下一步</strong>。难题被拆成单步小题，于是算对了。"
+    },
+    {
+      cap: "一句话触发（zero-shot CoT）",
+      out: "让我们一步步想：\n开走 15 → 23−15=8；开来 18 → 8+18=26；一半离开 → 26÷2=13。\n答案：13 辆。",
+      why: "连示范都不给，<strong>只在题后加「让我们一步步想」</strong>，就触发了同样的推理。最省事的 CoT——你 prompt 里那句「请一步步分析」就是它。"
+    }
+  ];
+  var cbtns = document.getElementById("cbtns");
+  function render(idx) {
+    var c = C[idx];
+    document.getElementById("cout").textContent = c.out;
+    document.getElementById("cwhy").innerHTML = c.why;
+    Array.prototype.forEach.call(cbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  C.forEach(function (c, i) {
+    var b = document.createElement("button");
+    b.textContent = c.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    cbtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>

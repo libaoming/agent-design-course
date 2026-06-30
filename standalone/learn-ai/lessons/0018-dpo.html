@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 18 课 · DPO：RLHF 但不用 RL——把三步对齐压成一步，也是开源对齐遍地开花的根</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 18 课 / 经典论文 <strong>P17</strong> &nbsp;·&nbsp; 阶段四：对齐与推理（Rafailov et al., 2023）</div>
+
+  <h1>DPO：<br>RLHF 但不用 RL<br><span style="font-size:0.55em;color:#a8521a">——把三步对齐压成一步，也是开源对齐遍地开花的根</span></h1>
+
+  <div class="mission">
+    上一课 <a href="0016-instructgpt-rlhf.html">RLHF</a> 很强，但它是个三步大工程：SFT → 训一个<b>奖励模型 RM</b> → 跑<b>强化学习 PPO</b>。又重、又不稳、又难调（RL 出了名的难伺候）。
+    这一课 DPO 抛出一个漂亮结论：<b>你根本不用单独训奖励模型、也不用跑 RL——直接拿「偏好对（好答案 vs 坏答案）」对模型做一个像监督微调的简单 loss，就能达到和 RLHF 同一个目标。</b>
+    它回答你一个很实际的问题：<b>如果我想把一个模型真正「调」成我要的偏好，有没有一条不碰 RL、我也跑得起的路？</b>
+  </div>
+
+  <div class="big-idea">
+    一句话：<strong>DPO = RLHF 的目标，但不用 RL。</strong><br>
+    它用一个数学等价证明：RLHF 那个「在 KL 约束下最大化奖励」的目标，可以<strong>重新参数化</strong>，把奖励<strong>用模型自己表达出来</strong>——于是<strong>语言模型自己，就暗中是它自己的奖励模型</strong>。
+    结果是一个<strong>直接作用在模型上的、像分类一样简单的 loss</strong>：拿偏好对，<strong>抬高「好答案」的相对概率、压低「坏答案」的</strong>，一步到位。<em>没有单独的 RM、没有采样、没有 RL 循环——这就是今天开源对齐几乎都用 DPO 的原因。</em>
+  </div>
+
+  <h2>一、立靶：RLHF 的三步，太重也太不稳</h2>
+
+  <p>
+    回忆 RLHF 的链条：<strong>① SFT</strong>（人写示范微调）→ <strong>② RM</strong>（人排序、训一个打分器）→ <strong>③ PPO</strong>（拿 RM 当奖励跑强化学习）。每一步都要数据、要算力、要调参，而第三步的 RL <strong>尤其难伺候</strong>：
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：中间那个 RM + RL，能不能直接省掉？</div>
+    <p style="margin:0.3rem 0">
+      RL 阶段要<strong>在线采样、用 RM 打分、PPO 更新、还要 KL 惩罚防漂移</strong>——环节多、不稳、容易 <a href="0016-instructgpt-rlhf.html">reward hacking</a>，复现还难。
+      可你手里的<strong>核心资产其实只是「偏好数据」</strong>（一堆「这个答案比那个好」）。
+      DPO 的赌注：<strong>既然最终就是想让模型多产出「好答案」、少产出「坏答案」，能不能跳过 RM 和 RL，拿偏好对<u>直接</u>训模型？</strong>
+    </p>
+  </div>
+
+  <h2>二、抽框架：一个直接作用在模型上的「偏好分类」loss</h2>
+
+  <p>DPO 把对齐变成一件几乎和监督微调一样的事。对每一个偏好对 <code>(问题 x，更好的回答 y<sub>w</sub>，更差的回答 y<sub>l</sub>)</code>：</p>
+
+  <table>
+    <tr><th>要素</th><th>做什么</th></tr>
+    <tr><td>抬高 / 压低</td><td>让模型给 <strong>y<sub>w</sub> 的概率往上、y<sub>l</sub> 的概率往下</strong></td></tr>
+    <tr><td>相对谁</td><td>不是绝对值，而是<strong>相对一个冻结的参考模型</strong>（通常就是 SFT 模型）的变化</td></tr>
+    <tr><td>幅度旋钮 β</td><td><strong>β 控制「能偏离参考模型多远」</strong>——它就是 RLHF 里 KL 惩罚的角色，<strong>内建进 loss</strong></td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">关键：它长得像分类，骨子里是 RLHF</div>
+    <p style="margin:0.3rem 0">
+      这个 loss 形式上就是个<strong>逻辑回归式的二分类</strong>（「y<sub>w</sub> 比 y<sub>l</sub> 好」的概率最大化），跑起来和普通 fine-tune 一样简单、一样稳。
+      但 DPO 证明了：<strong>优化它，等价于优化 RLHF 那个「KL 约束下最大化奖励」的目标</strong>——只是<strong>直接求解，而不是绕 RM + RL</strong>。
+      你想要的护栏（别离参考模型太远）<strong>自动带着</strong>，不用再单独加 KL 惩罚。
+    </p>
+  </div>
+
+  <h2>三、核心洞察：模型自己，就是它自己的奖励模型</h2>
+
+  <p class="interactive-hint cite">
+    DPO 最妙的一步，是一个「视角切换」——理解它，你就懂了为什么 RM 可以凭空消失。
+  </p>
+
+  <table>
+    <tr><th>洞察</th><th>说明</th></tr>
+    <tr><td><strong>① 隐式奖励：RM 被吸收进了模型</strong></td><td>RLHF 把「奖励」放在一个单独的 RM 里。DPO 用数学重参数化证明：那个最优奖励，<strong>可以用「模型相对参考模型的对数概率比」直接表达</strong>。换句话说——<strong>奖励信息本就藏在策略模型里，不必再训一个外部 RM 去装它</strong>。</td></tr>
+    <tr><td><strong>② 同一个目标，换了解法</strong></td><td>DPO <strong>不是一个新目标</strong>，它优化的就是 RLHF 那个目标。区别只在：RLHF <strong>分三步、绕一大圈</strong>（学 RM → RL 逼近）；DPO <strong>一步、闭式直达</strong>。参考模型 + β 这一项，就是把 KL 锚<strong>焊进了 loss</strong>。</td></tr>
+  </table>
+
+  <h2>四、动手玩：RLHF 三步 vs DPO 一步</h2>
+  <p class="interactive-hint cite">
+    点两边，看同样「用偏好数据对齐」，DPO 砍掉了什么、留下了什么。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选方案：　<span id="dbtns"></span>
+    </div>
+    <div id="dsteps" style="margin:0.5rem 0"></div>
+    <div id="dwhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>DPO 把「训 RM」和「跑 RL」两步直接删掉，合并成「拿偏好对训一个分类式 loss」。</strong>同样的偏好数据进去、同样的对齐目标出来，但工程复杂度和不稳定性大降——这就是它普及的根。
+  </p>
+
+  <h2>五、对照表（一）：RLHF vs DPO</h2>
+  <table>
+    <tr><th>维度</th><th>RLHF（PPO）</th><th>DPO</th></tr>
+    <tr><td>步骤</td><td>三步（SFT → RM → RL）</td><td><strong>一步</strong>（SFT 后直接 DPO）</td></tr>
+    <tr><td>要单独的奖励模型吗</td><td>要（训一个 RM）</td><td><strong>不要</strong>（隐式奖励）</td></tr>
+    <tr><td>要跑强化学习吗</td><td>要（PPO，难伺候）</td><td><strong>不要</strong>（像监督微调）</td></tr>
+    <tr><td>稳定性 / 复现</td><td>差、难调</td><td><strong>好、简单</strong></td></tr>
+    <tr><td>护栏（别漂太远）</td><td>单独的 KL 惩罚</td><td><strong>参考模型 + β 内建</strong></td></tr>
+    <tr><td>优化的目标</td><td colspan="2" style="text-align:center"><strong>两者相同</strong>（KL 约束下最大化奖励）</td></tr>
+  </table>
+
+  <h2>六、对照表（二）：DPO 的代价、变体、与前沿</h2>
+  <table>
+    <tr><th>点</th><th>说明</th></tr>
+    <tr><td><strong>离线，受数据集限</strong></td><td>DPO 是 <strong>offline</strong>：只吃你给的那批固定偏好对，<strong>不在训练中生成新答案再评判</strong>。而 RLHF 的 RL 是 online、能探索数据集之外——所以数据覆盖不好时 DPO 可能吃亏。</td></tr>
+    <tr><td><strong>RM 不可单独复用</strong></td><td>奖励是隐式的，你<strong>得不到一个能独立打分的 RM</strong>（RLHF 训出的 RM 可以拿去别处用）。</td></tr>
+    <tr><td><strong>一堆变体</strong></td><td>DPO 之后涌现 <strong>IPO / KTO / ORPO</strong> 等：有的免参考模型、有的只需「好/坏」二元标签（不必成对）、有的把 SFT 和对齐合一。各修 DPO 的一个痛点。</td></tr>
+  </table>
+  <p class="cite">
+    🔮 DPO 让对齐<strong>平民化</strong>：配上 <a href="0013-lora.html">LoRA</a>，普通团队也能在自有偏好数据上低成本「调教」模型。下一课 <strong>P18 Constitutional AI</strong>（Anthropic）再进一步——<strong>连「偏好数据从哪来」都自动化</strong>：用一套书面原则让 AI 自己生成偏好、自我对齐，少依赖人工标注。<strong>对齐的演化主线：从「人标 + RL」(RLHF) → 「人标、免 RL」(DPO) → 「AI 自己标」(CAI)。</strong>
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你的 <strong>autoevolve</strong>（好/坏样本 → 改进）</td><td>和 DPO 同一个「拿偏好对直接改进」的精神——只不过你改的是 <strong>prompt</strong>（不动权重），DPO 改的是<strong>权重</strong>。理解 DPO 能让你看清自己那套闭环在「偏好驱动优化」家谱里的位置</td></tr>
+    <tr><td>你哪天真要「微调」一个模型成自己的风格/偏好</td><td><strong>LoRA + DPO 就是你跑得起的那条路</strong>：收一批「这个回答比那个好」的对，跑 DPO（不碰 RL），用 LoRA 省成本——平民版对齐</td></tr>
+    <tr><td>你收集训练/评估数据时纠结「让人写答案还是让人选」</td><td>DPO 再次印证 <a href="0016-instructgpt-rlhf.html">RLHF</a> 的判断：<strong>「成对比较（A/B 哪个好）」比「写标准答案」更便宜、信号更干净</strong>——你建数据集优先收偏好对</td></tr>
+    <tr><td>「我的对齐/优化该用在线还是离线？」</td><td>新判断维度：<strong>离线（DPO，吃固定数据集、简单稳）vs 在线（能边生成边评判、探索更广但复杂）</strong>。你的 autoevolve 其实偏在线（不断生成新候选再评），各有取舍</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：DPO 跳过单独的奖励模型和 RL，直接拿偏好对做一个分类式 loss 训模型。"
+       data-no="看第二节：DPO 不训 RM、不跑 RL，直接用偏好对做一个像监督微调的 loss。">
+    <div class="quiz-q">1. DPO 相比 RLHF，省掉了什么？</div>
+    <button class="quiz-opt">省掉了 SFT 阶段</button>
+    <button class="quiz-opt">省掉了偏好数据</button>
+    <button class="quiz-opt">省掉了单独的奖励模型 RM 和强化学习 RL</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：DPO 证明最优奖励可用『模型相对参考模型的对数概率比』表达——模型自己就是它自己的奖励模型。"
+       data-no="看第三节：DPO 的核心洞察是奖励可被模型自身隐式表达，不必单独训一个 RM。">
+    <div class="quiz-q">2. 为什么 DPO 不需要单独的奖励模型？</div>
+    <button class="quiz-opt">奖励信息可由模型自身隐式表达（模型即自己的 RM）</button>
+    <button class="quiz-opt">因为 DPO 根本不在乎奖励</button>
+    <button class="quiz-opt">因为它用一个更大的外部模型代替</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：DPO 是离线的，只吃固定偏好数据集、不在训练中生成新答案再评判，数据覆盖不好时会吃亏。"
+       data-no="看第六节：DPO 的主要局限是 offline——受给定偏好数据集所限，不像在线 RL 能探索数据外。">
+    <div class="quiz-q">3. DPO 相比在线 RLHF 的主要局限是？</div>
+    <button class="quiz-opt">它不稳定、难复现</button>
+    <button class="quiz-opt">它是离线的，受固定偏好数据集所限，不能探索数据外</button>
+    <button class="quiz-opt">它需要更多 GPU</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">既然 DPO 又简单又稳，RLHF（PPO）是不是被淘汰了？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>没有，是分工。</strong>DPO 成了<strong>大多数场景的默认</strong>（尤其开源、资源有限、要快要稳），因为性价比碾压。但在<strong>最前沿、肯下血本</strong>的地方，<strong>在线 RLHF 仍有优势</strong>：它能<strong>边训边生成新答案、用 RM 即时评判</strong>，探索到固定数据集之外的改进；DPO 离线，天花板被你那批偏好数据卡住。</p>
+      <p style="margin:0.3rem 0" class="cite">还有混合路线：用 DPO 打底、再用在线方法精修；或「在线 DPO」（训练中不断生成新对、重新标注）来补离线的短板。<strong>判断法则：数据够好且要省事 → DPO；要榨最后几个点、有 RM 和算力预算 → 上（或叠）在线 RL。</strong></p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">DPO 里那个「参考模型」和 β 到底在防什么？去掉会怎样？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">参考模型（冻结的 SFT 模型）+ β 就是 <a href="0016-instructgpt-rlhf.html">RLHF 的 KL 惩罚</a><strong>焊进 loss 的版本</strong>：DPO 衡量的不是「y<sub>w</sub> 的绝对概率」，而是「<strong>相对参考模型，y<sub>w</sub> 被抬高了多少、y<sub>l</sub> 被压低了多少</strong>」。β 控制这个偏离的力度——<strong>β 小 = 可大胆偏离（更贴合偏好但易跑偏/退化），β 大 = 紧贴参考（更稳但学得少）</strong>。</p>
+      <p style="margin:0.3rem 0" class="cite">没有它，模型会为了拉大「好 vs 坏」的差距<strong>不择手段地漂移</strong>——可能把 y<sub>w</sub> 也压得稀烂（只要 y<sub>l</sub> 压得更狠就行）、或丢掉语言能力。这是上一课「<strong>对着代理优化要有锚</strong>」的同一课：β 就是 DPO 的锚。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">DPO 和我的 autoevolve，到底是不是一回事？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>同精神、不同层。</strong>都信奉「拿偏好对直接驱动改进」。但：DPO 用偏好对做<strong>梯度更新、改权重</strong>（一次训练，偏好被烤进模型）；你的 autoevolve 用评分/偏好做 <strong>prompt 改写、改 prompt 空间</strong>（不动权重，靠搜索爬坡）。</p>
+      <table>
+        <tr><th></th><th>DPO</th><th>autoevolve</th></tr>
+        <tr><td>改什么</td><td>权重</td><td>prompt</td></tr>
+        <tr><td>怎么改</td><td>梯度下降（闭式 loss）</td><td>LLM 改写 + 选择</td></tr>
+        <tr><td>在线/离线</td><td>偏离线</td><td>偏在线（不断生成新候选）</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">收获：如果你 autoevolve 调 prompt 已到瓶颈、且攒下了大量「好/坏」对，<strong>DPO+LoRA 是把这些偏好「焊进权重」的升级路径</strong>——从改 prompt 升到改模型，但纪律（防钻空子、要 held-out）一脉相承。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Rafailov et al. —
+      <a href="https://arxiv.org/abs/2305.18290">Direct Preference Optimization: Your Language Model is Secretly a Reward Model（2023）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      想看变体：搜 <strong>KTO</strong>（只要二元好/坏标签）/ <strong>ORPO</strong>（SFT 与对齐合一、免参考模型）/ <strong>IPO</strong>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      阶段四推进：<strong>RLHF（人标+RL）→ CoT（推理）→ DPO（人标、免 RL）</strong>。下一篇 <strong>P18 Constitutional AI</strong>：让 AI 用一套原则<strong>自己生成偏好、自我对齐</strong>——Claude 的方法论根。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「DPO 说『模型即自己的奖励模型』，这个重参数化直觉上怎么理解？」「β 一般取多少、怎么调？」
+    「我攒『好/坏』对时，坏样本该用模型自己的旧输出还是随便造？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0017-chain-of-thought.html">&#8592; 第 17 课：Chain-of-Thought (P16)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P17</code> → 明天 P18（Constitutional AI）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Rafailov et al., <em>Direct Preference Optimization: Your Language Model is Secretly a Reward Model</em>, 2023.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— RLHF 三步 vs DPO 一步 —— */
+(function () {
+  var D = [
+    {
+      cap: "RLHF（三步）",
+      steps: [
+        ["① SFT", "人写示范微调，学会当助手", "#d2691e"],
+        ["② 训奖励模型 RM", "人排序 → 训一个独立打分器", "#b23"],
+        ["③ 跑强化学习 PPO", "在线采样 → RM 打分 → 更新 → KL 惩罚", "#b23"]
+      ],
+      why: "中间两步（红）是重头：要单独训 RM、要跑难伺候的 RL，环节多、不稳、易 reward hacking。"
+    },
+    {
+      cap: "DPO（一步）",
+      steps: [
+        ["① SFT", "人写示范微调（同上，作参考模型）", "#d2691e"],
+        ["② DPO loss", "拿偏好对直接训：抬好答案、压坏答案，相对参考模型 + β", "#2a7"]
+      ],
+      why: "RM 和 RL 被一个「分类式 loss」<strong>合并删除</strong>。同样的偏好数据、同样的对齐目标，但像监督微调一样简单稳定。"
+    }
+  ];
+  var dbtns = document.getElementById("dbtns");
+  function render(idx) {
+    var d = D[idx];
+    var html = "";
+    d.steps.forEach(function (s) {
+      html += "<div style='background:#fff;border-left:4px solid " + s[2] +
+        ";border-radius:4px;padding:0.4rem 0.7rem;margin:0.35rem 0'>" +
+        "<b style='color:" + s[2] + "'>" + s[0] + "</b>　<span style='font-size:0.88rem'>" + s[1] + "</span></div>";
+    });
+    document.getElementById("dsteps").innerHTML = html;
+    document.getElementById("dwhy").innerHTML = d.why;
+    Array.prototype.forEach.call(dbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  D.forEach(function (d, i) {
+    var b = document.createElement("button");
+    b.textContent = d.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    dbtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>

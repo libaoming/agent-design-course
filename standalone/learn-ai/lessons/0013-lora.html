@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 13 课 · LoRA：冻住整个大模型，只训旁边两片「瘦」矩阵——「人人都能微调」「一底座挂无数技能插件」的根</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 13 课 / 经典论文 <strong>P12</strong> &nbsp;·&nbsp; 阶段三：规模与效率（Hu et al., 2021）</div>
+
+  <h1>LoRA：<br>冻住整个大模型，只训旁边两片「瘦」矩阵<br><span style="font-size:0.55em;color:#a8521a">——「人人都能微调」「一底座挂无数技能插件」的根</span></h1>
+
+  <div class="mission">
+    前三课都在讲「<b>怎么把一个大模型训出来</b>」（统一形状、配多少算力数据）。这一课换赛道：模型已经有了，<b>怎么用极小成本把它微调到<u>你的</u>场景？</b>
+    全量微调一个大模型贵得离谱——要更新<b>所有</b>参数、每个任务存一整份几十 GB 的副本、显存爆炸。LoRA 给出一个近乎魔法的省法：<b>把整个大模型冻住，只在旁边训练两片很「瘦」的小矩阵。</b>
+    它回答你天天在用的产品形态背后的原理：<b>为什么现在「人人都能微调」？为什么能做到「一个底座模型 + 给每个客户/任务挂一个小适配器」？</b>
+  </div>
+
+  <div class="big-idea">
+    LoRA 的一句话：<strong>冻结预训练权重 W 不动，给它配一个低秩的「补丁」ΔW = B·A（两片瘦矩阵，秩 r 很小），只训练这两片。</strong><br>
+    效果：可训练参数<strong>砍掉上万倍</strong>、显存大降、每个任务的 checkpoint 从 <strong>GB 变 MB</strong>；而且推理时把补丁<strong>合并回 W</strong>，<strong>零额外延迟</strong>、质量逼近全量微调。
+    <em>这就是 PEFT（参数高效微调）生态、QLoRA、以及「一底座挂无数技能插件」这种产品架构的根。</em>
+  </div>
+
+  <h2>一、立靶：全量微调一个大模型，到底贵在哪？</h2>
+
+  <p>
+    回忆 <a href="0009-gpt-3.html">GPT-3</a> 课你学的「改动幅度轴」：从零训 → 全量微调 → in-context learning。<strong>全量微调</strong>虽然只是「在预训练权重上小幅再拧」，但「拧」的是<strong>全部</strong>参数：
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：每个任务都全量微调，成本是怎么堆起来的</div>
+    <p style="margin:0.3rem 0">
+      ① <strong>更新所有参数</strong>——175B 个权重每个都要算梯度、存优化器状态，显存需求是参数本身的好几倍；
+      ② <strong>每个任务存一整份模型</strong>——你有 100 个客户/任务，就要存 100 份几十 GB 的副本；
+      ③ <strong>切换/部署笨重</strong>——没法在一个底座上灵活地服务多任务。
+      <strong>问题来了：适配一个新任务，真的需要动全部参数吗？还是其实只需要动「一点点」？</strong>
+    </p>
+  </div>
+
+  <h2>二、抽框架：把「更新量」拆成两片瘦矩阵</h2>
+
+  <p>
+    关键不在 W 本身，而在<strong>微调带来的「更新量」ΔW</strong>。全量微调学的是一个和 W 同样大的 ΔW（d×k）。LoRA 说：<strong>别学整块 ΔW，把它分解成两片瘦矩阵的乘积</strong>：
+  </p>
+
+  <div class="callout primary">
+    <div class="label">ΔW = B · A，其中 r ≪ d, k</div>
+    <p style="margin:0.3rem 0">
+      <strong>A</strong> 是 r×k（矮胖→其实是「瘦高压扁」），<strong>B</strong> 是 d×r。两者相乘还原成 d×k 的更新量，但<strong>真正要训的只有 A、B 里的参数</strong>。
+      秩 <strong>r</strong>（rank）是唯一的核心旋钮，取 1、2、4、8 这种<strong>极小值</strong>就够用。<br>
+      参数量对比（以一个 4096×4096 的权重矩阵为例）：全量 = 4096×4096 ≈ <strong>1678 万</strong>；LoRA(r=8) = 2×4096×8 ≈ <strong>6.5 万</strong>——<strong>不到 0.4%</strong>。整个模型层层叠加，总量同比例缩小，典型砍掉约 <strong>10000 倍</strong>。
+    </p>
+  </div>
+
+  <h2>三、核心洞察：为什么「低秩」就够 + 推理零延迟</h2>
+
+  <p class="interactive-hint cite">
+    两个洞察撑起整篇论文——一个解释「为什么省得掉」，一个解释「为什么省了还不亏」。
+  </p>
+
+  <table>
+    <tr><th>洞察</th><th>说明</th></tr>
+    <tr><td><strong>① 任务适配的「内在秩」很低</strong></td><td>把一个预训练好的模型适配到新任务，<strong>需要改变的方向其实很少</strong>——更新量 ΔW 活在一个低维子空间里。所以用低秩的 B·A 去近似它，几乎不丢东西。这就是 LoRA 敢把 r 取到个位数的底气。</td></tr>
+    <tr><td><strong>② 推理时可合并，零额外延迟</strong></td><td>用完后把 <code>W + B·A</code> 算出来<strong>合并成一个新的 W</strong>，模型结构和原来一模一样——<strong>推理不多花一分钟</strong>。这是 LoRA 胜过早期 adapter（往网络里插额外层、推理变慢）的关键。</td></tr>
+  </table>
+
+  <p class="cite">
+    第 ① 点接得上你学过的直觉：预训练已经把通用能力压进 W，适配新任务只是<strong>在通用底子上做一个小角度的偏转</strong>——不需要重塑整个大脑，只需要一个低秩的「微调补丁」。
+  </p>
+
+  <h2>四、动手玩：调秩 r，看「省多少」和「亏不亏」</h2>
+  <p class="interactive-hint cite">
+    以一个 4096×4096 的权重矩阵为例。点不同的秩 r，看<strong>可训练参数、checkpoint 大小、质量</strong>怎么变——你会看到秩极小时省得惊人、质量却几乎不掉。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选秩 r：　<span id="rbtns"></span>
+    </div>
+    <div style="text-align:center;margin:0.6rem 0">
+      <span class="mono" style="font-size:1.3rem;color:#d2691e;font-weight:700" id="rparam"></span>
+      <div class="cite" style="margin-top:0.2rem" id="rpct"></div>
+    </div>
+    <div id="rwhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>从 r=8 到全量，质量几乎没差，但参数量差了 200 多倍。</strong>这就是「内在秩很低」的实证——花极小代价，买到接近全量微调的效果。
+  </p>
+
+  <h2>五、对照表（一）：全量微调 vs LoRA</h2>
+  <table>
+    <tr><th>维度</th><th>全量微调</th><th>LoRA</th></tr>
+    <tr><td>动多少参数</td><td>全部（如 175B）</td><td><strong>约万分之一</strong>（只训 A、B）</td></tr>
+    <tr><td>显存</td><td>极高（要存所有梯度+优化器状态）</td><td><strong>大降（~3 倍以上节省）</strong></td></tr>
+    <tr><td>每任务 checkpoint</td><td>一整份模型（GB 级）</td><td><strong>一个小补丁（MB 级）</strong></td></tr>
+    <tr><td>推理延迟</td><td>正常</td><td><strong>零额外延迟</strong>（合并回 W）</td></tr>
+    <tr><td>多任务服务</td><td>每任务一份大模型，笨重</td><td><strong>一底座 + 热插拔小补丁</strong></td></tr>
+    <tr><td>质量</td><td>基准</td><td><strong>逼近、常持平</strong></td></tr>
+  </table>
+
+  <h2>六、对照表（二）：回扣「改动幅度轴」+ LoRA 撑起的生态</h2>
+  <p>把 LoRA 放回你 GPT-3 课学的那条「动权重多少」的轴上，它正好补上中间那个<strong>「便宜的微调」</strong>档：</p>
+  <table>
+    <tr><th>方式</th><th>动权重吗</th><th>成本 / 特点</th></tr>
+    <tr><td>全量微调</td><td>改全部，永久</td><td>贵、每任务一整份</td></tr>
+    <tr><td><strong>LoRA</strong></td><td><strong>只改低秩补丁，永久</strong></td><td><strong>便宜、补丁 MB 级、可热插拔</strong></td></tr>
+    <tr><td>in-context learning</td><td>不改，临时</td><td>零训练，但每次推理带例子、占 token</td></tr>
+  </table>
+  <p class="cite">
+    🔮 LoRA 之上长出一整片生态：<strong>QLoRA</strong>（把底座量化压缩 + LoRA，让你在<strong>一张消费级显卡</strong>上微调几十 B 的模型）、<strong>PEFT</strong>（参数高效微调）成为默认范式。产品形态上，它直接催生了「<strong>一个冻结底座 + 给每个客户/角色/任务挂一个小 LoRA 补丁</strong>」——这正是你做「一套模型服务多场景」时最该想到的架构。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你想给某个垂直场景/客户「定制」一个模型，又怕成本爆炸</td><td>LoRA：冻底座、只训低秩补丁——<strong>定制成本砍上万倍</strong>，补丁 MB 级，想要多少个就存多少个</td></tr>
+    <tr><td>「一套模型怎么同时服务很多不同任务/客户」</td><td>就是 <strong>一底座 + 热插拔 LoRA</strong> 的架构：底座只存一份，每个场景一个小补丁，按需切换</td></tr>
+    <tr><td>你纠结「这个需求该 few-shot 还是去微调」</td><td>现在轴上多了一档：<strong>LoRA = 便宜的永久微调</strong>。高频稳定且 few-shot 压不住 → 上 LoRA，比全量微调省太多</td></tr>
+    <tr><td>你听到「我们在消费级 GPU 上微调了一个 13B 模型」</td><td>大概率是 <strong>QLoRA</strong>——量化 + LoRA 把门槛打到一张显卡，这就是「人人都能微调」的技术底</td></tr>
+    <tr><td>你的「声音复刻 / 角色定制」想低成本批量产出</td><td>同一思路：<strong>一个底座 + 每个声音/角色一个小补丁</strong>，而不是为每个都全量训一份</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：LoRA 冻结 W，只训练低秩补丁 ΔW=B·A 里的两片瘦矩阵，可训练参数砍掉上万倍。"
+       data-no="看第二节：LoRA 冻结原权重，只训练低秩分解出的 A、B 两片瘦矩阵。">
+    <div class="quiz-q">1. LoRA 到底训练什么？</div>
+    <button class="quiz-opt">全部参数，但用更小的学习率</button>
+    <button class="quiz-opt">只训练模型的最后几层</button>
+    <button class="quiz-opt">冻结原权重，只训练低秩补丁 B·A 里的两片瘦矩阵</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：任务适配的『内在秩』很低——更新量活在低维子空间，所以低秩近似几乎不丢东西。"
+       data-no="看第三节：LoRA 能省，是因为任务适配需要改变的方向很少（内在秩低），低秩补丁就够。">
+    <div class="quiz-q">2. 为什么「低秩」就够用？</div>
+    <button class="quiz-opt">任务适配的内在秩很低，更新量活在低维子空间</button>
+    <button class="quiz-opt">因为大模型本来就没几个有用参数</button>
+    <button class="quiz-opt">因为低秩会强制模型遗忘旧知识</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：推理时把 W+BA 合并成一个新 W，结构不变，所以零额外延迟——这是它胜过插层式 adapter 的关键。"
+       data-no="看第三节洞察②：LoRA 可把补丁合并回 W，推理零额外延迟，不像插额外层的 adapter 会变慢。">
+    <div class="quiz-q">3. LoRA 相比早期「插额外层」的 adapter，关键优势是？</div>
+    <button class="quiz-opt">训练时完全不用 GPU</button>
+    <button class="quiz-opt">补丁可合并回 W，推理零额外延迟</button>
+    <button class="quiz-opt">完全不改变模型行为</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">秩 r 该取多大？是不是越大越好？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>不是越大越好，而是「够用就行」。</strong>r 是「补丁的容量」：太小可能装不下复杂任务的适配，太大则参数变多、向全量微调退化、还可能过拟合。论文里 r=1~8 在很多任务上就已逼近全量——因为内在秩本就低。</p>
+      <p style="margin:0.3rem 0" class="cite">实操经验：<strong>从 r=8 起步，任务简单可降到 4/2，效果不够再往上调到 16/32</strong>。它是你要调的主旋钮，但调的空间通常很小——这本身就是「内在秩低」的体现。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">既然能合并回 W 零延迟，那「热插拔多个补丁」又怎么实现？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">两种用法，按需选：<strong>① 合并模式</strong>——把某个 LoRA 永久并进 W，得到一个专用模型，推理零延迟，但就固定成这一个任务了；<strong>② 不合并模式</strong>——保持 W 冻结、补丁单独挂着，推理时临时加上 B·A。这样<strong>同一个底座可以同时挂不同补丁、按请求切换</strong>，代价是这点旁路计算（很小）。</p>
+      <p style="margin:0.3rem 0" class="cite">产品上常这么用：<strong>底座只存一份，每个客户/角色一个 MB 级补丁，请求来了挂对应的那个</strong>。要极致单任务性能就合并，要多租户灵活就不合并——两头都给你了。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">LoRA（便宜微调）和 RAG / few-shot，我做产品时怎么选？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">它们解决<strong>不同的事</strong>，常常组合用：</p>
+      <table>
+        <tr><th></th><th>改什么</th><th>适合</th></tr>
+        <tr><td>few-shot</td><td>不改权重，临时给例子</td><td>任务多变、量小、要快试</td></tr>
+        <tr><td><strong>LoRA</strong></td><td>改权重（低秩补丁），永久</td><td>固定风格/技能/格式，高频稳定，要省推理 token</td></tr>
+        <tr><td>RAG</td><td>不改权重，外挂知识</td><td>需要<strong>最新/私有事实</strong>，知识常变</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">一句话区分：<strong>要它「换个说话方式/学个技能」→ LoRA；要它「知道某些具体事实」→ RAG；要它「这次照这几个例子办」→ few-shot。</strong>RAG 是后面 P19 的正课，到时再深挖。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">为什么分解的是「更新量 ΔW」，而不是直接低秩近似 W 本身？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">因为 <strong>W 不是低秩的，ΔW 才是</strong>。W（预训练权重）高秩、信息致密，装着海量通用知识——直接 <code>W≈B·A</code> 会<strong>把知识压扁、大量丢失</strong>，模型废掉。而适配新任务所需的「改变量」ΔW <strong>内在秩很低</strong>，用低秩拟合它几乎不丢东西。</p>
+      <p style="margin:0.3rem 0" class="cite">比方：<strong>W 是厚百科全书（不能压），ΔW 是薄勘误便利贴（就这任务微调几处）</strong>。LoRA 只用低秩去拟合那张便利贴。附带还白赚：W 冻结 → 不灾难性遗忘；W 原样保留 → 才能合并/卸载、一底座挂多补丁。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">A、B 怎么初始化？为什么一开始补丁必须等于 0？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">标准做法：<strong>A = 小随机高斯，B = 全 0</strong>，于是开训那刻 <code>ΔW = B·A = 0</code>。<strong>必须从 0 起步</strong>，是因为要从「一模一样的预训练模型」开始——补丁若一上来随机非零，等于往调好的模型注入噪声，前几步全在撤销自己的破坏。从 0 起步则第 0 步=纯预训练行为，补丁只朝有用方向慢慢长出来。</p>
+      <p style="margin:0.3rem 0" class="cite">为什么不两片都设 0？会<strong>梯度死锁</strong>：∂/∂A 依赖 B、∂/∂B 依赖 A，全 0 则梯度全 0、学不动。所以<strong>一片随机（打破对称、留梯度通路）、一片归零（保证乘积为 0）</strong>。另有 α/r 缩放因子控更新幅度，次要。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">LoRA 能叠加吗？一个底座挂多个补丁会打架吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">能挂很多，<strong>看怎么用</strong>，风险递增：</p>
+      <table>
+        <tr><th>用法</th><th>怎么做</th><th>会打架吗</th></tr>
+        <tr><td>切换（热插拔）</td><td>每请求用「底座+一个补丁」</td><td><strong>不会</strong>，干净常规做法</td></tr>
+        <tr><td>合并</td><td>把一个补丁永久并进 W</td><td>不会，但固定成单任务</td></tr>
+        <tr><td>同时叠加</td><td><code>W+ΔW₁+ΔW₂…</code> 一起上</td><td><strong>可能打架</strong></td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">叠加会冲突，是因为低秩更新<strong>线性相加</strong>、而各补丁<strong>没学过共存</strong>，可能把权重往互相矛盾的方向拽。缓解：加权组合、约束正交、或路由（Mixture-of-LoRAs）。<strong>实操标准姿势是「一请求一补丁」</strong>（零冲突）；同时叠多个是要小心的高级玩法（类比文生图社区混多个风格 LoRA、堆多了就糊）。服务侧有 S-LoRA 等方案：底座只放一份，成千上万补丁高效换进换出。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Hu et al. —
+      <a href="https://arxiv.org/abs/2106.09685">LoRA: Low-Rank Adaptation of Large Language Models（2021）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      想看它怎么把门槛打到一张显卡：搜 <strong>QLoRA</strong>（Dettmers et al., 2023，量化 + LoRA）。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      阶段三进入「效率」段：<strong>LoRA 省微调成本</strong>。下一篇 <strong>P13 FlashAttention</strong>：省的是<strong>推理/训练时 attention 的显存与速度</strong>——直接对应你 realtime 链路的长上下文与延迟。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「为什么是分解 ΔW 而不是直接低秩近似 W 本身？」「A、B 初始化有讲究吗（为什么一开始补丁要等于 0）？」
+    「LoRA 能叠加吗，一个底座挂多个补丁会打架吗？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0012-chinchilla.html">&#8592; 第 12 课：Chinchilla (P11)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P12</code> → 明天 P13（FlashAttention）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Hu et al., <em>LoRA: Low-Rank Adaptation of Large Language Models</em>, 2021.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 调秩 r：省多少、亏不亏（以 4096×4096 矩阵为例） —— */
+(function () {
+  var D = 4096;
+  var FULL = D * D; // 16,777,216
+  var R = [
+    { cap: "全量（r=4096）", r: 4096, q: "基准质量", note: "等于直接学整块 ΔW，没省。" },
+    { cap: "r=64", r: 64, q: "≈ 持平", note: "已砍掉 99%+ 参数，质量基本不掉。" },
+    { cap: "r=8", r: 8, q: "≈ 持平（常用默认）", note: "最常用档：参数不到 0.4%，多数任务逼近全量。" },
+    { cap: "r=1", r: 1, q: "多数任务仍可用", note: "极端低秩，惊人地常常还能打——内在秩真的很低。" }
+  ];
+  function params(r) { return (r >= D) ? FULL : 2 * D * r; }
+  function fmt(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+    return n + "";
+  }
+  var rbtns = document.getElementById("rbtns");
+  function render(idx) {
+    var item = R[idx];
+    var p = params(item.r);
+    document.getElementById("rparam").textContent = "可训练参数 ≈ " + fmt(p);
+    var pct = (p / FULL) * 100;
+    var pctStr = pct >= 1 ? pct.toFixed(0) + "%" : pct.toFixed(3) + "%";
+    document.getElementById("rpct").innerHTML =
+      "占全量的 <strong>" + pctStr + "</strong>　|　质量：<strong>" + item.q + "</strong>";
+    document.getElementById("rwhy").innerHTML =
+      item.note + (idx === 0 ? "" : "　（全量是 " + fmt(FULL) + "，这里只训 " + fmt(p) + "）");
+    Array.prototype.forEach.call(rbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  R.forEach(function (item, i) {
+    var b = document.createElement("button");
+    b.textContent = item.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    rbtns.appendChild(b);
+  });
+  render(2);
+})();
+</script>
+</body>
+</html>

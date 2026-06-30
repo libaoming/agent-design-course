@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 11 课 · Scaling Laws：大力出奇迹不是玄学，是能画成直线、能外推的幂律——你判断「该不该花这笔算力」的尺</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 11 课 / 经典论文 <strong>P10</strong> &nbsp;·&nbsp; 阶段三：统一框架与规模（Kaplan et al., 2020）</div>
+
+  <h1>Scaling Laws：<br>「大力出奇迹」不是玄学，<br><span style="font-size:0.55em;color:#a8521a">是能画成直线、能外推的幂律——你判断「该不该花这笔算力」的尺</span></h1>
+
+  <div class="mission">
+    上一课 <a href="0010-t5.html">T5</a> 把「任务的形状」统一了，并确认「放大就涨」。但留了个大悬念：<b>放大到底涨多少？该按什么比例放？值不值这笔钱？</b>
+    这一课 Scaling Laws 把「大力出奇迹」从一句口号，变成一条<b>能画在坐标纸上、还能外推的曲线</b>。
+    它回答你作为 PM 最该会判断的事：<b>工程师说「再大一点就更好」「这得花一大笔算力」——到底是真是假？我怎么不靠玄学、而靠一条曲线来判断？</b>
+  </div>
+
+  <div class="big-idea">
+    Kaplan 等人的发现，一句话：<strong>模型的测试 loss，对「参数量 N、数据量 D、算力 C」三者都是平滑的幂律（power law）——在 log-log 坐标上是<u>一条直线</u>，横跨好几个数量级都不拐弯。</strong><br>
+    这意味着两件事：① <strong>可预测</strong>——用小模型的几个点，就能<strong>外推</strong>出「砸 100 倍算力，loss 会落到哪」；② <strong>scale 决定一切，shape 几乎不重要</strong>——深一点宽一点这类架构细节影响很小，真正决定性能的是规模。<em>从此 AI 进步从「炼丹」变成「能立项、能预算、能验收」的工程。</em>
+  </div>
+
+  <h2>一、立靶：「越大越好」能不能从口号变成可预测的曲线？</h2>
+
+  <p>
+    你已经一路看着规模在发威：<a href="0008-gpt-2.html">GPT-2</a> 放大见 zero-shot、<a href="0009-gpt-3.html">GPT-3</a> 放大坐实 in-context learning。但当时「为什么大就好、大多少才够、钱该砸哪」基本靠<strong>直觉和试错</strong>——本质是炼丹。
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：把 loss 和「规模」的关系，量成一条公式</div>
+    <p style="margin:0.3rem 0">
+      Kaplan 团队系统训练了一大批<strong>不同大小</strong>的模型，把每个的测试 loss 标到图上，发现一个惊人规律：
+      <strong>loss 随规模下降的轨迹，是一条干净的幂律直线</strong>（在对数坐标下）。
+      于是「越大越好」不再是感觉，而是 <code>L(N) ≈ (Nc / N)^α</code> 这种<strong>能算、能外推</strong>的关系——你给我算力预算，我能<strong>提前告诉你</strong>loss 大概落在哪。
+    </p>
+  </div>
+
+  <h2>二、抽框架：三个旋钮，三条幂律</h2>
+
+  <p>性能（用测试 loss 衡量，越低越好）主要被<strong>三个量</strong>拖着走，对每一个都是幂律——单独拉大任意一个、其余不卡瓶颈时，loss 沿直线下降：</p>
+
+  <table>
+    <tr><th>旋钮</th><th>是什么</th><th>关系</th></tr>
+    <tr><td><strong>N</strong></td><td>模型参数量（模型多大）</td><td rowspan="3" style="vertical-align:middle">loss 是每个量的<br><strong>幂律</strong><br>（log-log 下是直线）</td></tr>
+    <tr><td><strong>D</strong></td><td>训练数据量（喂多少 token）</td></tr>
+    <tr><td><strong>C</strong></td><td>算力（≈ N × D，花多少计算）</td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">关键直觉：幂律 = 「每砍掉同一截 loss，要花掉<strong>成倍</strong>的资源」</div>
+    <p style="margin:0.3rem 0">
+      幂律在 log-log 上是直线，翻成大白话就是<strong>残酷的边际递减</strong>：
+      想让 loss 再降同样一小步，得把算力<strong>翻 10 倍</strong>，再降一小步又要 10 倍。
+      <strong>loss 是线性地降，成本是指数地涨。</strong>这条曲线既解释了「为什么大力真出奇迹」，也解释了「为什么前沿模型越来越烧钱」——你下一节就能亲手感受这个落差。
+    </p>
+  </div>
+
+  <h2>三、核心洞察：可预测 + scale &gt; shape</h2>
+
+  <p class="interactive-hint cite">
+    这篇论文真正改变行业的，是两个「反炼丹」的结论——它们让 AI 从赌博变成可立项的工程。
+  </p>
+
+  <table>
+    <tr><th>洞察</th><th>说明 / 对行业的意义</th></tr>
+    <tr><td><strong>① 平滑且可外推</strong></td><td>曲线不拐弯，横跨好几个数量级。于是<strong>不用真训出那个巨无霸</strong>，用一串小模型的点就能<strong>预测</strong>大模型的 loss——大厂敢一次砸几千万美金，靠的是这条预测线，不是赌。</td></tr>
+    <tr><td><strong>② scale 决定，shape 几乎不重要</strong></td><td>在合理范围内，<strong>深一点/宽一点、超参微调这些架构细节，对 loss 的影响远小于规模本身</strong>。把精力花在「做大」，比花在「调结构」回报高得多——也呼应你 <a href="0010-t5.html">T5</a> 学到的「shape 让位、scale 当家」。</td></tr>
+    <tr><td><strong>③ 大模型更省样本</strong></td><td>同样要达到某个 loss，<strong>更大的模型用更少的数据/步数</strong>就到了（sample efficiency 更高）。所以 Kaplan 的建议是：训练大模型、<strong>没必要训到收敛</strong>就停。</td></tr>
+  </table>
+
+  <h2>四、动手玩：算力翻 10 倍，loss 到底降多少？</h2>
+  <p class="interactive-hint cite">
+    点不同的算力预算，看预测的测试 loss 怎么走。重点感受：<strong>每多花 10 倍算力，loss 只降一小截，而且越往后越不划算</strong>——这就是幂律的「边际递减」。
+  </p>
+
+  <div class="callout primary">
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选算力预算：　<span id="cbtns"></span>
+    </div>
+    <div style="text-align:center;margin:0.6rem 0">
+      <span class="mono" style="font-size:1.6rem;color:#d2691e;font-weight:700" id="closs"></span>
+      <div class="cite" style="margin-top:0.2rem" id="cnote"></div>
+    </div>
+    <div id="cbar" style="height:14px;background:#eadfca;border-radius:7px;overflow:hidden;margin:0.5rem 0"><div id="cfill" style="height:100%;background:#d2691e;width:100%;transition:width .3s"></div></div>
+    <div id="cwhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>从 1× 到 1000×（一千倍算力），loss 也就降了一小段。</strong>这正是你该带进选型会的那把尺——「再大就更好」对，但要问清<strong>「再大多少、换来 loss 降多少、值这笔钱吗」</strong>。
+  </p>
+
+  <h2>五、对照表（一）：三条幂律，一句话各记一条</h2>
+  <table>
+    <tr><th>幂律</th><th>说的是</th><th>实操含义</th></tr>
+    <tr><td>L 对 <strong>N</strong></td><td>模型越大，loss 越低（幂律）</td><td>没卡数据/算力时，做大模型最直接</td></tr>
+    <tr><td>L 对 <strong>D</strong></td><td>数据越多，loss 越低（幂律）</td><td>数据也得跟上，否则会过拟合见顶</td></tr>
+    <tr><td>L 对 <strong>C</strong></td><td>算力越多，loss 越低（幂律）</td><td>给定预算能<strong>外推</strong>出能到的最低 loss</td></tr>
+  </table>
+  <p class="cite">
+    三者要<strong>配着放大</strong>：只放大模型不加数据，会撞上过拟合的墙；只堆数据不放大模型，模型「装不下」。Kaplan 给了它们大致的搭配比例——而「这个比例到底对不对」，正是下一课的战场。
+  </p>
+
+  <h2>六、对照表（二）：固定预算，钱该砸模型还是砸数据？——埋下 Chinchilla 的雷</h2>
+  <p>
+    最有产品味的问题：<strong>算力预算固定，是该训一个更大的模型，还是喂更多数据？</strong>这就是 <strong>compute-optimal（算力最优分配）</strong>。
+  </p>
+  <table>
+    <tr><th></th><th>Kaplan 2020（本篇 P10）</th><th>Chinchilla 2022（下一篇 P11）</th></tr>
+    <tr><td>钱主要砸哪</td><td><strong>砸模型大小</strong>（大模型更省样本，数据没必要喂太多、不必训到收敛）</td><td><strong>数据被严重低估</strong>，同样算力下模型应<strong>更小、数据喂更多</strong>，训到更充分</td></tr>
+    <tr><td>结论</td><td>「把模型做大」</td><td>「模型别那么大，多喂数据」——<strong>直接修正了 P10</strong></td></tr>
+  </table>
+  <p class="cite">
+    🔮 这是这门课少见的「<strong>后人推翻前人</strong>」剧情：P10 立了 scaling law 的范式（loss 可预测、可外推，这点至今成立），但它对<strong>预算分配</strong>的具体建议，被 P11 Chinchilla 用更细的实验纠正。下一课你会看到：为什么一度人人追「更大」，后来转向「同算力下，小一点但喂饱数据」。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>工程师说「换更大的模型就更好」，你想判断真假与性价比</td><td>scaling law 给你尺：<strong>更大确实更好，但 loss 是幂律边际递减</strong>——要追问「大多少、降多少、贵多少」</td></tr>
+    <tr><td>你用小流量 / 小样本实验，去<strong>外推</strong>大盘表现</td><td>同一个「平滑可外推」的直觉：小规模的点能预测大规模的走向（前提是没撞瓶颈、没换分布）</td></tr>
+    <tr><td>你纠结「上大模型，还是小模型 + 更多 RAG / 更长上下文」</td><td>本质是 <strong>compute-optimal</strong> 的产品版：把有限资源投到「模型容量」还是「喂给它的信息」上——scaling law 是这道取舍的思维框架</td></tr>
+    <tr><td>「为什么前沿模型一代比一代贵得离谱」</td><td>因为 loss 每降一小步要<strong>成倍</strong>砸算力（幂律），越往前沿边际成本越陡</td></tr>
+    <tr><td>「为什么大家都先比谁大，不先比谁结构妙」</td><td>因为 <strong>scale &gt; shape</strong>——规模对 loss 的影响远超架构微调，钱花在做大回报最高</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：loss 对 N/D/C 都是幂律，在 log-log 坐标上是直线，横跨多个数量级——所以能外推。"
+       data-no="看第二节：核心发现是 loss 对参数/数据/算力都呈幂律（log-log 直线），平滑且可外推。">
+    <div class="quiz-q">1. Scaling Laws 的核心发现是什么？</div>
+    <button class="quiz-opt">模型越大越容易过拟合，所以要限制规模</button>
+    <button class="quiz-opt">loss 对参数/数据/算力都是幂律（log-log 直线），平滑可外推</button>
+    <button class="quiz-opt">架构设计比规模更重要</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：幂律意味着边际递减——每降同样一小截 loss，要成倍砸算力。这正是前沿越来越贵的原因。"
+       data-no="看第二/四节：幂律 = 残酷的边际递减，loss 线性降、成本指数涨，不是越花越省。">
+    <div class="quiz-q">2. 「loss 是幂律」对成本意味着什么？</div>
+    <button class="quiz-opt">花越多算力越省钱</button>
+    <button class="quiz-opt">loss 和成本成正比，简单线性</button>
+    <button class="quiz-opt">边际递减：每再降一小截 loss，要成倍砸算力</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：Kaplan 建议把预算主要砸模型大小；Chinchilla(P11) 后来修正——数据被低估，应模型更小、数据更多。"
+       data-no="看第六节：P10 主张砸模型大小，P11 Chinchilla 修正为『模型小一点、数据多喂点』。">
+    <div class="quiz-q">3. 固定算力预算，Kaplan(P10) 和 Chinchilla(P11) 的分歧是？</div>
+    <button class="quiz-opt">P10 主张砸模型大小，P11 修正为「小一点、多喂数据」</button>
+    <button class="quiz-opt">两者都主张无脑堆数据</button>
+    <button class="quiz-opt">P11 主张模型要更大</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">loss 平滑下降，但 GPT-3 的「涌现能力」是阶跃冒出来的，这俩不矛盾吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>不矛盾，是两件事。</strong>scaling law 量的是<strong>预训练 loss</strong>（猜下一个词的平均误差），它确实平滑下降；而 <a href="0009-gpt-3.html">涌现</a> 说的是<strong>某个下游任务的准确率</strong>（如三位数加法），它可能在某个规模突然从「几乎为零」跳到「能用」。</p>
+      <p style="margin:0.3rem 0" class="cite">直觉：底层那条 loss 曲线一直在悄悄滑，但「能不能做对一道需要多步推理的题」是个<strong>阈值型</strong>指标——loss 滑过某条线后，下游能力才肉眼可见地点亮。所以<strong>平滑的是 loss，阶跃的是下游能力</strong>，两条曲线别混。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">既然「越大越好」，是不是无脑堆大就行？scaling law 的边界在哪？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">有三道边界：<strong>① 边际递减</strong>——幂律下每步进步要成倍成本，到前沿性价比极低；<strong>② 三者要配比</strong>——只放大模型不加数据会过拟合，Chinchilla(P11) 还会告诉你 Kaplan 的配比偏了；<strong>③ 这条曲线只管 loss，不管对齐</strong>——它<strong>不保证模型听话、安全、说真话</strong>，那是 RLHF（P15）的事。</p>
+      <p style="margin:0.3rem 0" class="cite">还有个隐含前提：<strong>数据质量</strong>不在公式里却是地基（呼应 <a href="0008-gpt-2.html">WebText</a> / <a href="0010-t5.html">C4</a>）。喂垃圾数据，scaling law 不会救你。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">我又不训练模型，这条曲线对我做产品到底有什么用？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">三处直接有用：<strong>① 判真假</strong>——工程师说「再大就更好」，你知道方向对但要追问边际收益和成本，不被一句话带走；<strong>② 做选型</strong>——「上更大模型」vs「小模型 + 更多 RAG/上下文」就是 compute-optimal 的产品版，你能用「容量 vs 信息」的框架权衡；<strong>③ 会外推</strong>——小流量/小样本实验推大盘，吃的就是「平滑可预测」这条直觉（只要别换了数据分布、别撞瓶颈）。</p>
+      <p style="margin:0.3rem 0" class="cite">一句话：<strong>scaling law 是你把「要不要花这笔算力/钱」从拍脑袋变成估算的尺。</strong></p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">loss 为什么是 THE 关键指标？它下滑到底代表什么？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>loss 是什么</strong>：next-token 预测里，<code>loss = −log(模型分给「正确那个词」的概率)</code>——即模型每猜一个词「有多惊讶」的平均值。给正确词概率 1.0 → loss 0（零惊讶）；给 0.5 → 0.69；给 0.01 → 4.6（大跌眼镜）。<strong>loss 越低 = 越不惊讶 = 猜得越准。</strong></p>
+      <p style="margin:0.3rem 0"><strong>为什么是 THE 指标</strong>：① 训练<strong>唯一直接优化</strong>的就是它，模型的所有知识/语法/推理都是「压低 loss」挤出来的副产品；② 它单一、平滑、跨模型可比，所以能当 scaling law 的纵轴（任务准确率坑坑洼洼，做不到）；③ 它就是 <a href="0007-gpt-1.html">压缩即理解</a> 的度量——loss 低 = 文本压得更狠 = 必须真懂才压得好。</p>
+      <p style="margin:0.3rem 0"><strong>下滑代表什么（三层）</strong>：机械层＝给正确词的概率更高；信息论层＝对文本压缩更好＝<strong>对世界的理解更到位</strong>；行为层＝能力点亮但<strong>不均匀</strong>（loss 平滑、下游能力可能阈值式 <a href="0009-gpt-3.html">涌现</a>）。</p>
+      <p style="margin:0.3rem 0" class="cite">让「小幅下降」变具体：困惑度 perplexity ≈ e^loss ≈「模型在多少个候选词间纠结」。<strong>loss 3.0→2.0</strong> 看着只降 1，其实是从「约 20 个候选里挑」收窄到「约 7 个里挑」——一次大锐化，也是为什么这条幂律上「降一点」要砸成倍算力。</p>
+      <p style="margin:0.3rem 0" class="cite"><strong>但别神化它</strong>：loss 只管「预测训练分布的文本有多准」，<strong>不管听不听话/安不安全/说不说真话</strong>（那是对齐/RLHF，P15）；且语言有不可消除的随机性，loss 有降不到的地板，永远到不了 0、也不该追 0。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Kaplan et al. —
+      <a href="https://arxiv.org/abs/2001.08361">Scaling Laws for Neural Language Models（2020）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      建立直觉：先看论文第 1 页那几张「log-log 直线」图——一图胜千言。想看被推翻的部分，直接接读下一篇 Chinchilla。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      阶段三推进：<strong>T5 统一形状 → Scaling Laws 量化「放大就涨」</strong>。下一篇 <strong>P11 Chinchilla</strong>：修正预算分配，告诉你「同算力下，模型别那么大、数据要喂饱」。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「幂律的指数 α 大概多大、为什么算力那条这么平？」「外推到底能信到哪一步、什么时候会断？」
+    「compute-optimal 和我选大模型还是小模型+RAG，怎么对上？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0010-t5.html">&#8592; 第 10 课：T5 (P09)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P10</code> → 明天 P11（Chinchilla）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Kaplan et al., <em>Scaling Laws for Neural Language Models</em>, 2020.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 算力翻倍，loss 降多少（幂律边际递减） —— */
+(function () {
+  // 示意性数字：L ∝ C^(-0.05)（Kaplan 中算力指数约此量级）。基准 1× → loss 3.00
+  var C = [
+    { cap: "1×（基准）", mult: 1 },
+    { cap: "10×", mult: 10 },
+    { cap: "100×", mult: 100 },
+    { cap: "1000×", mult: 1000 }
+  ];
+  var BASE = 3.00, ALPHA = 0.05;
+  function lossAt(m) { return BASE * Math.pow(m, -ALPHA); }
+  var cbtns = document.getElementById("cbtns");
+  function render(idx) {
+    var m = C[idx].mult;
+    var loss = lossAt(m);
+    document.getElementById("closs").textContent = "loss ≈ " + loss.toFixed(3);
+    // 条形：以 1× 的 loss 为满格，越短代表 loss 越低（进步）
+    var pct = (loss / BASE) * 100;
+    document.getElementById("cfill").style.width = pct.toFixed(1) + "%";
+    if (idx === 0) {
+      document.getElementById("cnote").textContent = "基准点。";
+      document.getElementById("cwhy").innerHTML = "从这里开始往右滑，看每多花 10 倍算力换来多少 loss 下降。";
+    } else {
+      var prev = lossAt(C[idx - 1].mult);
+      var drop = (prev - loss);
+      document.getElementById("cnote").innerHTML =
+        "比上一档多花 <strong>10 倍</strong>算力，loss 仅再降 <strong>" + drop.toFixed(3) + "</strong>";
+      var fromBase = (BASE - loss);
+      document.getElementById("cwhy").innerHTML =
+        "相对 1× 基准：算力 <strong>×" + m + "</strong>，loss 一共才降 <strong>" + fromBase.toFixed(3) +
+        "</strong>。算力指数级砸下去，loss 线性地、越来越吝啬地降——<strong>这就是幂律的边际递减</strong>。";
+    }
+    Array.prototype.forEach.call(cbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  C.forEach(function (c, i) {
+    var b = document.createElement("button");
+    b.textContent = c.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    cbtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>
