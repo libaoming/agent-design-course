@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 22 课 · Toolformer：模型自己学会「该在哪调工具」——function calling 的由来（全课收官）</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 22 课 / 经典论文 <strong>P21</strong> &nbsp;·&nbsp; 阶段五：检索与 Agent（收官 · Schick et al., 2023）</div>
+
+  <h1>Toolformer：<br>模型自己学会「该在哪调工具」<br><span style="font-size:0.55em;color:#a8521a">——function calling 的由来（全课收官 🎉）</span></h1>
+
+  <div class="mission">
+    上一课 <a href="0021-react.html">ReAct</a> 教你用 prompt <b>编排</b>工具调用的循环。但还剩一问：模型怎么<b>自己学会</b>——该在哪个位置、用什么参数调哪个工具——而且<b>不靠海量人工标注</b>「这里该调」？
+    这一课 Toolformer 给出一个漂亮的自监督答案：<b>让模型在文本里到处试着插 API 调用，只保留那些「插了结果能让它把后面的词预测得更准」的调用，再拿这些去微调。</b>
+    它回答 agent 时代最底层的一问，也为整门课收尾：<b>「调用工具」是怎么从一个 prompt 技巧，变成模型<u>原生</u>的本事（function calling）的？</b>
+  </div>
+
+  <div class="big-idea">
+    一句话：<strong>Toolformer 让模型用「自己的训练目标」当筛子，自监督地学会调工具。</strong><br>
+    四步：① 在文本各处<strong>试插</strong>候选 API 调用 → ② <strong>执行</strong>拿到结果 → ③ <strong>筛选</strong>：只留下「插入结果后，能让模型把<u>接下来的词</u>预测得更准（loss 下降）」的调用 → ④ 拿这些增强文本<strong>微调</strong>。<br>
+    妙在第 ③ 步：<strong>「这个工具调用有没有用」= 「它有没有降低预测 loss」</strong>——复用模型自己的「猜下一个词」当判据，<strong>无需人工标注、可规模化</strong>。
+    <em>这就是 function calling 成为模型原生能力的根：模型成了一个「推理内核」，用工具把自己扩展到冻结权重之外。</em>
+  </div>
+
+  <h2>一、立靶：模型不擅长的事，它会硬编而不是「去查」</h2>
+
+  <p>
+    有些事工具天生比模型强：<strong>精确算术、最新事实、精确查询、日期计算、生僻翻译</strong>。模型遇到这些，常常<strong>不调工具、直接凭权重里的模糊记忆硬编</strong>（幻觉）。
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：怎么让模型「自己」学会该在哪伸手拿工具？</div>
+    <p style="margin:0.3rem 0">
+      <a href="0021-react.html">ReAct</a> 用 prompt <strong>当场教</strong>模型走「想-做-看」循环——但那是<strong>推理时</strong>的编排，没把能力<strong>训进模型</strong>。
+      要把工具调用变成模型的<strong>原生本事</strong>，得训练；可「在每个该调工具的位置都人工标注」<strong>贵到不可行</strong>。
+      Toolformer 的赌注：<strong>能不能让模型<u>自己</u>判断「哪里调工具有用」，自监督地生成训练数据？</strong>
+    </p>
+  </div>
+
+  <h2>二、抽框架：自监督四步，让模型自学调工具</h2>
+
+  <table>
+    <tr><th>步</th><th>做什么</th></tr>
+    <tr><td><strong>① 试插</strong></td><td>给定一段文本，用几个示例引导模型，在<strong>各种位置</strong>提出「这里也许该调某 API（带某参数）」的候选</td></tr>
+    <tr><td><strong>② 执行</strong></td><td>把候选 API 调用<strong>真的跑一遍</strong>，拿到结果（计算器算出值、搜索返回事实…）</td></tr>
+    <tr><td><strong>③ 筛选（核心）</strong></td><td>判据：<strong>把结果插进去，能不能让模型对「后面的词」预测得更准</strong>？能（loss 下降）→ 有用，<strong>保留</strong>；不能 → <strong>丢弃</strong></td></tr>
+    <tr><td><strong>④ 微调</strong></td><td>拿通过筛选的「带 API 调用的文本」去微调模型——它就<strong>把「在有用处调工具」学进了权重</strong></td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">核心：用「降不降 loss」当「有没有用」的自动判据</div>
+    <p style="margin:0.3rem 0">
+      最妙的一步是 ③。怎么判断一个工具调用「值不值得」？Toolformer 说：<strong>看它有没有帮模型把后续文本预测得更准</strong>。
+      比如文本「…通过率是 ___%」，插入 <code>[计算器(400/1400)→28.6]</code> 后，模型对「28.6%」的预测<strong>笃定了（loss 暴降）</strong>→ 这次调用<strong>有用，留下</strong>；若插在无关处、对后文预测没帮助 → <strong>丢掉</strong>。
+      <strong>它复用了模型自己的训练目标（<a href="0001-next-token-prediction.html">猜下一个词</a>）当筛子——所以全程自监督、不用人标。</strong>
+    </p>
+  </div>
+
+  <h2>三、核心洞察：自监督、烤进权重、推理内核</h2>
+
+  <p class="interactive-hint cite">
+    三个洞察，第一个是方法之妙，后两个把整个 agent 阶段串成一句话。
+  </p>
+
+  <table>
+    <tr><th>洞察</th><th>说明</th></tr>
+    <tr><td><strong>① 「有用」= 「降 loss」，自监督</strong></td><td>不用人去标「这里该调工具」，而是让模型<strong>用自己的预测误差</strong>来评判每个候选调用值不值——把「猜下一个词」这个老目标，变成了「工具有没有用」的<strong>免费、可规模化的判据</strong>。</td></tr>
+    <tr><td><strong>② 工具能力烤进权重（vs ReAct 靠 prompt）</strong></td><td><a href="0021-react.html">ReAct</a> 在<strong>推理时</strong>用 prompt 编排；Toolformer 在<strong>训练时</strong>把「何时/如何调工具」学进权重。这就是 <strong>function calling 成为模型原生能力</strong>的路径。</td></tr>
+    <tr><td><strong>③ 模型 = 推理内核，工具 = 它的延伸</strong></td><td>模型负责<strong>推理与编排</strong>，把自己<strong>不擅长/权重里没有</strong>的事（算术、最新事实、动作）外包给工具——<strong>用工具把能力扩展到冻结权重之外</strong>。</td></tr>
+  </table>
+
+  <h2>四、动手玩：一个候选调用，为什么被保留 / 被丢弃</h2>
+  <p class="interactive-hint cite">
+    看 Toolformer 的「筛选」怎么工作。同一句话，点三种情况，看「降不降 loss」如何决定一个 API 调用的去留。
+  </p>
+
+  <div class="callout primary">
+    <div class="mono" style="background:#fff;border-radius:6px;padding:0.5rem 0.7rem;margin-bottom:0.5rem;font-size:0.9rem">文本：这场考试 1400 人参加、400 人通过，通过率是 ___%。</div>
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选情况：　<span id="tbtns"></span>
+    </div>
+    <div id="tout" class="mono" style="font-size:0.92rem;line-height:1.7;background:#fff;border-radius:6px;padding:0.6rem 0.8rem;margin:0.5rem 0;white-space:pre-wrap"></div>
+    <div id="twhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>筛选不看「人觉得该不该调」，只看「调了之后模型预测后文准不准」。</strong>有用的调用（降 loss）被留下、拿去微调，模型于是学会了「<strong>在会算错的地方，自己伸手拿计算器</strong>」——而不是硬编一个数。
+  </p>
+
+  <h2>五、对照表（一）：ReAct vs Toolformer</h2>
+  <table>
+    <tr><th>维度</th><th>ReAct（P20）</th><th>Toolformer（P21）</th></tr>
+    <tr><td>工具能力怎么来</td><td>prompt <strong>当场编排</strong>（想-做-看循环）</td><td><strong>自监督训进权重</strong></td></tr>
+    <tr><td>作用时机</td><td>推理时</td><td>训练时（之后推理就会用）</td></tr>
+    <tr><td>要训练吗</td><td>不要</td><td>要（但数据自监督生成）</td></tr>
+    <tr><td>解决的问题</td><td>用工具的<strong>推理循环</strong>长啥样</td><td>模型怎么<strong>学会</strong>该在哪/怎么调工具</td></tr>
+    <tr><td>今天的样子</td><td colspan="2" style="text-align:center"><strong>合流：模型被训得会调工具（Toolformer 精神）+ 在 ReAct 式循环里用</strong></td></tr>
+  </table>
+
+  <h2>六、对照表（二）：工具把模型扩展到「权重之外」</h2>
+  <table>
+    <tr><th>模型不擅长 / 权重里没有</th><th>外包给哪个工具</th></tr>
+    <tr><td>精确算术</td><td>计算器</td></tr>
+    <tr><td>最新 / 私有事实</td><td>搜索 / <a href="0020-rag.html">检索（RAG）</a></td></tr>
+    <tr><td>当前日期 / 时间推算</td><td>日历</td></tr>
+    <tr><td>生僻语言翻译</td><td>翻译 API</td></tr>
+    <tr><td>改变世界的动作</td><td>各种 API / 执行器</td></tr>
+  </table>
+  <p class="cite">
+    🔮 这正是整个阶段五的母题：<strong>模型的权重是冻结且有限的，于是想办法把它「扩展出去」</strong>——<a href="0020-rag.html">RAG</a> 用<strong>检索</strong>扩展知识、<a href="0021-react.html">ReAct</a> 用<strong>循环</strong>扩展行动、Toolformer 用<strong>自监督训练</strong>把调工具变成原生本事。三者合起来，就是你那个语音 agent 的完整底座：<strong>一个推理内核 + 一圈它会自己调用的工具。</strong>
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你用的模型「会 <strong>function calling</strong>」</td><td>就是 Toolformer 精神的产品化：模型<strong>被训得</strong>能在合适处吐出工具调用——这能力的由来在这篇</td></tr>
+    <tr><td>你给 agent <strong>挂哪些工具、在哪挂</strong></td><td>判据正是 Toolformer 的筛选逻辑：<strong>在「模型会瞎猜/会算错/会过时」的地方提供工具</strong>；一个不减少不确定性的工具就是噪声</td></tr>
+    <tr><td>你的语音 agent 整体架构</td><td><strong>推理内核 + 工具延伸</strong>：模型管理对话与推理，把查库、算薪资、查日程等外包给工具——别让它硬编它该去查的东西</td></tr>
+    <tr><td>「工具越多越好吗」</td><td>不是：工具多了模型<strong>选择困难、易选错</strong>。按 Toolformer 的精神——<strong>只挂「确实能降低模型出错」的工具</strong>，且描述要让模型分得清何时用哪个</td></tr>
+    <tr><td>更通用：模型不会算数 / 不知道今天几号</td><td>别指望 prompt 教会它算——<strong>那是工具的活</strong>。判断「这事该靠模型还是靠工具」，是 agent 设计的核心功夫</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：Toolformer 自监督学调工具——只保留『插入结果能降低后续预测 loss』的 API 调用，再微调。"
+       data-no="看第二节：Toolformer 用『降不降 loss』筛选有用的 API 调用，自监督生成训练数据。">
+    <div class="quiz-q">1. Toolformer 怎么判断一个工具调用「值得保留」？</div>
+    <button class="quiz-opt">人工标注哪里该调</button>
+    <button class="quiz-opt">看插入结果后，模型对后续 token 的预测 loss 有没有下降</button>
+    <button class="quiz-opt">看调用次数多不多</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：ReAct 靠 prompt 在推理时编排工具循环；Toolformer 靠自监督训练把调工具烤进权重。"
+       data-no="看第五节：ReAct 是推理时 prompt 编排，Toolformer 是训练时把工具能力学进权重。">
+    <div class="quiz-q">2. ReAct 和 Toolformer 的根本区别？</div>
+    <button class="quiz-opt">两者都不需要训练</button>
+    <button class="quiz-opt">Toolformer 不用工具</button>
+    <button class="quiz-opt">ReAct 靠 prompt 编排（推理时）；Toolformer 靠训练把能力学进权重</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：Toolformer 复用模型自己的『猜下一个词』目标当筛子，自监督、免人工标注、可规模化。"
+       data-no="看第三节：妙在用模型自己的预测误差（loss）当『有没有用』的判据，所以自监督、免标注。">
+    <div class="quiz-q">3. Toolformer 方法最妙的地方是？</div>
+    <button class="quiz-opt">复用模型自己的「猜下一个词」目标当筛子，自监督免标注</button>
+    <button class="quiz-opt">用了一个更大的模型</button>
+    <button class="quiz-opt">取消了工具调用</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">我用现成的 function-calling 模型，还需要懂 Toolformer 吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>你不用自己训，但它的判据直接指导你「怎么挂工具」。</strong>Toolformer 的核心是「<strong>工具在能降低模型不确定性的地方才有价值</strong>」——翻译成你的实操：① <strong>在模型会瞎猜的地方挂工具</strong>（算术、实时数据、私有事实、动作），它本来就擅长的别硬塞工具；② <strong>工具描述要让模型分得清何时该用</strong>（参数、用途写清楚），这相当于帮它复现 Toolformer 学到的「调用时机」判断。</p>
+      <p style="margin:0.3rem 0" class="cite">一句话：<strong>你不训练模型选工具，但你设计的「工具集 + 描述」就是模型当场判断的依据</strong>——挂得准不准，直接决定 function calling 灵不灵。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">工具是不是越多越好？挂一堆 API 给 agent 会怎样？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>不是，常常更糟。</strong>工具一多：① 模型<strong>选择困难、易选错</strong>（相似工具尤其）；② 每个工具的描述都<strong>占上下文</strong>，挤压有效空间、增延迟；③ 调试与失败面变大。Toolformer 的精神恰恰是「<strong>只留有用的</strong>」（降 loss 才保留）。</p>
+      <p style="margin:0.3rem 0" class="cite">实操：<strong>挂最小够用的工具集</strong>；相似功能合并；用清晰、互斥的描述帮模型区分；工具多到一定程度，考虑<strong>分层/路由</strong>（先让模型选一个工具<u>类别</u>，再在类别内选具体的）。<strong>少而准 &gt; 多而杂</strong>——和你做 <a href="0020-rag.html">RAG</a> 「精度 ≥ 召回」是同一种克制。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">Toolformer / RAG / ReAct 三者到底怎么分工？一句话理清</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <table>
+        <tr><th></th><th>解决什么</th><th>一句话</th></tr>
+        <tr><td><a href="0020-rag.html">RAG</a></td><td>知识不够</td><td>把对的<strong>知识</strong>检索进上下文</td></tr>
+        <tr><td><a href="0021-react.html">ReAct</a></td><td>怎么用工具的<strong>循环</strong></td><td>想-做-看，<strong>编排</strong>多步工具调用</td></tr>
+        <tr><td><strong>Toolformer</strong></td><td>模型怎么<strong>学会</strong>调工具</td><td>自监督把<strong>调工具的本事</strong>训进权重</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">合起来：<strong>Toolformer 让模型<u>会</u>调工具（含 RAG 的检索也是一种工具）→ ReAct 提供<u>怎么循环着</u>调的骨架 → 你的 agent 就跑起来了。</strong>它们不是竞品，是一套栈的不同层。</p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Schick et al. —
+      <a href="https://arxiv.org/abs/2302.04761">Toolformer: Language Models Can Teach Themselves to Use Tools（2023）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      配套回看：<a href="0021-react.html">ReAct（工具循环）</a> + <a href="0020-rag.html">RAG（检索也是一种工具）</a>——三篇合起来就是你 agent 的完整底座。
+    </p>
+  </div>
+
+  <div class="callout primary" style="border:2px solid #d2691e;background:#fffaf3">
+    <div class="label" style="font-size:1.05rem">🎉 全课收官：21 篇经典论文，全通关</div>
+    <p style="margin:0.4rem 0">你从「一个 token 怎么被吐出来」，一路读到「一个 agent 怎么自己调工具」。回望五个阶段，每一阶段回答了一个根本问题：</p>
+    <table>
+      <tr><th>阶段</th><th>回答的问题</th><th>关键论文</th></tr>
+      <tr><td>一 · 地基</td><td>模型<strong>怎么算</strong>（注意力/Transformer 怎么来的）</td><td>Attention / NMT / seq2seq / word2vec</td></tr>
+      <tr><td>二 · 预训练范式</td><td>能力<strong>怎么长出来</strong>（预训练→涌现→ICL）</td><td>BERT / GPT-1/2/3 / T5</td></tr>
+      <tr><td>三 · 规模与效率</td><td>怎么<strong>又强又便宜</strong>（量化→修配比→省微调/注意力/激活）</td><td>Scaling / Chinchilla / LoRA / FlashAttn / MoE</td></tr>
+      <tr><td>四 · 对齐与推理</td><td>怎么让它<strong>听话 + 会想</strong></td><td>RLHF / CoT / DPO / Constitutional AI</td></tr>
+      <tr><td>五 · 检索与 Agent</td><td>怎么把它<strong>扩展到权重之外</strong>、变成 agent</td><td>RAG / ReAct / Toolformer</td></tr>
+    </table>
+    <p style="margin:0.4rem 0" class="cite">
+      Mission 回看：你现在<strong>能在白纸上画 self-attention、能说清一篇新模型改了哪、能判断「这做不了/这很贵」的真假、能把 agent 输出不稳定拆到具体机制</strong>——「由内而外的物理直觉」，到手了。
+    </p>
+    <p style="margin:0.4rem 0">
+      下一步建议：① <strong>关掉 AI，默写</strong>最该练的两处——<strong>self-attention（P01）</strong>与 <strong>RLHF 三步（P15）</strong>；② 挑 2-3 篇做<strong>真实项目复盘</strong>（你的 RAG 供料层、语音 agent、Grader 各对应哪几课）；③ 想继续深挖可加读<strong>选读地基</strong>（AlexNet/ResNet/Adam…）或前沿新作。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「我想把 21 篇连成一张「现代 LLM 全景图」，怎么画？」「想验收自己学得怎样，给我出一套综合默写题？」
+    「我的某个真实项目（RAG/语音 agent/Grader），用这门课的框架该怎么重新审视？」——通关了，但学习不止于此。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0021-react.html">&#8592; 第 21 课：ReAct (P20)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P21</code> → <strong>21/21 全部完成 🎉</strong></span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Schick et al., <em>Toolformer: Language Models Can Teach Themselves to Use Tools</em>, 2023.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 候选 API 调用：为什么被保留 / 丢弃（看降不降 loss） —— */
+(function () {
+  var T = [
+    {
+      cap: "不调工具（猜）",
+      out: "…通过率是 30%？（其实 400/1400≈28.6%，模型凭感觉猜，不确定）",
+      why: "没工具，模型只能<strong>凭模糊估计</strong>填一个数——对「后面那个数字」的预测<strong>很不确定（loss 高）</strong>，还可能算错。"
+    },
+    {
+      cap: "调工具且有用 → 保留",
+      out: "…通过率是 [计算器(400/1400)→28.6] 28.6%。",
+      why: "插入计算器结果后，模型对「28.6%」的预测<strong>变得笃定（loss 暴降）</strong>。<strong>降了 loss = 有用 → 这个调用被保留</strong>，拿去微调。模型于是学会「这种地方该调计算器」。"
+    },
+    {
+      cap: "调在无关处 → 丢弃",
+      out: "这场 [计算器(1+1)→2] 考试 1400 人参加…（插在「考试」前，对后文预测毫无帮助）",
+      why: "调用插在<strong>不相关的位置</strong>，对预测后面的词<strong>没有帮助（loss 没降）</strong>→ <strong>判为无用，丢弃</strong>。筛选只认「降不降 loss」，不认「有没有调用」。"
+    }
+  ];
+  var tbtns = document.getElementById("tbtns");
+  function render(idx) {
+    var t = T[idx];
+    document.getElementById("tout").textContent = t.out;
+    document.getElementById("twhy").innerHTML = t.why;
+    Array.prototype.forEach.call(tbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  T.forEach(function (t, i) {
+    var b = document.createElement("button");
+    b.textContent = t.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    tbtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 20 课 · RAG：给冻结的模型外接一个可检索的知识库——你「改不了权重就改上下文」的正路</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 20 课 / 经典论文 <strong>P19</strong> &nbsp;·&nbsp; 阶段五：检索与 Agent（开篇 · Lewis et al., 2020）</div>
+
+  <h1>RAG：<br>给冻结的模型外接一个可检索的知识库<br><span style="font-size:0.55em;color:#a8521a">——你「改不了权重就改上下文」的正路</span></h1>
+
+  <div class="mission">
+    上一课结尾你抓住了那条铁律：<b>你能动的永远是「上下文」，动不了「权重」。</b>但模型的知识冻在权重里——<b>训练截止后的事不知道、你的私有数据不知道、不知道还会硬编（幻觉）</b>，而更新知识要重训，贵到不现实。
+    这一课 RAG 给出「往上下文里喂知识」的<b>系统做法</b>：<b>来了问题，先去一个外部知识库检索相关片段，塞进 prompt，再让模型基于「问题 + 检索到的证据」作答。</b>
+    它正是你那个 <code>rag-供料层选型</code> 在做的事的理论根，也回答：<b>怎么让一个冻结的模型，可靠地用上它「本来不知道」的知识？</b>
+  </div>
+
+  <div class="big-idea">
+    一句话：<strong>RAG = 参数化模型（LLM，知识在权重里）+ 非参数化记忆（外挂的可检索文档库）。</strong><br>
+    三步走——<strong>检索（Retrieve）</strong>：按问题从知识库捞出相关片段；<strong>增强（Augment）</strong>：把片段拼进 prompt；<strong>生成（Generate）</strong>：模型基于「问题 + 证据」作答。<br>
+    于是知识<strong>可更新（改库不改模型）、可溯源（能给出处）、少幻觉（答案接地在证据上）</strong>。<em>这就是「改不了权重就改上下文」最正的那条路。</em>
+  </div>
+
+  <h2>一、立靶：知识冻在权重里，四个硬伤</h2>
+
+  <p>
+    模型的知识，是预训练时<strong>压进权重</strong>的（你前面学的「<a href="0007-gpt-1.html">压缩即理解</a>」）。这带来四个绕不开的硬伤：
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：知识焊死在权重里 → 过时、不私有、会胡编、难更新</div>
+    <p style="margin:0.3rem 0">
+      ① <strong>过时</strong>：训练截止后的事一概不知；② <strong>不含私有数据</strong>：你公司的文档、用户的资料，它没见过；
+      ③ <strong>不知道也硬答（幻觉）</strong>：它不会说「我不知道」，会编一个像样的；④ <strong>更新要重训</strong>：想让它知道新事实，得重新训练，贵到不可行。
+      上一课的铁律说<strong>权重你改不了</strong>——那把知识<strong>放到权重外面、用时再取</strong>，行不行？
+    </p>
+  </div>
+
+  <h2>二、抽框架：检索 → 增强 → 生成</h2>
+
+  <table>
+    <tr><th>步</th><th>做什么</th><th>关键</th></tr>
+    <tr><td><strong>① 检索 Retrieve</strong></td><td>把问题变成向量，去知识库里找<strong>语义最相近</strong>的若干片段</td><td>靠 <a href="0005-word2vec.html">embedding</a> 近邻——同一向量空间里找最近邻</td></tr>
+    <tr><td><strong>② 增强 Augment</strong></td><td>把检索到的片段，<strong>拼进 prompt 的上下文</strong></td><td>这一步纯粹是「往上下文塞文本」——不碰权重</td></tr>
+    <tr><td><strong>③ 生成 Generate</strong></td><td>模型基于「<strong>问题 + 检索到的证据</strong>」作答</td><td>答案<strong>接地在证据上</strong>，而非凭权重里的记忆猜</td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">关键：把「会推理的脑子」和「装事实的库」拆开</div>
+    <p style="margin:0.3rem 0">
+      Lewis 等人（2020）把<strong>参数化</strong>的生成模型（知识/语言能力在权重里）和一个<strong>非参数化</strong>的外部记忆（Wikipedia 向量索引）结合：
+      模型负责<strong>理解问题、组织语言、推理</strong>，库负责<strong>装最新、最全、最私有的事实</strong>。
+      两者<strong>解耦</strong>——你想换知识，<strong>只改库</strong>（增删文档、重建索引），模型一动不动。这就是知识「可热更新」的根。
+    </p>
+  </div>
+
+  <h2>三、核心洞察：解耦知识、靠近邻检索、用证据接地</h2>
+
+  <p class="interactive-hint cite">
+    三个洞察，第一个是范式级，第二个把你前面学的 embedding 接上了，第三个是它最大的实用价值。
+  </p>
+
+  <table>
+    <tr><th>洞察</th><th>说明</th></tr>
+    <tr><td><strong>① 知识与模型解耦</strong></td><td><strong>参数化记忆</strong>（权重，擅长推理/语言、但冻结）+ <strong>非参数化记忆</strong>（文档库，可随时更新/替换/溯源）。两者能<strong>独立扩展、独立更新</strong>——这是 RAG 的范式贡献。</td></tr>
+    <tr><td><strong>② 检索 = 向量空间找最近邻</strong></td><td>问题和文档都被 <a href="0006-bert.html">embedding 模型</a>（bge/e5/gte 等，<strong>BERT 系</strong>）映到同一向量空间，<strong>距离近 = 语义相关</strong>。这正是你 <a href="0005-word2vec.html">word2vec</a> 学的「语义=几何」在工程上的兑现。</td></tr>
+    <tr><td><strong>③ grounding：用证据压住幻觉</strong></td><td>让模型「照着检索到的文本答、并标出处」，把回答<strong>锚在可核查的证据上</strong>，而非权重里的模糊记忆——大幅减少编造，还能<strong>溯源、可审计</strong>。</td></tr>
+  </table>
+
+  <h2>四、动手玩：同一个问题，有没有 RAG 差在哪</h2>
+  <p class="interactive-hint cite">
+    一个模型「权重里没有」的问题（私有/最新知识）。点两边，看没 RAG 怎么胡编，有 RAG 怎么基于证据答对、还给出处。
+  </p>
+
+  <div class="callout primary">
+    <div class="mono" style="background:#fff;border-radius:6px;padding:0.5rem 0.7rem;margin-bottom:0.5rem;font-size:0.9rem">用户问：你们公司的退货政策是多少天？</div>
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选方式：　<span id="rbtns"></span>
+    </div>
+    <div id="rout" class="mono" style="font-size:0.92rem;line-height:1.7;background:#fff;border-radius:6px;padding:0.6rem 0.8rem;margin:0.5rem 0;white-space:pre-wrap"></div>
+    <div id="rwhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>模型没变，变的只是「上下文里有没有那条证据」。</strong>RAG 不是让模型「学会」了退货政策，而是<strong>每次把对的那段事实，临时取来放它眼前</strong>——这就是「改上下文」的正路。
+  </p>
+
+  <h2>五、对照表（一）：无 RAG vs 有 RAG</h2>
+  <table>
+    <tr><th>维度</th><th>无 RAG（纯模型）</th><th>有 RAG</th></tr>
+    <tr><td>训练截止后的新知识</td><td>不知道</td><td><strong>知道（库里有就行）</strong></td></tr>
+    <tr><td>私有/领域数据</td><td>没见过</td><td><strong>可用（指向你的库）</strong></td></tr>
+    <tr><td>幻觉</td><td>不知道也硬编</td><td><strong>接地在证据上，大幅减少</strong></td></tr>
+    <tr><td>溯源</td><td>无</td><td><strong>能给出处，可审计</strong></td></tr>
+    <tr><td>更新知识</td><td>要重训（贵）</td><td><strong>改库即可（便宜、即时）</strong></td></tr>
+  </table>
+
+  <h2>六、对照表（二）：RAG vs 微调 vs 长上下文，以及 RAG 的命门</h2>
+  <table>
+    <tr><th>手段</th><th>改什么</th><th>适合</th></tr>
+    <tr><td><strong>RAG</strong></td><td>不改权重，<strong>外挂知识</strong></td><td>需要<strong>最新/私有事实</strong>、知识常变、要溯源</td></tr>
+    <tr><td><a href="0013-lora.html">LoRA</a>/微调</td><td>改权重（永久）</td><td>要<strong>换风格/学技能/固定格式</strong></td></tr>
+    <tr><td>长上下文</td><td>不改权重，一次性塞</td><td><strong>一次性</strong>大输入（一篇长文档当场问）</td></tr>
+  </table>
+  <p class="cite">
+    一句话区分：<strong>要它「知道某些事实」→ RAG；要它「换个做事方式」→ 微调；「就这一篇，当场读」→ 长上下文。</strong>（呼应 LoRA 课那张表。）
+  </p>
+  <p class="cite">
+    🔮 但 RAG 的命门是<strong>检索质量</strong>——<strong>检索回来的是垃圾，再强的模型也答不对（garbage in, garbage out）</strong>。瓶颈通常不在生成、而在<strong>检索</strong>：分块策略、embedding 选型、top-k、重排（rerank）全在影响它。这正是你 <code>rag-供料层选型</code> 的战场。下一课 <strong>P20 ReAct</strong> 再进一步：把「检索」从固定的前置一步，变成 <strong>agent 在推理中<u>主动决定何时去查</u>的一个动作</strong>——你的语音 agent 就站在这条线上。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你做的 <code>rag-供料层</code> / 知识库注入</td><td>就是 RAG 的<strong>非参数化记忆 + 检索</strong>那一半——你天天在调的就是这套「检索→增强→生成」</td></tr>
+    <tr><td>你反复强调供料层「<strong>质 ≥ 量</strong>、要清洗」</td><td>正中 RAG 命门：<strong>检索质量是天花板</strong>，库脏/分块烂/检索偏，模型再强也救不回（呼应 <a href="0008-gpt-2.html">WebText</a>/<a href="0010-t5.html">C4</a> 同一信条）</td></tr>
+    <tr><td>你纠结「上 RAG 还是微调还是塞长上下文」</td><td>就是上面那张取舍表：<strong>事实变/私有 → RAG；技能/风格 → 微调；一次性大输入 → 长上下文</strong>，常组合用</td></tr>
+    <tr><td>我（Claude Code）的 <strong>memory 系统</strong>（recall 相关记忆文件再注入）</td><td>本质就是一个 RAG：<strong>按相关性检索你的记忆 → 注入上下文</strong>，让冻结的我用上「这个项目/这个你」的专属知识</td></tr>
+    <tr><td>「检索回来一堆不相关片段，反而把模型带歪」</td><td>RAG 的真实坑：<strong>无关证据是噪声、甚至误导</strong>——所以要 rerank、控 top-k、过滤低相关，检索精度比召回更要紧</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：RAG = 检索相关文档 → 拼进 prompt → 模型基于问题+证据作答，不改权重。"
+       data-no="看第二节：RAG 三步是检索→增强(拼进上下文)→生成，给冻结模型外挂可检索知识。">
+    <div class="quiz-q">1. RAG 的三步是？</div>
+    <button class="quiz-opt">微调 → 部署 → 推理</button>
+    <button class="quiz-opt">检索相关文档 → 拼进 prompt → 基于证据生成</button>
+    <button class="quiz-opt">压缩 → 量化 → 蒸馏</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：RAG 把参数化模型（权重，会推理）和非参数化记忆（外部库，装事实可更新）解耦——改库不改模型。"
+       data-no="看第三节：RAG 的范式贡献是解耦『会推理的模型』和『装事实的可更新外部库』。">
+    <div class="quiz-q">2. RAG 的范式贡献是？</div>
+    <button class="quiz-opt">让模型参数更多</button>
+    <button class="quiz-opt">取消了预训练</button>
+    <button class="quiz-opt">解耦「参数化模型（会推理）」和「非参数化记忆（装事实、可更新）」</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：检索质量是天花板——检索回垃圾，再强的模型也答不对（garbage in garbage out）。"
+       data-no="看第六节：RAG 的命门是检索质量，瓶颈常在检索而非生成。">
+    <div class="quiz-q">3. RAG 系统最常见的命门是？</div>
+    <button class="quiz-opt">检索质量——检索回垃圾，模型再强也答不对</button>
+    <button class="quiz-opt">模型参数不够多</button>
+    <button class="quiz-opt">必须重新训练模型</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">既然可以塞超长上下文了，RAG 是不是要被淘汰了？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>没有，长上下文解决不了 RAG 的核心问题。</strong>长上下文是「<strong>把已有的一堆文本一次性塞进去</strong>」，但：① 你的知识库可能有<strong>百万级文档</strong>，再长的窗口也塞不下，仍需先<strong>检索</strong>出相关的；② 长上下文<strong>每次都按全长付费、按全长增延迟</strong>（<a href="0014-flashattention.html">KV cache、计算量</a>都涨），把无关内容全塞既贵又慢还可能「迷失在中间」；③ 知识更新还是得有个<strong>可增删的库</strong>。</p>
+      <p style="margin:0.3rem 0" class="cite">正确关系：<strong>长上下文让 RAG 更好用（每次能放更多检索结果、对分块更宽容），而不是替代它</strong>。检索这步——「从海量里挑出该看的」——长上下文消不掉。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">RAG 能彻底消除幻觉吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>不能，只是大幅降低、并让错误可定位。</strong>RAG 把答案接地在证据上，但仍会出错的几种情况：① <strong>检索错了</strong>（捞回不相关/过时片段，模型照着错的答）；② <strong>模型无视证据</strong>（仍用权重里的旧记忆，或证据与它"先验"冲突时不信）；③ <strong>证据本身错</strong>（库里就是脏数据）；④ <strong>检索没命中但模型硬答</strong>（没找到相关却不说「不知道」）。</p>
+      <p style="margin:0.3rem 0" class="cite">缓解：① 检索质量优先（rerank、过滤低相关）；② prompt 明确「只依据给定材料、没有就说不知道、并引用出处」；③ 让它<strong>标注每句的来源</strong>便于核查（把幻觉变成可抓的引用错误）；④ 库要清洗。<strong>RAG 把幻觉从「凭空编」变成「可溯源、可定位」，这本身就是巨大进步。</strong></p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">检索这步，到底哪几个旋钮最影响效果？（供料层选型该看什么）</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">按影响排，几个核心旋钮：</p>
+      <table>
+        <tr><th>旋钮</th><th>在调什么</th></tr>
+        <tr><td><strong>分块（chunking）</strong></td><td>文档怎么切——太大塞不下且稀释、太小丢上下文。最被低估、却最影响效果的一环</td></tr>
+        <tr><td><strong>embedding 模型</strong></td><td>决定「语义相近」判得准不准（中文/领域要选对，bge/e5/gte 系）</td></tr>
+        <tr><td><strong>top-k + rerank</strong></td><td>召回几条、再用更强的重排模型把最相关的顶上来——<strong>精度比召回更要紧</strong></td></tr>
+        <tr><td>混合检索</td><td>向量（语义）+ 关键词（BM25）结合，补稠密检索对专有名词/精确匹配的短板</td></tr>
+      </table>
+      <p style="margin:0.3rem 0" class="cite">心法（你已有的直觉）：<strong>质 ≥ 量、检索精度 ≥ 召回数量</strong>。先把分块和 rerank 做对，比换更大的生成模型划算得多——因为<strong>命门在检索不在生成</strong>。建个小评测集（问题→应检索到哪些片段）量化检索命中率，是供料层选型最该先做的事。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">稠密检索（向量）vs 关键词检索（BM25），用哪个？要混合吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">两者<strong>互补</strong>：</p>
+      <table>
+        <tr><th></th><th>稠密（向量）</th><th>BM25（关键词）</th></tr>
+        <tr><td>强在</td><td><strong>语义</strong>（近义、改写）</td><td><strong>精确</strong>（专名、ID、术语、码）</td></tr>
+        <tr><td>弱在</td><td>精确匹配会糊掉漏掉</td><td>没语义，近义词不通</td></tr>
+      </table>
+      <p style="margin:0.3rem 0"><strong>大多数情况混合(hybrid)最稳</strong>：两路都跑、RRF 融合、再 rerank。语料里<strong>精确标识符多</strong>（代码/法条/SKU/人名）→ BM25 不能省（纯向量会静默漏）；<strong>对话式查询+散文</strong>→ 稠密吃香。<strong>默认推荐 hybrid + reranker</strong>。但别过度工程：<strong>调好的 BM25 基线强得惊人又近乎零成本</strong>，刚起步先用它打底、量化后再决定加不加向量。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">分块到底怎么切才好，有经验法则吗？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">核心矛盾：<strong>太大</strong>→盖多主题、embedding 糊、稀释相关性；<strong>太小</strong>→丢上下文（"它要 30 块"——"它"是啥）。法则：</p>
+      <p style="margin:0.3rem 0">① <strong>按语义/结构边界切，别盲目按字数</strong>——沿标题/段落/列表项/Q&A 对，一块=一个完整意思；② <strong>典型 ~200-500 token</strong> 起步（随密度变，非铁律）；③ <strong>相邻块 10-20% 重叠</strong>，免得一个意思被劈两半；④ <strong>每块带上下文</strong>——把文档标题/小节名拼到块首（进阶：Contextual Retrieval，用 LLM 给每块加一句"它在全文何处"）；⑤ <strong>父子块(small-to-big)</strong>——小块做精确检索、喂模型时给大块（精度+上下文兼得）。</p>
+      <p style="margin:0.3rem 0" class="cite">实操：先做"结构感知分块 + 每块带标题上下文"，再用下条的评测去调——<strong>没有通用最优，依赖你的语料和查询</strong>，所以必须量化。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">怎么量化评测检索质量，而不是凭感觉调？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>第一层 · 单独评检索（最重要，多数 RAG 失败在这）</strong>：① 攒一批代表性查询；② 给每个标"应检索到哪些块"（gold set；可自举——拿一段文档让 LLM 生成它能答的问题，该段即 ground-truth，抽样人工验）；③ 算指标：</p>
+      <table>
+        <tr><th>指标</th><th>测什么</th></tr>
+        <tr><td><strong>Recall@k</strong></td><td>相关块有几个进 top-k——<strong>RAG 最关键</strong>（没检索到，生成再强也答不出）</td></tr>
+        <tr><td>Precision@k</td><td>top-k 里几个真相关（噪声多少）</td></tr>
+        <tr><td>MRR / NDCG</td><td>对的块排得够不够靠前（模型更关注前文）</td></tr>
+      </table>
+      <p style="margin:0.3rem 0"><strong>第二层 · 端到端</strong>：faithfulness（答案忠于证据吗）+ 正确性，用 <a href="0016-instructgpt-rlhf.html">LLM-as-judge</a>（你的 Grader 直接复用）。<strong>纪律：检索和生成分开诊断</strong>——先分清"没捞到"还是"捞到了答歪"。</p>
+      <p style="margin:0.3rem 0" class="cite">工作流：改一个旋钮 → 重跑评测集 → 看 Recall@k/NDCG 动没动 → 留或回退（就是 autoevolve/harness 套到 RAG）。配 held-out 查询集防过拟合（<a href="0016-instructgpt-rlhf.html">Goodhart</a>）。现成工具看 RAGAS。<strong>永远先量化、再调；命门在检索。</strong></p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Lewis et al. —
+      <a href="https://arxiv.org/abs/2005.11401">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks（2020）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      配套回看：<a href="0005-word2vec.html">word2vec（语义=几何）</a> + <a href="0006-bert.html">BERT（检索用的 embedding 模型都是 BERT 系）</a>——检索这半套，你前面已经埋好了根。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      阶段五「检索与 Agent」开篇。下一篇 <strong>P20 ReAct</strong>：把「检索/查工具」变成 agent 在推理中<strong>主动交错的「想一步、做一步」</strong>——<strong>你的语音 agent 的理论原型</strong>。收官 P21 Toolformer 讲工具调用的由来。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「稠密检索（向量）和关键词检索（BM25），我该用哪个、要不要混合？」「分块到底怎么切才好，有没有经验法则？」
+    「RAG 的检索质量，我怎么量化评测、而不是凭感觉调？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0019-constitutional-ai.html">&#8592; 第 19 课：Constitutional AI (P18)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P19</code> → 明天 P20（ReAct）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Lewis et al., <em>Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</em>, 2020.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 同一问题，有没有 RAG —— */
+(function () {
+  var R = [
+    {
+      cap: "无 RAG（纯模型）",
+      out: "一般来说，退货政策通常是 7 天内可退……（其实是模型按「常见情况」编的，不是你公司的真实政策）",
+      why: "模型权重里<strong>没有你公司的政策</strong>，但它不会说「不知道」——会按训练里见过的「常见做法」<strong>硬编一个</strong>。这就是幻觉。"
+    },
+    {
+      cap: "有 RAG",
+      out: "根据《退货政策》文档：本店支持 30 天内无理由退货。\n（来源：policy/refund.md 第 2 条）",
+      why: "先去库里<strong>检索</strong>到「退货政策」那段 → <strong>拼进上下文</strong> → 模型<strong>照着证据答「30 天」并给出处</strong>。模型没变，只是眼前多了对的那条事实。"
+    }
+  ];
+  var rbtns = document.getElementById("rbtns");
+  function render(idx) {
+    var r = R[idx];
+    document.getElementById("rout").textContent = r.out;
+    document.getElementById("rwhy").innerHTML = r.why;
+    Array.prototype.forEach.call(rbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  R.forEach(function (r, i) {
+    var b = document.createElement("button");
+    b.textContent = r.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    rbtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>

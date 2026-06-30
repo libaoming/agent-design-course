@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 21 课 · ReAct：想一步、做一步、看一步——你语音 agent 的循环骨架</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
+  <div class="lesson-no">第 21 课 / 经典论文 <strong>P20</strong> &nbsp;·&nbsp; 阶段五：检索与 Agent（Yao et al., 2022）</div>
+
+  <h1>ReAct：<br>想一步、做一步、看一步<br><span style="font-size:0.55em;color:#a8521a">——你语音 agent 的循环骨架</span></h1>
+
+  <div class="mission">
+    你学的两块拼图，各有缺口：<a href="0017-chain-of-thought.html">CoT</a> 让模型「一步步想」，但想是<b>封闭</b>的——拿不到新信息、还可能越想越飘（无依据）；<a href="0020-rag.html">RAG</a> 能取信息，但<b>只在开头检索一次</b>，取完就定死。
+    可真实任务往往是：<b>你得先想一下、才知道该查什么；查到结果后，再想下一步该干嘛</b>——要边想边做、按需取信息。
+    这一课 ReAct 把「想」和「做」<b>交错成一个循环</b>，组装出了 agent 的基本形态。它正是你语音 agent「感知→思考→行动→再感知」的理论原型：<b>一个会推理、会调工具、会根据结果调整的循环，到底长什么样、为什么这样才work？</b>
+  </div>
+
+  <div class="big-idea">
+    一句话：<strong>ReAct = 把「推理（Reasoning）」和「行动（Acting）」交错成一个循环。</strong><br>
+    <strong>Thought（想一步）→ Action（做一步，调工具/搜索）→ Observation（看结果）→ Thought → …</strong> 直到给出答案。<br>
+    妙处在<strong>相互增强</strong>：<strong>推理决定该做什么动作（规划、拆解、处理异常）；动作把真实信息喂回来给推理接地（防幻觉、可纠错）。</strong>
+    <em>这就是现代几乎所有 agent（包括你的语音 agent）的循环骨架，也是 RAG 从「一次性检索」升级成「模型自己决定何时查、查完再想」的形态。</em>
+  </div>
+
+  <h2>一、立靶：会想的不会做，会做的不会想</h2>
+
+  <p>
+    把你学过的两条能力摆一起，缺口就露出来了：
+  </p>
+
+  <div class="callout">
+    <div class="label">立靶：推理和行动，能不能合一？</div>
+    <p style="margin:0.3rem 0">
+      <strong>只会推理（CoT）</strong>：在脑子里一步步想，但<strong>取不到外部信息</strong>、想错了也没东西纠正它——容易<strong>一本正经地飘</strong>。
+      <strong>只会行动（纯调工具）</strong>：能搜、能调 API，但<strong>没脑子规划</strong>——不知道<strong>先做什么、为什么做、出错了怎么办</strong>。
+      <strong>RAG</strong> 介于之间，但它<strong>只在开头检索一次</strong>，多跳任务（答案要查好几轮、且后一轮查什么取决于前一轮结果）就不够用。
+      <strong>能不能让模型：想一下 → 据此去做一个动作 → 看到结果 → 再想 → 再做……？</strong>
+    </p>
+  </div>
+
+  <h2>二、抽框架：Thought → Action → Observation 循环</h2>
+
+  <table>
+    <tr><th>环节</th><th>是什么</th><th>来自你学过的</th></tr>
+    <tr><td><strong>Thought（思考）</strong></td><td>模型写一段推理：我现在知道啥、还缺啥、下一步该做什么</td><td>就是 <a href="0017-chain-of-thought.html">CoT</a>，只是嵌进了循环</td></tr>
+    <tr><td><strong>Action（行动）</strong></td><td>模型发起一个动作：搜索、查库、调 API、计算……</td><td>工具调用（下一课 <a href="#">Toolformer</a> 讲它怎么学来的）</td></tr>
+    <tr><td><strong>Observation（观察）</strong></td><td>动作的结果<strong>回到上下文</strong>，成为下一步推理的输入</td><td>像 <a href="0020-rag.html">RAG</a> 的「增强」，但<strong>每轮都来一次</strong></td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">关键：循环，直到「想清楚了」才收尾</div>
+    <p style="margin:0.3rem 0">
+      模型不停地 <strong>想 → 做 → 看</strong>：每看到一个新 Observation，就把它纳入推理、决定下一个 Action，直到 Thought 判断「信息够了」，才输出最终答案。
+      和 <a href="0020-rag.html">RAG</a> 的根本区别——<strong>RAG 是「先检索一次，再答」；ReAct 是「检索/行动多次，每次由推理决定下一步」</strong>。检索这件事，从固定的前置步，变成了<strong>模型在循环里主动控制的动作</strong>。
+    </p>
+  </div>
+
+  <h2>三、核心洞察：推理与行动「相互增强」（Synergize）</h2>
+
+  <p class="interactive-hint cite">
+    论文标题里的 Synergizing 是题眼——不是「推理 + 行动」简单相加，而是两者<strong>互相补对方的命门</strong>。
+  </p>
+
+  <table>
+    <tr><th>方向</th><th>说明</th></tr>
+    <tr><td><strong>① 推理 → 引导行动</strong></td><td>Thought 决定<strong>该调哪个工具、为什么、参数是啥</strong>，能<strong>拆解任务、规划顺序、处理异常</strong>（搜不到就换个词再搜）。<strong>没有推理的行动是瞎做。</strong></td></tr>
+    <tr><td><strong>② 行动 → 给推理接地</strong></td><td>Observation 把<strong>真实外部信息</strong>灌回推理，让后续思考<strong>建立在事实上而非凭空</strong>——这正好补上 CoT「闭门空想会飘」的命门。<strong>没有行动的推理是空想。</strong></td></tr>
+  </table>
+
+  <div class="callout primary">
+    <div class="label">1 + 1 &gt; 2</div>
+    <p style="margin:0.3rem 0">
+      <strong>CoT 单独用</strong>：会推理但无依据，容易幻觉；<strong>纯行动单独用</strong>：能动手但不会规划，乱撞。
+      ReAct 把它们<strong>咬合成一个循环</strong>：推理让行动有章法，行动让推理有依据。
+      在知识问答、网页操作、决策任务上，<strong>ReAct 全面超过「只推理」和「只行动」</strong>——这就是「协同」的实证。
+    </p>
+  </div>
+
+  <h2>四、动手玩：一个多跳问题，纯 CoT vs ReAct</h2>
+  <p class="interactive-hint cite">
+    一个要「查两轮」才能答的问题（后一轮查什么，取决于前一轮的结果）。点两边，看纯 CoT 怎么凭记忆冒险、ReAct 怎么边想边查、步步接地。
+  </p>
+
+  <div class="callout primary">
+    <div class="mono" style="background:#fff;border-radius:6px;padding:0.5rem 0.7rem;margin-bottom:0.5rem;font-size:0.9rem">问题：《盗梦空间》的导演，还导过哪部 2014 年的太空题材电影？</div>
+    <div style="margin-bottom:0.5rem;font-family:-apple-system,sans-serif;font-size:0.86rem">
+      选方式：　<span id="rbtns"></span>
+    </div>
+    <div id="rout" style="margin:0.5rem 0"></div>
+    <div id="rwhy" class="cite" style="margin-top:0.3rem"></div>
+  </div>
+
+  <p class="cite">
+    看出门道了吗：<strong>ReAct 把「我还缺什么 → 去查 → 拿到 → 再想下一步缺什么」走成了一条接地的链</strong>。每一步答案都锚在 Observation 上，而不是赌模型记得对。<strong>多跳、可纠错、能停在「够了」——这就是 agent 在干的事。</strong>
+  </p>
+
+  <h2>五、对照表（一）：CoT-only vs Act-only vs ReAct</h2>
+  <table>
+    <tr><th>维度</th><th>只推理（CoT）</th><th>只行动（纯工具）</th><th>ReAct</th></tr>
+    <tr><td>能取外部信息吗</td><td>不能</td><td>能</td><td><strong>能</strong></td></tr>
+    <tr><td>会规划/处理异常吗</td><td>会想但落不了地</td><td>不会</td><td><strong>会（Thought 主导）</strong></td></tr>
+    <tr><td>幻觉</td><td>高（无接地）</td><td>—</td><td><strong>低（Observation 接地）</strong></td></tr>
+    <tr><td>多跳任务</td><td>差</td><td>差</td><td><strong>强</strong></td></tr>
+  </table>
+
+  <h2>六、对照表（二）：ReAct 在你已学版图里的位置</h2>
+  <table>
+    <tr><th>关系</th><th>说明</th></tr>
+    <tr><td>= CoT + 工具，循环化</td><td>Thought 就是 <a href="0017-chain-of-thought.html">CoT</a>，加上 Action/Observation 并反复迭代</td></tr>
+    <tr><td>= RAG 的升级</td><td><a href="0020-rag.html">RAG</a> 检索一次；ReAct <strong>由模型在循环里决定何时查、查什么、要不要再查</strong>（这就是「agentic RAG」）</td></tr>
+    <tr><td>= agent 循环骨架</td><td>今天所有 function-calling / 工具 agent 的「想-做-看」主循环，模板源于此</td></tr>
+  </table>
+  <p class="cite">
+    ⚠️ ReAct 的真实坑（你调 agent 一定撞过）：<strong>死循环</strong>（反复做同一个无效动作）、<strong>不肯停</strong>（信息够了还在查）、<strong>选错工具/参数</strong>、<strong>Observation 太长淹没上下文</strong>。这些问题<strong>大多出在 Thought 的质量</strong>——agent 强不强，很大程度是「两个动作之间它想得好不好」。
+  </p>
+  <p class="cite">
+    🔮 收官在即：ReAct 讲的是<strong>用工具的推理循环</strong>，下一课 <strong>P21 Toolformer</strong> 讲<strong>模型怎么自己学会「该在哪调工具、怎么调」</strong>——function calling 的由来。两课合起来，就是你 agent 的完整底座。
+  </p>
+
+  <h2>七、映射到你的项目</h2>
+  <table>
+    <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
+    <tr><td>你的<strong>语音招聘 agent</strong>「听 → 想 → 调工具/查资料 → 据结果应答 → 再听」</td><td>就是 ReAct 循环：<strong>Thought（想）+ Action（调工具）+ Observation（结果）</strong>反复迭代——你做的就是这套</td></tr>
+    <tr><td>你想让 agent「先查知识库再回答」，且能多查几轮</td><td>就是 <strong>agentic RAG</strong>：把 <a href="0020-rag.html">RAG</a> 的一次性检索，变成模型<strong>在循环里自己决定何时检索、要不要追查</strong></td></tr>
+    <tr><td>你的 agent <strong>function calling / 工具编排</strong></td><td>ReAct 是其推理骨架：每次工具调用前那段「为什么调、调哪个」的 Thought，决定编排质不质量</td></tr>
+    <tr><td>你的 agent <strong>死循环、不停、乱调工具</strong>这些 bug</td><td>都是 ReAct 的经典失败模式——<strong>多在 Thought 环节修</strong>（让它显式判断「是否已够/是否在重复/该不该停」），而非加更多工具</td></tr>
+    <tr><td>「agent 质量到底取决于啥」</td><td>很大程度是<strong>「两个动作之间的推理质量」</strong>——所以 <a href="0017-chain-of-thought.html">CoT</a> 的功夫（先想后做、显式推理）直接决定 agent 上限</td></tr>
+  </table>
+
+  <h2>八、检索练习（关掉上文，凭记忆答）</h2>
+
+  <div class="quiz" data-answer="1"
+       data-ok="对：ReAct 把推理(Thought)和行动(Action)交错成循环——想一步、做一步、看结果(Observation)、再想。"
+       data-no="看第二节：ReAct 的循环是 Thought→Action→Observation→Thought…，推理和行动交错。">
+    <div class="quiz-q">1. ReAct 的核心结构是？</div>
+    <button class="quiz-opt">把多个模型串成流水线</button>
+    <button class="quiz-opt">Thought→Action→Observation 交错循环（想-做-看）</button>
+    <button class="quiz-opt">把推理过程并行采样后投票</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="2"
+       data-ok="对：推理引导行动（决定做什么、处理异常），行动给推理接地（真实信息防幻觉）——相互增强。"
+       data-no="看第三节：ReAct 的协同是『推理引导行动 + 行动给推理接地』，互补对方命门。">
+    <div class="quiz-q">2. ReAct 里推理和行动怎么「相互增强」？</div>
+    <button class="quiz-opt">推理让模型更快，行动让模型更省</button>
+    <button class="quiz-opt">两者其实没关系，只是并列</button>
+    <button class="quiz-opt">推理引导行动（规划），行动给推理接地（防幻觉）</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz" data-answer="0"
+       data-ok="对：RAG 开头检索一次；ReAct 由模型在循环里决定何时查、查什么、要不要再查（agentic RAG）。"
+       data-no="看第二节末/第六节：RAG 一次性检索，ReAct 让模型在循环里多次、自主地决定检索。">
+    <div class="quiz-q">3. ReAct 和 RAG 在「检索」上的根本区别？</div>
+    <button class="quiz-opt">RAG 检索一次；ReAct 由模型在循环里自主决定何时/查几次</button>
+    <button class="quiz-opt">ReAct 不需要检索</button>
+    <button class="quiz-opt">两者完全一样</button>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <h2>九、常见问题 FAQ</h2>
+  <p class="interactive-hint cite">把这一课接到你真实工作上的几个关键问。点开看答。</p>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">怎么防 agent 死循环 / 不肯停 / 反复调同一个工具？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">这些几乎都是 <strong>Thought 环节没管住</strong>，对应几招：① <strong>设最大步数上限</strong>（兜底，到了强制收尾）；② <strong>让 Thought 显式自检</strong>——每轮要它回答「我是否已有足够信息？这个动作和上一步是否重复？该不该停？」；③ <strong>把历史动作/观察喂进上下文</strong>，让它「看得见自己做过啥」，否则会失忆地重复；④ <strong>给明确的停止条件</strong>（什么算「答完了」）。</p>
+      <p style="margin:0.3rem 0" class="cite">根因心智：<strong>agent 的循环控制力住在 Thought 里</strong>。与其加更多工具，不如把「该不该继续」的判断写进每一步推理。死循环往往是「它不知道自己已经试过了」或「没人告诉它什么时候算完」。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">现在有了 function calling，ReAct 还相关吗？是不是过时了？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>没过时——function calling 是 ReAct 的「产品化封装」，骨架还是它。</strong>早期 ReAct 靠 prompt 让模型按 <code>Thought/Action/Observation</code> 格式输出、再由外层代码解析执行。现在模型被训得能直接<strong>结构化地吐出工具调用</strong>（function calling），把「Action」标准化了——但<strong>「想一步→调工具→拿结果→再想」的循环一模一样</strong>。</p>
+      <p style="margin:0.3rem 0" class="cite">所以理解 ReAct 仍是理解 agent 的钥匙：function calling 只是让 Action 那步更干净，<strong>Thought（要不要调、调哪个、看完结果怎么办）和整个循环逻辑还得你来设计</strong>。多数 agent 框架（LangChain agent、各家 SDK 的 agent loop）骨子里都是 ReAct。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">ReAct 每轮都把推理和观察堆进上下文，会不会越跑越长、越贵越慢？</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0"><strong>会，这是 agent 的真实成本陷阱。</strong>每轮 Thought + Observation 都累加进上下文，多跑几轮，token、延迟、钱都线性涨（还可能「迷失在中间」）。尤其 <strong>Observation 可能很长</strong>（一整页搜索结果、一大段 API 返回），几轮就把窗口撑爆。</p>
+      <p style="margin:0.3rem 0" class="cite">缓解：① <strong>压缩 Observation</strong>（只留相关摘要再入上下文，别原样塞）；② <strong>限制步数 / 早停</strong>；③ <strong>阶段性总结</strong>（把前几轮压成一段记忆，丢掉原始细节）；④ <strong>对延迟敏感的 realtime 场景</strong>（你的语音 agent），更要控轮数、用更快的工具、把重活挪到不卡用户的环节——这是 <a href="0017-chain-of-thought.html">CoT</a>「想得多=慢而贵」取舍在 agent 上的放大版。</p>
+    </div>
+  </details>
+
+  <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">记忆锚：ReAct 就是「办事版的知行合一」</summary>
+    <div style="padding:0.4rem 0 0.6rem">
+      <p style="margin:0.3rem 0">王阳明提「知行合一」，<strong>正是为治两种病</strong>，和本课命门几乎同一句话：</p>
+      <table>
+        <tr><th>王阳明的病</th><th>ReAct 的命门</th></tr>
+        <tr><td><strong>冥行妄作</strong>（懵懂任意去做、不思省察）</td><td>没有推理的行动是<strong>瞎做</strong></td></tr>
+        <tr><td><strong>悬空思索</strong>（空想揣摸、不肯躬行）</td><td>没有行动的推理是<strong>空想</strong></td></tr>
+      </table>
+      <p style="margin:0.3rem 0">更妙：王阳明「<strong>知是行之始，行是知之成</strong>」对应 ReAct 循环——Thought（知）启动 Action（行），Observation 把结果灌回、完成并校正下一轮的知（「知→行→知之成→再知」）；「<strong>事上磨练</strong>」≈「行动给推理接地」。</p>
+      <p style="margin:0.3rem 0" class="cite"><strong>一处别画等号</strong>：王阳明主张知行<strong>本是一体</strong>（取消二元），ReAct 是把两个分开的步骤<strong>交替咬合</strong>（弥合二元）；且王阳明的「知」是良知（讲成人），ReAct 的「知」是工具理性（讲办事）。<strong>精神一致、内核不同。</strong>但作记忆锚足够：<strong>ReAct = 用「想-做-看」循环，治「只知不行(幻觉)」和「只行不知(乱撞)」两种病。</strong></p>
+    </div>
+  </details>
+
+  <div class="callout primary">
+    <div class="label">本课主源</div>
+    <p style="margin:0.3rem 0">
+      读原典：Yao et al. —
+      <a href="https://arxiv.org/abs/2210.03629">ReAct: Synergizing Reasoning and Acting in Language Models（2022）</a>。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      配套回看：<a href="0017-chain-of-thought.html">CoT（Thought 的来源）</a> + <a href="0020-rag.html">RAG（Observation/检索的来源）</a>——ReAct 是这两块的循环化合体。
+    </p>
+    <p style="margin:0.3rem 0" class="cite">
+      <strong>只剩最后一篇了！</strong>下一课 <strong>P21 Toolformer</strong>：模型怎么<strong>自己学会</strong>在合适的地方调用工具（function calling 的由来）——读完，21 篇全通关。
+    </p>
+  </div>
+
+  <div class="ask-teacher">
+    <b>我是你的老师，随时提问。</b> 比如：「多步 agent 出错了，我怎么定位是 Thought 错还是工具/Observation 错？」「ReAct 和 Plan-and-Execute（先规划全程再执行）哪种更适合我的语音 agent？」
+    「Reflexion（让 agent 反思失败再重试）和 ReAct 是什么关系？」——别带着模糊往下走。
+  </div>
+
+  <div class="nav">
+    <span class="cite"><a href="0020-rag.html">&#8592; 第 20 课：RAG (P19)</a></span>
+    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P20</code> → 明天 P21（Toolformer，收官）</span>
+  </div>
+
+  <p class="cite" style="margin-top:2rem">参考：<br>
+    Yao et al., <em>ReAct: Synergizing Reasoning and Acting in Language Models</em>, 2022.
+  </p>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+/* —— 多跳问题：纯 CoT vs ReAct —— */
+(function () {
+  var R = [
+    {
+      cap: "纯 CoT（无工具）",
+      html: "<div style='background:#fff;border-radius:6px;padding:0.5rem 0.7rem;font-size:0.9rem;line-height:1.7'>" +
+        "<b>推理：</b>《盗梦空间》的导演是诺兰……他 2014 年的太空片，应该是……<b>《星际穿越》</b>？（凭记忆，<span style='color:#b23'>没法核实，万一记错就直接错</span>）</div>",
+      why: "全靠权重里的记忆<strong>一口气推到底</strong>，没有任何外部核实——对就对、错就一本正经地错。多跳事实题正是 CoT 最容易飘的地方。"
+    },
+    {
+      cap: "ReAct（边想边查）",
+      html: "<div style='font-size:0.88rem;line-height:1.6'>" +
+        "<div style='background:#fff;border-left:4px solid #d2691e;border-radius:4px;padding:0.35rem 0.6rem;margin:0.3rem 0'><b style='color:#d2691e'>Thought 1</b> 我得先知道《盗梦空间》的导演是谁。</div>" +
+        "<div style='background:#fff;border-left:4px solid #2a7;border-radius:4px;padding:0.35rem 0.6rem;margin:0.3rem 0'><b style='color:#2a7'>Action 1</b> 搜索「盗梦空间 导演」</div>" +
+        "<div style='background:#f6efe1;border-radius:4px;padding:0.35rem 0.6rem;margin:0.3rem 0'><b>Observation 1</b> 克里斯托弗·诺兰</div>" +
+        "<div style='background:#fff;border-left:4px solid #d2691e;border-radius:4px;padding:0.35rem 0.6rem;margin:0.3rem 0'><b style='color:#d2691e'>Thought 2</b> 现在查诺兰 2014 年的太空题材电影。</div>" +
+        "<div style='background:#fff;border-left:4px solid #2a7;border-radius:4px;padding:0.35rem 0.6rem;margin:0.3rem 0'><b style='color:#2a7'>Action 2</b> 搜索「诺兰 2014 太空电影」</div>" +
+        "<div style='background:#f6efe1;border-radius:4px;padding:0.35rem 0.6rem;margin:0.3rem 0'><b>Observation 2</b> 《星际穿越》(Interstellar, 2014)</div>" +
+        "<div style='background:#fff;border-left:4px solid #a8521a;border-radius:4px;padding:0.35rem 0.6rem;margin:0.3rem 0'><b style='color:#a8521a'>答案</b> 《星际穿越》（每一步都有出处）</div>" +
+        "</div>",
+      why: "<strong>想一步→查一步→看结果→再想</strong>：第二轮查什么（诺兰的片）<strong>取决于第一轮的结果</strong>（导演是诺兰）。每个事实都<strong>接地在 Observation 上</strong>，不是赌记忆。这就是多跳任务该有的样子。"
+    }
+  ];
+  var rbtns = document.getElementById("rbtns");
+  function render(idx) {
+    var r = R[idx];
+    document.getElementById("rout").innerHTML = r.html;
+    document.getElementById("rwhy").innerHTML = r.why;
+    Array.prototype.forEach.call(rbtns.children, function (b, i) {
+      b.style.background = (i === idx) ? "#d2691e" : "#fff";
+      b.style.color = (i === idx) ? "#fff" : "#a8521a";
+    });
+  }
+  R.forEach(function (r, i) {
+    var b = document.createElement("button");
+    b.textContent = r.cap;
+    b.style.cssText = "border:1.5px solid #d2691e;border-radius:6px;padding:0.2rem 0.6rem;margin:0.15rem 0.2rem;cursor:pointer;font-size:0.8rem;font-family:inherit";
+    b.addEventListener("click", function () { render(i); });
+    rbtns.appendChild(b);
+  });
+  render(0);
+})();
+</script>
+</body>
+</html>
