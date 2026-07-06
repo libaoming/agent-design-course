@@ -2,13 +2,16 @@
 
 > 每次 session 第一个读的文件。收尾必更新本文件。
 
-## 一句话状态（2026-06-16 新增 Module E · 上下文工程）
-**5 讲义模块 31 讲**（A 产品能力 6 / B 工程地基 6 / C Harness 工程 7 / D 设计模式 5 / **E 上下文工程 7**）+ 3 实战示例 + 18 张轻手绘 SVG 框架图 + 每页「已有 N 人学过本课程」统计（GoatCounter）。模块导语 + GitHub Actions 自动部署。**（⚠️ 2026-06-19 已改版为「橙研所」博客流：侧栏导航→顶部 nav、课程→博客、「N 人学过」已删，详见下方「网站改版」段）**
+## 一句话状态（2026-07-06 新增 C07 Workflow 编排）
+**5 讲义模块 32 讲**（A 产品能力 6 / B 工程地基 6 / C Harness 工程 **8** / D 设计模式 5 / E 上下文工程 7）+ 3 实战示例 + 18 张轻手绘 SVG 框架图 + 每页「已有 N 人学过本课程」统计（GoatCounter）。模块导语 + GitHub Actions 自动部署。**（⚠️ 2026-06-19 已改版为「橙研所」博客流：侧栏导航→顶部 nav、课程→博客、「N 人学过」已删，详见下方「网站改版」段）**
 
 **2026-06-16 新增 Module E · Context Engineering 上下文工程**：与 A（产品能力）/ C（Harness）并列的第三大支柱，源自 CE 7 单元自学体系。S5 切片，**第 0 讲「CE 总览·七层与暗物质」已上线**（七层次表 + 暗物质 + CE/PE/Harness 辨析，五段式）。**全程脱敏**：私人项目写成「某语音 agent / 某成熟产品」，build 后跑 grep 闸门确认零命中（妙招/豆包/ECS/评级等）。**E01-E06（U2-U7 各层深入讲）于 2026-06-16 全部完稿上线**：prompt 分层 / 结构化 IO+工具 / 记忆+RAG / 历史+压缩 / cache 工程 / 可观测+eval，均「为什么 X」立靶句式 + 五段式，build/verify 全绿、脱敏 grep 干净。features.json 全 22 feature passing。
 
 > 早期状态（2026-06-05 主体完成）：4 模块 24 讲全 passing，Module C 融合 walkinglabs + 本项目实战方法论（自指），Module D 源 Google《Agentic Design Patterns》/xindoo 仓库。
 关联：libaoming.github.io 根站 2017 旧简历已换成跳转课程站的占位页（另一仓库 libaoming/libaoming.github.io，旧源码在 git 历史可恢复）。
+
+## 📄 2026-07-06 新增 Module C 第7讲「Workflow 编排」（S6）
+**C07_workflow_orchestration passing**：`content/module-c/07-workflow-orchestration.{md,en.md}`，讲义体（立靶=multi-agent 自由协作翻车 → 三类动机表 + pipeline vs barrier + 质量模式库 → sourcing 流水线真实 case（29→26→12→11 漏斗）→ 最小骨架 + 八条纪律 → 一句话收口）。verify 全绿：build 32 讲、中英 HTML 均产出、无 emoji、FAIL=0、模块 C 列表可达、表格渲染 2 张。脱敏：case 只写「候选人 sourcing」，无私人项目名。源头：同日 Claude Code Workflow 工具实测（复刻 Anthropic PM _catwu 公开用例）。
 
 ## 🧪 新增「实验室 / Lab」区（2026-06-20 上线，第三条内容线）
 网站第三足：**讲义=想明白的 / 实战=拆解过的 / 实验室=做出来的（开源工程产出）**。首批 5 个项目（全已开源）：harness-kit（互链模块 C）/ agent-memory-kit / context-engineering-kit（互链模块 E）/ claude-usage / agent-skill-case-studies。

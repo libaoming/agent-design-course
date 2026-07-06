@@ -543,6 +543,27 @@
       "blocking": [
         "E00_ce_overview"
       ]
+    },
+    {
+      "id": "C07_workflow_orchestration",
+      "slice": "S6",
+      "status": "passing",
+      "verify": {
+        "type": "cmd",
+        "cmd": "python3 scripts/build.py && test -f site/module-c/workflow-orchestration.html && test -f site/en/module-c/workflow-orchestration.html && bash scripts/verify.sh"
+      },
+      "verify_notes": "Module C 第7讲（Workflow 多 agent 编排）：三类动机 / pipeline vs barrier / 质量模式库 / sourcing 流水线 case / 八条纪律，中英双语，脱敏（不含私人项目名）",
+      "related": {
+        "specs": [],
+        "code": [
+          "content/module-c/07-workflow-orchestration.md",
+          "content/module-c/07-workflow-orchestration.en.md"
+        ],
+        "docs": []
+      },
+      "affected": "Module C 第7讲（新增）",
+      "out_of_scope": "不改 build.py / 不动既有讲义",
+      "blocking": []
     }
   ]
 }
