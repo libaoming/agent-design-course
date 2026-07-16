@@ -17,7 +17,7 @@
   <div class="mission">
     上一课结尾你抓住了那条铁律：<b>你能动的永远是「上下文」，动不了「权重」。</b>但模型的知识冻在权重里——<b>训练截止后的事不知道、你的私有数据不知道、不知道还会硬编（幻觉）</b>，而更新知识要重训，贵到不现实。
     这一课 RAG 给出「往上下文里喂知识」的<b>系统做法</b>：<b>来了问题，先去一个外部知识库检索相关片段，塞进 prompt，再让模型基于「问题 + 检索到的证据」作答。</b>
-    它正是你那个 <code>rag-供料层选型</code> 在做的事的理论根，也回答：<b>怎么让一个冻结的模型，可靠地用上它「本来不知道」的知识？</b>
+    它正是所有「知识库问答」产品在做的事的理论根，也回答：<b>怎么让一个冻结的模型，可靠地用上它「本来不知道」的知识？</b>
   </div>
 
   <div class="big-idea">
@@ -111,16 +111,16 @@
     一句话区分：<strong>要它「知道某些事实」→ RAG；要它「换个做事方式」→ 微调；「就这一篇，当场读」→ 长上下文。</strong>（呼应 LoRA 课那张表。）
   </p>
   <p class="cite">
-    🔮 但 RAG 的命门是<strong>检索质量</strong>——<strong>检索回来的是垃圾，再强的模型也答不对（garbage in, garbage out）</strong>。瓶颈通常不在生成、而在<strong>检索</strong>：分块策略、embedding 选型、top-k、重排（rerank）全在影响它。这正是你 <code>rag-供料层选型</code> 的战场。下一课 <strong>P20 ReAct</strong> 再进一步：把「检索」从固定的前置一步，变成 <strong>agent 在推理中<u>主动决定何时去查</u>的一个动作</strong>——你的语音 agent 就站在这条线上。
+    🔮 但 RAG 的命门是<strong>检索质量</strong>——<strong>检索回来的是垃圾，再强的模型也答不对（garbage in, garbage out）</strong>。瓶颈通常不在生成、而在<strong>检索</strong>：分块策略、embedding 选型、top-k、重排（rerank）全在影响它。这正是 RAG 落地时真正的战场。下一课 <strong>P20 ReAct</strong> 再进一步：把「检索」从固定的前置一步，变成 <strong>agent 在推理中<u>主动决定何时去查</u>的一个动作</strong>——对话式 agent 都站在这条线上。
   </p>
 
   <h2>七、映射到你的项目</h2>
   <table>
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
-    <tr><td>你做的 <code>rag-供料层</code> / 知识库注入</td><td>就是 RAG 的<strong>非参数化记忆 + 检索</strong>那一半——你天天在调的就是这套「检索→增强→生成」</td></tr>
-    <tr><td>你反复强调供料层「<strong>质 ≥ 量</strong>、要清洗」</td><td>正中 RAG 命门：<strong>检索质量是天花板</strong>，库脏/分块烂/检索偏，模型再强也救不回（呼应 <a href="0008-gpt-2.html">WebText</a>/<a href="0010-t5.html">C4</a> 同一信条）</td></tr>
+    <tr><td>你做的 RAG 知识库问答 / 知识注入</td><td>就是 RAG 的<strong>非参数化记忆 + 检索</strong>那一半——天天在调的就是这套「检索→增强→生成」</td></tr>
+    <tr><td>入库语料要「<strong>质 ≥ 量</strong>、要清洗」的直觉</td><td>正中 RAG 命门：<strong>检索质量是天花板</strong>，库脏/分块烂/检索偏，模型再强也救不回（呼应 <a href="0008-gpt-2.html">WebText</a>/<a href="0010-t5.html">C4</a> 同一信条）</td></tr>
     <tr><td>你纠结「上 RAG 还是微调还是塞长上下文」</td><td>就是上面那张取舍表：<strong>事实变/私有 → RAG；技能/风格 → 微调；一次性大输入 → 长上下文</strong>，常组合用</td></tr>
-    <tr><td>我（Claude Code）的 <strong>memory 系统</strong>（recall 相关记忆文件再注入）</td><td>本质就是一个 RAG：<strong>按相关性检索你的记忆 → 注入上下文</strong>，让冻结的我用上「这个项目/这个你」的专属知识</td></tr>
+    <tr><td>Claude Code 这类编程 agent 的 <strong>memory 系统</strong>（先检索相关记忆文件再注入）</td><td>本质就是一个 RAG：<strong>按相关性检索记忆 → 注入上下文</strong>，让冻结的模型用上「这个项目/这个用户」的专属知识</td></tr>
     <tr><td>「检索回来一堆不相关片段，反而把模型带歪」</td><td>RAG 的真实坑：<strong>无关证据是噪声、甚至误导</strong>——所以要 rerank、控 top-k、过滤低相关，检索精度比召回更要紧</td></tr>
   </table>
 
@@ -176,7 +176,7 @@
   </details>
 
   <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
-    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">检索这步，到底哪几个旋钮最影响效果？（供料层选型该看什么）</summary>
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">检索这步，到底哪几个旋钮最影响效果？（检索层选型该看什么）</summary>
     <div style="padding:0.4rem 0 0.6rem">
       <p style="margin:0.3rem 0">按影响排，几个核心旋钮：</p>
       <table>
@@ -186,7 +186,7 @@
         <tr><td><strong>top-k + rerank</strong></td><td>召回几条、再用更强的重排模型把最相关的顶上来——<strong>精度比召回更要紧</strong></td></tr>
         <tr><td>混合检索</td><td>向量（语义）+ 关键词（BM25）结合，补稠密检索对专有名词/精确匹配的短板</td></tr>
       </table>
-      <p style="margin:0.3rem 0" class="cite">心法（你已有的直觉）：<strong>质 ≥ 量、检索精度 ≥ 召回数量</strong>。先把分块和 rerank 做对，比换更大的生成模型划算得多——因为<strong>命门在检索不在生成</strong>。建个小评测集（问题→应检索到哪些片段）量化检索命中率，是供料层选型最该先做的事。</p>
+      <p style="margin:0.3rem 0" class="cite">心法：<strong>质 ≥ 量、检索精度 ≥ 召回数量</strong>。先把分块和 rerank 做对，比换更大的生成模型划算得多——因为<strong>命门在检索不在生成</strong>。建个小评测集（问题→应检索到哪些片段）量化检索命中率，是搭 RAG 最该先做的事。</p>
     </div>
   </details>
 
@@ -222,8 +222,8 @@
         <tr><td>Precision@k</td><td>top-k 里几个真相关（噪声多少）</td></tr>
         <tr><td>MRR / NDCG</td><td>对的块排得够不够靠前（模型更关注前文）</td></tr>
       </table>
-      <p style="margin:0.3rem 0"><strong>第二层 · 端到端</strong>：faithfulness（答案忠于证据吗）+ 正确性，用 <a href="0016-instructgpt-rlhf.html">LLM-as-judge</a>（你的 Grader 直接复用）。<strong>纪律：检索和生成分开诊断</strong>——先分清"没捞到"还是"捞到了答歪"。</p>
-      <p style="margin:0.3rem 0" class="cite">工作流：改一个旋钮 → 重跑评测集 → 看 Recall@k/NDCG 动没动 → 留或回退（就是 autoevolve/harness 套到 RAG）。配 held-out 查询集防过拟合（<a href="0016-instructgpt-rlhf.html">Goodhart</a>）。现成工具看 RAGAS。<strong>永远先量化、再调；命门在检索。</strong></p>
+      <p style="margin:0.3rem 0"><strong>第二层 · 端到端</strong>：faithfulness（答案忠于证据吗）+ 正确性，用 <a href="0016-instructgpt-rlhf.html">LLM-as-judge</a>（做过对话质检评分器的话直接复用）。<strong>纪律：检索和生成分开诊断</strong>——先分清"没捞到"还是"捞到了答歪"。</p>
+      <p style="margin:0.3rem 0" class="cite">工作流：改一个旋钮 → 重跑评测集 → 看 Recall@k/NDCG 动没动 → 留或回退（就是「生成→评分→改进」的调优闭环套到 RAG）。配 held-out 查询集防过拟合（<a href="0016-instructgpt-rlhf.html">Goodhart</a>）。现成工具看 RAGAS。<strong>永远先量化、再调；命门在检索。</strong></p>
     </div>
   </details>
 
@@ -237,7 +237,7 @@
       配套回看：<a href="0005-word2vec.html">word2vec（语义=几何）</a> + <a href="0006-bert.html">BERT（检索用的 embedding 模型都是 BERT 系）</a>——检索这半套，你前面已经埋好了根。
     </p>
     <p style="margin:0.3rem 0" class="cite">
-      阶段五「检索与 Agent」开篇。下一篇 <strong>P20 ReAct</strong>：把「检索/查工具」变成 agent 在推理中<strong>主动交错的「想一步、做一步」</strong>——<strong>你的语音 agent 的理论原型</strong>。收官 P21 Toolformer 讲工具调用的由来。
+      阶段五「检索与 Agent」开篇。下一篇 <strong>P20 ReAct</strong>：把「检索/查工具」变成 agent 在推理中<strong>主动交错的「想一步、做一步」</strong>——<strong>工具调用 agent 的理论原型</strong>。收官 P21 Toolformer 讲工具调用的由来。
     </p>
   </div>
 
@@ -248,7 +248,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0019-constitutional-ai.html">&#8592; 第 19 课：Constitutional AI (P18)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P19</code> → 明天 P20（ReAct）</span>
+    <span class="cite">读完了？→ 下一课 P20（ReAct）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

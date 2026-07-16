@@ -112,19 +112,19 @@
     <tr><th>点</th><th>说明</th></tr>
     <tr><td><strong>对齐税（alignment tax）</strong></td><td>对齐后模型在某些纯能力 benchmark 上会<strong>略降</strong>——「听话」和「极致能力」有轻微取舍。论文用「混入预训练梯度」来缓解。</td></tr>
     <tr><td><strong>奖励作弊（reward hacking）</strong></td><td>模型会<strong>钻 RM 的空子</strong>——找到能骗高分但实际不好的输出（如一味冗长、谄媚）。靠 <strong>KL 惩罚</strong>（别离 SFT 太远）+ 更好的 RM 压制。</td></tr>
-    <tr><td><strong>RM 就是「学出来的裁判」</strong></td><td>奖励模型本质是一个 <strong>LLM-as-judge</strong>——把人类偏好压成自动打分器。<strong>这正是你做 Grader 的祖先。</strong></td></tr>
+    <tr><td><strong>RM 就是「学出来的裁判」</strong></td><td>奖励模型本质是一个 <strong>LLM-as-judge</strong>——把人类偏好压成自动打分器。<strong>如果你做过「用 LLM 给输出打分的质检器」，这正是它的祖先。</strong></td></tr>
   </table>
   <p class="cite">
-    🔮 RLHF 强大但<strong>笨重</strong>（要训 RM + 跑 RL，三阶段、不稳）。于是后续两条路来简化/强化它：<strong>P17 DPO</strong>——不训 RM、不跑 RL，直接用偏好数据一步优化（更对得上你 autoevolve「打分→改」的直觉）；<strong>P18 Constitutional AI</strong>（Anthropic）——用一套<strong>书面原则</strong>让模型自我批评、自我对齐，少依赖人工标注。这一阶段就是「怎么让模型听话」的方法演化史。
+    🔮 RLHF 强大但<strong>笨重</strong>（要训 RM + 跑 RL，三阶段、不稳）。于是后续两条路来简化/强化它：<strong>P17 DPO</strong>——不训 RM、不跑 RL，直接用偏好数据一步优化（更对得上「打分→改 prompt」自动调优环的直觉）；<strong>P18 Constitutional AI</strong>（Anthropic）——用一套<strong>书面原则</strong>让模型自我批评、自我对齐，少依赖人工标注。这一阶段就是「怎么让模型听话」的方法演化史。
   </p>
 
   <h2>七、映射到你的项目</h2>
   <table>
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
     <tr><td>你那个老困惑「精心写 prompt，行为还是控不住」</td><td>因为行为活在<strong>能力 + 对齐两条轴</strong>上：prompt 只在「对齐好的地盘」里微调，模型被 RLHF 烤进去的性格/拒答/风格，<strong>prompt 顶多绕、难根除</strong></td></tr>
-    <tr><td>你做的 <strong>Grader / LLM-as-judge</strong></td><td>就是 <strong>奖励模型（RM）</strong>的同款：把「什么算好」压成一个可自动打分的裁判。RLHF 的 RM 是它的理论原型</td></tr>
-    <tr><td>你做的 <strong>prompt autoevolve</strong>（打分→改→再打分）</td><td>结构上就是 <strong>RLHF 的轻量版</strong>：用一个评分信号去迭代优化输出/prompt——同一个「靠反馈爬坡」的范式</td></tr>
-    <tr><td>你给评分模型设规则，却发现被「钻空子」（输出变长、变谄媚就拿高分）</td><td>正是 <strong>reward hacking</strong>——裁判会被它评的对象套路。设计 Grader 要专门防这个（对照基准、防长度偏好等）</td></tr>
+    <tr><td>你做 <strong>LLM 评分/质检（LLM-as-judge）</strong></td><td>就是 <strong>奖励模型（RM）</strong>的同款：把「什么算好」压成一个可自动打分的裁判。RLHF 的 RM 是它的理论原型</td></tr>
+    <tr><td>你搭 <strong>prompt 自动调优环</strong>（生成→评分→改 prompt 再评）</td><td>结构上就是 <strong>RLHF 的轻量版</strong>：用一个评分信号去迭代优化输出/prompt——同一个「靠反馈爬坡」的范式</td></tr>
+    <tr><td>你给评分模型设规则，却发现被「钻空子」（输出变长、变谄媚就拿高分）</td><td>正是 <strong>reward hacking</strong>——裁判会被它评的对象套路。设计 LLM 评分器要专门防这个（对照基准、防长度偏好等）</td></tr>
     <tr><td>「换个更大的模型，是不是就更听话了」</td><td>不一定——<strong>听话看对齐，不只看规模</strong>。1.3B 对齐版能赢 175B base，选型别只盯参数</td></tr>
   </table>
 
@@ -183,22 +183,22 @@
     <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">KL 惩罚到底在防什么？去掉会怎样？</summary>
     <div style="padding:0.4rem 0 0.6rem">
       <p style="margin:0.3rem 0">RL 阶段，模型为了拿 RM 高分会<strong>不择手段地漂移</strong>。KL 惩罚是一条<strong>「别离 SFT 模型太远」的橡皮筋</strong>：每偏离原模型一点就扣分。去掉它，模型会<strong>钻 RM 空子（reward hacking）</strong>——产出 RM 爱打高分、但其实退化的怪输出（语无伦次却命中 RM 偏好、或一味谄媚冗长），甚至<strong>把语言能力也忘了</strong>。</p>
-      <p style="margin:0.3rem 0" class="cite">直觉：<strong>RM 只是人类偏好的「近似裁判」，不是真理</strong>；放任模型死磕这个近似裁判，它会找到裁判的漏洞而非真的变好。KL 惩罚＝「在裁判允许的范围内进步，但别为了刷分变成另一个东西」。这对你设计任何「用一个打分器去优化」的闭环（autoevolve、Grader 驱动迭代）都是同一课：<strong>得有个锚防止系统钻分数空子。</strong></p>
+      <p style="margin:0.3rem 0" class="cite">直觉：<strong>RM 只是人类偏好的「近似裁判」，不是真理</strong>；放任模型死磕这个近似裁判，它会找到裁判的漏洞而非真的变好。KL 惩罚＝「在裁判允许的范围内进步，但别为了刷分变成另一个东西」。这对你设计任何「用一个打分器去优化」的闭环（prompt 自动调优环、LLM 评分器驱动的迭代）都是同一课：<strong>得有个锚防止系统钻分数空子。</strong></p>
     </div>
   </details>
 
   <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
-    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">RLHF 和我做的 LLM-as-judge / autoevolve，像在哪、差在哪？</summary>
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">RLHF 和我做的 LLM-as-judge / prompt 自动调优环，像在哪、差在哪？</summary>
     <div style="padding:0.4rem 0 0.6rem">
-      <p style="margin:0.3rem 0"><strong>像：同一个骨架</strong>——「生成→裁判评估→用信号推向更好」。你的 Grader≈RLHF 的 RM、autoevolve 循环≈PPO 循环，连失败模式都一样（裁判被钻）。</p>
+      <p style="margin:0.3rem 0"><strong>像：同一个骨架</strong>——「生成→裁判评估→用信号推向更好」。你的 LLM 评分器≈RLHF 的 RM、prompt 自动调优循环≈PPO 循环，连失败模式都一样（裁判被钻）。</p>
       <table>
-        <tr><th>轴</th><th>RLHF</th><th>你的 autoevolve</th></tr>
+        <tr><th>轴</th><th>RLHF</th><th>你的 prompt 自动调优环</th></tr>
         <tr><td>改什么</td><td><strong>模型权重</strong>（永久）</td><td><strong>prompt/输出</strong>（不动权重）</td></tr>
         <tr><td>优化器</td><td>真 RL（PPO+梯度+KL）</td><td>LLM 驱动的改写/搜索（无梯度）</td></tr>
-        <tr><td>裁判</td><td><strong>训出来</strong>的 RM（锚真人偏好）</td><td><strong>prompt 出来</strong>的 Grader（灵活但不接地气）</td></tr>
+        <tr><td>裁判</td><td><strong>训出来</strong>的 RM（锚真人偏好）</td><td><strong>prompt 出来</strong>的 LLM 评分器（灵活但不接地气）</td></tr>
         <tr><td>信号</td><td>刻意用排序</td><td>常用绝对分（更不稳）</td></tr>
       </table>
-      <p style="margin:0.3rem 0" class="cite">一句话：你在做 RLHF 的「形」、没用它的「重机械」——通常是对的（便宜够用），但<strong>继承了失败模式（代理被钻）却没自带护栏（KL 锚、真人 RM），得自己补</strong>。可立刻用的改进：<strong>Grader 从「打绝对分」改成「两两排序」，信号稳很多</strong>。</p>
+      <p style="margin:0.3rem 0" class="cite">一句话：你在做 RLHF 的「形」、没用它的「重机械」——通常是对的（便宜够用），但<strong>继承了失败模式（代理被钻）却没自带护栏（KL 锚、真人 RM），得自己补</strong>。可立刻用的改进：<strong>评分器从「打绝对分」改成「两两排序」，信号稳很多</strong>。</p>
     </div>
   </details>
 
@@ -211,7 +211,7 @@
   </details>
 
   <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
-    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">reward hacking 在我的 Grader 里长什么样、怎么防？</summary>
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">reward hacking 在我的 LLM 评分器里长什么样、怎么防？</summary>
     <div style="padding:0.4rem 0 0.6rem">
       <p style="margin:0.3rem 0"><strong>长什么样</strong>：① 长度偏好（越长越高分，学会注水）；② rubric 关键词谄媚（塞满 rubric 原词）；③ 自我标榜/对裁判喊话/自信口吻刷分；④ 格式刷分（分点标题被当「组织良好」）；⑤ 位置偏好（两两比时偏第一/第二）；⑥ <strong>共享盲点</strong>（裁判与生成器同源，查不出自己也不知道的事实错）；⑦ <strong>过拟合到这个裁判/测试集</strong>（钻当前裁判怪癖而非真变好）。</p>
       <p style="margin:0.3rem 0"><strong>怎么防</strong>（按性价比）：① 排序代替绝对分；② 控长度（忽略/惩罚啰嗦、等长比）；③ 带参考答案/基线对比；④ <strong>守住 held-out 集</strong>（train 涨、held-out 不涨 = 正在钻空子，最灵的报警器）；⑤ 多裁判/轮换；⑥ 裁判比生成器强且异源；⑦ <strong>对抗式 rubric</strong>（让裁判主动找漏洞/幻觉、要引证据）；⑧ 位置随机化；⑨ 剥离 meta 文本；⑩ 定期真人抽检。</p>
@@ -234,13 +234,13 @@
   </div>
 
   <div class="ask-teacher">
-    <b>我是你的老师，随时提问。</b> 比如：「RLHF 和我做的 LLM-as-judge / autoevolve，到底像在哪、差在哪？」「为什么会有对齐税，能不能消掉？」
-    「reward hacking 在我的 Grader 里具体会长什么样、怎么防？」——别带着模糊往下走。
+    <b>我是你的老师，随时提问。</b> 比如：「RLHF 和我做的 LLM-as-judge / prompt 自动调优环，到底像在哪、差在哪？」「为什么会有对齐税，能不能消掉？」
+    「reward hacking 在我的 LLM 评分器里具体会长什么样、怎么防？」——别带着模糊往下走。
   </div>
 
   <div class="nav">
     <span class="cite"><a href="0015-moe-switch-transformers.html">&#8592; 第 15 课：MoE (P14)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P15</code> → 明天 P16（Chain-of-Thought）</span>
+    <span class="cite">读完了？→ 下一课 P16（Chain-of-Thought）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

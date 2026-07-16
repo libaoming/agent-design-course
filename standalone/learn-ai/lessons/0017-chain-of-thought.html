@@ -123,9 +123,9 @@
   <table>
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
     <tr><td>你写 prompt 时加「请一步步分析 / 先说理由再给结论」</td><td>就是 <strong>CoT</strong>——最便宜、最高杠杆的提质招，对任何多步任务都该默认开</td></tr>
-    <tr><td>你的 <strong>LLM-as-judge / Grader</strong> 让它先打分</td><td>反了！应让它<strong>先写评判理由、再给分</strong>——CoT 同款。直接出分=逼它心算，先推理再裁决质量更稳（呼应上一课 RM 设计）</td></tr>
+    <tr><td>你做 <strong>LLM 评分/质检（LLM-as-judge）</strong>让它直接出分</td><td>反了！应让它<strong>先写评判理由、再给分</strong>——CoT 同款。直接出分=逼它心算，先推理再裁决质量更稳（呼应上一课 RM 设计）</td></tr>
     <tr><td>你的 <strong>agent</strong> 先「想计划」再行动</td><td>就是 CoT 的 agent 版（下一课 <a href="#">ReAct</a> 会把「想」和「做」交错）——先推理再动手</td></tr>
-    <tr><td>你的 <strong>realtime 语音</strong>链路纠结延迟</td><td>正面取舍：CoT 提准确率，但<strong>多出的推理 token = 多出的延迟</strong>。realtime 要么用隐式/简短推理，要么把「想」放到不卡用户的环节</td></tr>
+    <tr><td>你做<strong>实时语音 agent</strong>纠结延迟</td><td>正面取舍：CoT 提准确率，但<strong>多出的推理 token = 多出的延迟</strong>。实时语音场景要么用隐式/简短推理，要么把「想」放到不卡用户的环节</td></tr>
     <tr><td>「为什么有时模型加了思考反而更啰嗦、还可能更错」</td><td>① 小模型/简单题用 CoT 无益甚至有害；② 推理链本身可能错（写得通顺≠逻辑对）——要 self-consistency 或校验兜底</td></tr>
   </table>
 
@@ -175,7 +175,7 @@
   <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
     <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">既然 CoT 几乎总有帮助，是不是该无脑给所有任务都加？</summary>
     <div style="padding:0.4rem 0 0.6rem">
-      <p style="margin:0.3rem 0"><strong>不是。</strong>三种情况别加或要权衡：① <strong>简单/单步任务</strong>（分类、抽取、查表）——CoT 没收益，白白多花 token、增延迟，有时还把简单题想复杂了；② <strong>延迟敏感场景</strong>（你的 realtime 语音）——推理 token 直接变延迟，得掂量；③ <strong>小模型</strong>——涌现门槛没到，无益甚至有害。</p>
+      <p style="margin:0.3rem 0"><strong>不是。</strong>三种情况别加或要权衡：① <strong>简单/单步任务</strong>（分类、抽取、查表）——CoT 没收益，白白多花 token、增延迟，有时还把简单题想复杂了；② <strong>延迟敏感场景</strong>（如实时语音交互）——推理 token 直接变延迟，得掂量；③ <strong>小模型</strong>——涌现门槛没到，无益甚至有害。</p>
       <p style="margin:0.3rem 0" class="cite">判据：<strong>任务要不要「拐弯」？</strong>需要多步推理/计算/规划 → 上 CoT；一步能答的 → 直接答更省更快。成本意识：<strong>CoT 是用 token（钱+延迟）买准确率，要看这道题值不值这笔买卖。</strong></p>
     </div>
   </details>
@@ -206,7 +206,7 @@
   </details>
 
   <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
-    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">把 Grader 改成「先理由后打分」，怎么排版最稳？</summary>
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">把 LLM 评分器改成「先理由后打分」，怎么排版最稳？</summary>
     <div style="padding:0.4rem 0 0.6rem">
       <p style="margin:0.3rem 0">可直接抄的模板：</p>
       <pre class="mono" style="background:#fff;border-radius:6px;padding:0.6rem 0.8rem;font-size:0.82rem;white-space:pre-wrap;line-height:1.5">你是严格的评审。务必"先逐条分析、最后打分"，不许先给分再补理由。
@@ -235,18 +235,18 @@
       延伸：Kojima et al. — <em>Large Language Models are Zero-Shot Reasoners</em>（「Let's think step by step」）；Wang et al. — <em>Self-Consistency</em>。
     </p>
     <p style="margin:0.3rem 0" class="cite">
-      阶段四推进：<strong>RLHF（对齐）→ CoT（推理）</strong>。下一篇 <strong>P17 DPO</strong>：不训奖励模型、不跑 RL，直接用偏好数据对齐——更对得上你 autoevolve 的直觉。
+      阶段四推进：<strong>RLHF（对齐）→ CoT（推理）</strong>。下一篇 <strong>P17 DPO</strong>：不训奖励模型、不跑 RL，直接用偏好数据对齐——更对得上「打分→改 prompt」自动调优环的直觉。
     </p>
   </div>
 
   <div class="ask-teacher">
     <b>我是你的老师，随时提问。</b> 比如：「test-time compute 和训练时 scaling，前沿现在更看重哪个？」「self-consistency 为什么比单条 CoT 准，代价是什么？」
-    「我的 Grader 改成『先理由后打分』，具体怎么排版最稳？」——别带着模糊往下走。
+    「我的 LLM 评分器改成『先理由后打分』，具体怎么排版最稳？」——别带着模糊往下走。
   </div>
 
   <div class="nav">
     <span class="cite"><a href="0016-instructgpt-rlhf.html">&#8592; 第 16 课：InstructGPT/RLHF (P15)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P16</code> → 明天 P17（DPO）</span>
+    <span class="cite">读完了？→ 下一课 P17（DPO）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

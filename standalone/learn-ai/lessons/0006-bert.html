@@ -110,7 +110,7 @@
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
     <tr><td>RAG 里 <code>bge-small-zh</code> 把句子编码成向量</td><td>它是 <strong>BERT 系 encoder</strong> 的直系后代。检索要「双向理解整句」，正是 <strong>MLM 训出来</strong>的本事——这就是为什么编码用 BERT 系、不用 GPT 系。</td></tr>
     <tr><td>「句向量 / 整段的语义表示」从哪来</td><td>BERT 的 <code>[CLS]</code> 输出向量 = <strong>整句语义浓缩</strong>，正是句向量最早的来源（现代多用 mean-pooling 改进）。</td></tr>
-    <tr><td>你 <a href="../rag-供料层选型/MISSION.md">供料层选型</a>里纠结的「切块 vs 整段」</td><td>BERT 类编码器有<strong>固定长度上限</strong>（经典 512 token），长文必须切——你那个老约束，根在编码器的双向注意力 O(n²) 成本。</td></tr>
+    <tr><td>做 RAG 知识库时纠结的「切块 vs 整段」</td><td>BERT 类编码器有<strong>固定长度上限</strong>（经典 512 token），长文必须切——这个老约束，根在编码器的双向注意力 O(n²) 成本。</td></tr>
     <tr><td>「为什么不从零训，拉个权重就微调」</td><td>就是 BERT 钉下的<strong>预训练-微调</strong>范式。你用过的所有 fine-tune，都站在这套范式上。</td></tr>
   </table>
 
@@ -219,7 +219,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0005-word2vec.html">&#8592; 第 5 课：word2vec (P04)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P05</code> → 明天 P06（GPT-1）</span>
+    <span class="cite">读完了？→ 下一课 P06（GPT-1）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

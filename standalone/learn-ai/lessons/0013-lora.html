@@ -123,7 +123,7 @@
     <tr><td>「一套模型怎么同时服务很多不同任务/客户」</td><td>就是 <strong>一底座 + 热插拔 LoRA</strong> 的架构：底座只存一份，每个场景一个小补丁，按需切换</td></tr>
     <tr><td>你纠结「这个需求该 few-shot 还是去微调」</td><td>现在轴上多了一档：<strong>LoRA = 便宜的永久微调</strong>。高频稳定且 few-shot 压不住 → 上 LoRA，比全量微调省太多</td></tr>
     <tr><td>你听到「我们在消费级 GPU 上微调了一个 13B 模型」</td><td>大概率是 <strong>QLoRA</strong>——量化 + LoRA 把门槛打到一张显卡，这就是「人人都能微调」的技术底</td></tr>
-    <tr><td>你的「声音复刻 / 角色定制」想低成本批量产出</td><td>同一思路：<strong>一个底座 + 每个声音/角色一个小补丁</strong>，而不是为每个都全量训一份</td></tr>
+    <tr><td>你想做「音色定制 / 角色定制」这类低成本批量定制</td><td>同一思路：<strong>一个底座 + 每个声音/角色一个小补丁</strong>，而不是为每个都全量训一份</td></tr>
   </table>
 
   <h2>八、检索练习（关掉上文，凭记忆答）</h2>
@@ -231,7 +231,7 @@
       想看它怎么把门槛打到一张显卡：搜 <strong>QLoRA</strong>（Dettmers et al., 2023，量化 + LoRA）。
     </p>
     <p style="margin:0.3rem 0" class="cite">
-      阶段三进入「效率」段：<strong>LoRA 省微调成本</strong>。下一篇 <strong>P13 FlashAttention</strong>：省的是<strong>推理/训练时 attention 的显存与速度</strong>——直接对应你 realtime 链路的长上下文与延迟。
+      阶段三进入「效率」段：<strong>LoRA 省微调成本</strong>。下一篇 <strong>P13 FlashAttention</strong>：省的是<strong>推理/训练时 attention 的显存与速度</strong>——直接对应实时语音等低延迟场景里的长上下文与延迟问题。
     </p>
   </div>
 
@@ -242,7 +242,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0012-chinchilla.html">&#8592; 第 12 课：Chinchilla (P11)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P12</code> → 明天 P13（FlashAttention）</span>
+    <span class="cite">读完了？→ 下一课 P13（FlashAttention）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

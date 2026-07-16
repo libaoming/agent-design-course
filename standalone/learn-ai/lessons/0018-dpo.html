@@ -115,10 +115,10 @@
   <h2>七、映射到你的项目</h2>
   <table>
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
-    <tr><td>你的 <strong>autoevolve</strong>（好/坏样本 → 改进）</td><td>和 DPO 同一个「拿偏好对直接改进」的精神——只不过你改的是 <strong>prompt</strong>（不动权重），DPO 改的是<strong>权重</strong>。理解 DPO 能让你看清自己那套闭环在「偏好驱动优化」家谱里的位置</td></tr>
+    <tr><td>你搭 <strong>prompt 自动调优环</strong>（好/坏样本 → 改 prompt）</td><td>和 DPO 同一个「拿偏好对直接改进」的精神——只不过你改的是 <strong>prompt</strong>（不动权重），DPO 改的是<strong>权重</strong>。理解 DPO 能让你看清自己那套闭环在「偏好驱动优化」家谱里的位置</td></tr>
     <tr><td>你哪天真要「微调」一个模型成自己的风格/偏好</td><td><strong>LoRA + DPO 就是你跑得起的那条路</strong>：收一批「这个回答比那个好」的对，跑 DPO（不碰 RL），用 LoRA 省成本——平民版对齐</td></tr>
     <tr><td>你收集训练/评估数据时纠结「让人写答案还是让人选」</td><td>DPO 再次印证 <a href="0016-instructgpt-rlhf.html">RLHF</a> 的判断：<strong>「成对比较（A/B 哪个好）」比「写标准答案」更便宜、信号更干净</strong>——你建数据集优先收偏好对</td></tr>
-    <tr><td>「我的对齐/优化该用在线还是离线？」</td><td>新判断维度：<strong>离线（DPO，吃固定数据集、简单稳）vs 在线（能边生成边评判、探索更广但复杂）</strong>。你的 autoevolve 其实偏在线（不断生成新候选再评），各有取舍</td></tr>
+    <tr><td>「我的对齐/优化该用在线还是离线？」</td><td>新判断维度：<strong>离线（DPO，吃固定数据集、简单稳）vs 在线（能边生成边评判、探索更广但复杂）</strong>。prompt 自动调优环其实偏在线（不断生成新候选再评），各有取舍</td></tr>
   </table>
 
   <h2>八、检索练习（关掉上文，凭记忆答）</h2>
@@ -173,16 +173,16 @@
   </details>
 
   <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
-    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">DPO 和我的 autoevolve，到底是不是一回事？</summary>
+    <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">DPO 和我的 prompt 自动调优环，到底是不是一回事？</summary>
     <div style="padding:0.4rem 0 0.6rem">
-      <p style="margin:0.3rem 0"><strong>同精神、不同层。</strong>都信奉「拿偏好对直接驱动改进」。但：DPO 用偏好对做<strong>梯度更新、改权重</strong>（一次训练，偏好被烤进模型）；你的 autoevolve 用评分/偏好做 <strong>prompt 改写、改 prompt 空间</strong>（不动权重，靠搜索爬坡）。</p>
+      <p style="margin:0.3rem 0"><strong>同精神、不同层。</strong>都信奉「拿偏好对直接驱动改进」。但：DPO 用偏好对做<strong>梯度更新、改权重</strong>（一次训练，偏好被烤进模型）；你的 prompt 自动调优环用评分/偏好做 <strong>prompt 改写、改 prompt 空间</strong>（不动权重，靠搜索爬坡）。</p>
       <table>
-        <tr><th></th><th>DPO</th><th>autoevolve</th></tr>
+        <tr><th></th><th>DPO</th><th>prompt 自动调优环</th></tr>
         <tr><td>改什么</td><td>权重</td><td>prompt</td></tr>
         <tr><td>怎么改</td><td>梯度下降（闭式 loss）</td><td>LLM 改写 + 选择</td></tr>
         <tr><td>在线/离线</td><td>偏离线</td><td>偏在线（不断生成新候选）</td></tr>
       </table>
-      <p style="margin:0.3rem 0" class="cite">收获：如果你 autoevolve 调 prompt 已到瓶颈、且攒下了大量「好/坏」对，<strong>DPO+LoRA 是把这些偏好「焊进权重」的升级路径</strong>——从改 prompt 升到改模型，但纪律（防钻空子、要 held-out）一脉相承。</p>
+      <p style="margin:0.3rem 0" class="cite">收获：如果你的自动调优环调 prompt 已到瓶颈、且攒下了大量「好/坏」对，<strong>DPO+LoRA 是把这些偏好「焊进权重」的升级路径</strong>——从改 prompt 升到改模型，但纪律（防钻空子、要 held-out）一脉相承。</p>
     </div>
   </details>
 
@@ -207,7 +207,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0017-chain-of-thought.html">&#8592; 第 17 课：Chain-of-Thought (P16)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P17</code> → 明天 P18（Constitutional AI）</span>
+    <span class="cite">读完了？→ 下一课 P18（Constitutional AI）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

@@ -129,9 +129,9 @@
   <table>
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
     <tr><td>RAG 里的 <code>bge-small-zh</code> 把一段话编码成向量</td><td>word2vec 思想的现代后代（升到句子级、且语境化），但内核没变：<strong>语义 = 几何</strong>。</td></tr>
-    <tr><td>向量检索 / 余弦相似度 / 你的 SQLite+numpy 召回</td><td>整套「<strong>把意思相近的东西在空间里找出来</strong>」的范式，就是这篇确立的。</td></tr>
-    <tr><td>「<code>king−man+woman</code>」那种<strong>方向可加减</strong></td><td>你做声音复刻 / 风格迁移时「往某个方向调一点」的直觉来源——属性是空间里的方向。</td></tr>
-    <tr><td>为什么 RAG 要切块、不能一个向量装一篇长文</td><td>静态/单向量的<strong>表达力上限</strong>：一个点压不下太多语义——你<a href="../rag-供料层选型/MISSION.md">供料层选型</a>的老问题，根在这。</td></tr>
+    <tr><td>向量检索 / 余弦相似度 / 向量库召回</td><td>整套「<strong>把意思相近的东西在空间里找出来</strong>」的范式，就是这篇确立的。</td></tr>
+    <tr><td>「<code>king−man+woman</code>」那种<strong>方向可加减</strong></td><td>做风格迁移 / 属性编辑（图像、语音生成里「往某个方向调一点」）的直觉来源——属性是空间里的方向。</td></tr>
+    <tr><td>为什么 RAG 要切块、不能一个向量装一篇长文</td><td>静态/单向量的<strong>表达力上限</strong>：一个点压不下太多语义——做 RAG 时纠结切块策略的老问题，根在这。</td></tr>
   </table>
 
   <h2>六、检索练习（关掉上文，凭记忆答）</h2>
@@ -201,7 +201,7 @@ king − man + woman
 = [1, −1]
 = queen   ✓</code></pre>
       <p style="margin:0.3rem 0">成立的原因：「王权」和「性别」成了两根<strong>大致独立、稳定的方向</strong>。<code>man→king</code> 和 <code>woman→queen</code> 是<strong>同一个王权方向、近似平行等长</strong>，四点连起来就是上面那个<strong>平行四边形</strong>。没人教它，是<strong>训练时为了预测对上下文，被逼着用同一个方向编码同一种语义</strong>，从语料里自己长出来的。</p>
-      <p style="margin:0.3rem 0" class="cite"><strong>诚实的 caveat</strong>：是 <code>≈</code>（约等于 + 最近邻），不是精确相等；实操要排除输入的三个词本身、做归一化才漂亮，且这现象有被<strong>夸大</strong>的成分。但「<strong>方向编码语义</strong>」这个核心直觉是真的——你做声音复刻/风格迁移时「往某个方向调一点」的直觉，根就在这。🔮</p>
+      <p style="margin:0.3rem 0" class="cite"><strong>诚实的 caveat</strong>：是 <code>≈</code>（约等于 + 最近邻），不是精确相等；实操要排除输入的三个词本身、做归一化才漂亮，且这现象有被<strong>夸大</strong>的成分。但「<strong>方向编码语义</strong>」这个核心直觉是真的——做风格迁移/属性编辑时「往某个方向调一点」的直觉，根就在这。🔮</p>
     </div>
   </details>
 
@@ -227,7 +227,7 @@ king − man + woman
 
   <div class="nav">
     <span class="cite"><a href="0004-sequence-to-sequence-learning.html">&#8592; 第 4 课：Seq2Seq (P03)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P04</code> → 明天 P05（进阶段二）</span>
+    <span class="cite">读完了？→ 下一课 P05（进阶段二）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

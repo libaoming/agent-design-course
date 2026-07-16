@@ -105,10 +105,10 @@
 
   <table>
     <tr><th>你的场景</th><th>其实是在这条流水线的哪一步做选择</th></tr>
-    <tr><td>语音招聘 agent 要「稳」，话术不能跑偏</td><td>调低 temperature / 用 top-p 收窄——让第 3 步只在分布的「头部」挑，牺牲多样性换稳定。</td></tr>
+    <tr><td>语音客服 agent 要「稳」，话术不能跑偏</td><td>调低 temperature / 用 top-p 收窄——让第 3 步只在分布的「头部」挑，牺牲多样性换稳定。</td></tr>
     <tr><td>要 agent 文案有变化、不千篇一律</td><td>反过来，适度抬高 temperature，让第 3 步能碰到分布的「腰部」。</td></tr>
-    <tr><td>Grader 要可复现地打分</td><td>temperature=0，让第 3 步退化成「永远取最大」，同输入同输出。</td></tr>
-    <tr><td>autoevolve 在「优化 prompt」</td><td>本质是在改第 1 步的输入，从而<strong>改变整个分布的形状</strong>——prompt 工程 = 给分布动手术。</td></tr>
+    <tr><td>LLM 评分器（LLM-as-judge）要可复现地打分</td><td>temperature=0，让第 3 步退化成「永远取最大」，同输入同输出。</td></tr>
+    <tr><td>prompt 自动调优环（生成→评分→改 prompt 的闭环）在「优化 prompt」</td><td>本质是在改第 1 步的输入，从而<strong>改变整个分布的形状</strong>——prompt 工程 = 给分布动手术。</td></tr>
   </table>
 
   <h2>六、检索练习（关掉上面的内容，凭记忆答）</h2>

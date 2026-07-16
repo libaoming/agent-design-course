@@ -152,7 +152,7 @@
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
     <tr><td>你每天用的 self-attention</td><td>就是这篇的<strong>直系后代</strong>：把"译文看源文"改成"序列看自己"、把小网络打分换成点积，就成了 P01。</td></tr>
     <tr><td>attention 热力图 / 可解释性</td><td>软对齐第一次让"<strong>模型在看哪</strong>"可被画出来。你 debug agent"它到底参考了上下文哪段"时，看的就是这套权重的后代。</td></tr>
-    <tr><td>RAG 为什么要切块、不能把长文塞进一个 embedding</td><td>正是<strong>固定向量瓶颈</strong>在检索端的回响：一个 dense 向量压不下一篇长文档。<a href="../rag-供料层选型/MISSION.md">你的供料层选型</a>里"答得碎/拼接感"很多就栽在这。</td></tr>
+    <tr><td>RAG 为什么要切块、不能把长文塞进一个 embedding</td><td>正是<strong>固定向量瓶颈</strong>在检索端的回响：一个 dense 向量压不下一篇长文档。RAG 回答"答得碎/有拼接感"，很多就栽在这。</td></tr>
     <tr><td>encoder–decoder / cross-attention</td><td>多模态、检索增强生成里"用一条序列去引导另一条"的结构，源头就在这篇的"译文 query 源文"。</td></tr>
   </table>
 
@@ -210,7 +210,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0002-attention-is-all-you-need.html">&#8592; 第 2 课：Attention Is All You Need (P01)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P02</code> → 明天 P03</span>
+    <span class="cite">读完了？→ 下一课 P03</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

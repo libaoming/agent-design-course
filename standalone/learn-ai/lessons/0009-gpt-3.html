@@ -119,7 +119,7 @@
     <tr><td>「示例换个顺序 / 改个格式，效果就抖」</td><td>因为模型全靠这几个例子<strong>认领任务、对齐格式</strong>，example 是它唯一的「任务说明书」</td></tr>
     <tr><td>你纠结「这个任务该 few-shot 还是去微调」</td><td>就是 <strong>ICL（不改权重、临时）vs fine-tuning（改权重、永久）</strong>的取舍——量大稳定走微调，灵活少量走 few-shot</td></tr>
     <tr><td>「为什么小模型怎么调 prompt 都不灵，大模型一点就通」</td><td>因为 ICL 是<strong>大模型才涌现</strong>的能力，prompt 技巧吃的是规模红利</td></tr>
-    <tr><td>你做 Grader / LLM-as-judge 时给评分示例</td><td>同一招：用 few-shot 示范「什么算好/坏」，让模型对齐你的评分标准——本质是 in-context 地「认领评分任务」</td></tr>
+    <tr><td>你做 LLM 评分器（LLM-as-judge）时给评分示例</td><td>同一招：用 few-shot 示范「什么算好/坏」，让模型对齐你的评分标准——本质是 in-context 地「认领评分任务」</td></tr>
   </table>
 
   <h2>八、检索练习（关掉上文，凭记忆答）</h2>
@@ -209,7 +209,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0008-gpt-2.html">&#8592; 第 8 课：GPT-2 (P07)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P08</code> → 明天 P09（T5）</span>
+    <span class="cite">读完了？→ 下一课 P09（T5）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

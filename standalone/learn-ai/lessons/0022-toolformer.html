@@ -112,7 +112,7 @@
     <tr><td>改变世界的动作</td><td>各种 API / 执行器</td></tr>
   </table>
   <p class="cite">
-    🔮 这正是整个阶段五的母题：<strong>模型的权重是冻结且有限的，于是想办法把它「扩展出去」</strong>——<a href="0020-rag.html">RAG</a> 用<strong>检索</strong>扩展知识、<a href="0021-react.html">ReAct</a> 用<strong>循环</strong>扩展行动、Toolformer 用<strong>自监督训练</strong>把调工具变成原生本事。三者合起来，就是你那个语音 agent 的完整底座：<strong>一个推理内核 + 一圈它会自己调用的工具。</strong>
+    🔮 这正是整个阶段五的母题：<strong>模型的权重是冻结且有限的，于是想办法把它「扩展出去」</strong>——<a href="0020-rag.html">RAG</a> 用<strong>检索</strong>扩展知识、<a href="0021-react.html">ReAct</a> 用<strong>循环</strong>扩展行动、Toolformer 用<strong>自监督训练</strong>把调工具变成原生本事。三者合起来，就是一个现代 agent 的完整底座：<strong>一个推理内核 + 一圈它会自己调用的工具。</strong>
   </p>
 
   <h2>七、映射到你的项目</h2>
@@ -120,7 +120,7 @@
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
     <tr><td>你用的模型「会 <strong>function calling</strong>」</td><td>就是 Toolformer 精神的产品化：模型<strong>被训得</strong>能在合适处吐出工具调用——这能力的由来在这篇</td></tr>
     <tr><td>你给 agent <strong>挂哪些工具、在哪挂</strong></td><td>判据正是 Toolformer 的筛选逻辑：<strong>在「模型会瞎猜/会算错/会过时」的地方提供工具</strong>；一个不减少不确定性的工具就是噪声</td></tr>
-    <tr><td>你的语音 agent 整体架构</td><td><strong>推理内核 + 工具延伸</strong>：模型管理对话与推理，把查库、算薪资、查日程等外包给工具——别让它硬编它该去查的东西</td></tr>
+    <tr><td>你的语音客服 / 对话 agent 整体架构</td><td><strong>推理内核 + 工具延伸</strong>：模型管理对话与推理，把查知识库、算价格、查日程等外包给工具——别让它硬编它该去查的东西</td></tr>
     <tr><td>「工具越多越好吗」</td><td>不是：工具多了模型<strong>选择困难、易选错</strong>。按 Toolformer 的精神——<strong>只挂「确实能降低模型出错」的工具</strong>，且描述要让模型分得清何时用哪个</td></tr>
     <tr><td>更通用：模型不会算数 / 不知道今天几号</td><td>别指望 prompt 教会它算——<strong>那是工具的活</strong>。判断「这事该靠模型还是靠工具」，是 agent 设计的核心功夫</td></tr>
   </table>
@@ -215,18 +215,18 @@
       Mission 回看：你现在<strong>能在白纸上画 self-attention、能说清一篇新模型改了哪、能判断「这做不了/这很贵」的真假、能把 agent 输出不稳定拆到具体机制</strong>——「由内而外的物理直觉」，到手了。
     </p>
     <p style="margin:0.4rem 0">
-      下一步建议：① <strong>关掉 AI，默写</strong>最该练的两处——<strong>self-attention（P01）</strong>与 <strong>RLHF 三步（P15）</strong>；② 挑 2-3 篇做<strong>真实项目复盘</strong>（你的 RAG 供料层、语音 agent、Grader 各对应哪几课）；③ 想继续深挖可加读<strong>选读地基</strong>（AlexNet/ResNet/Adam…）或前沿新作。
+      下一步建议：① <strong>关掉 AI，默写</strong>最该练的两处——<strong>self-attention（P01）</strong>与 <strong>RLHF 三步（P15）</strong>；② 挑 2-3 篇做<strong>真实项目复盘</strong>（你的 RAG 知识库、语音 agent、LLM 评分器各对应哪几课）；③ 想继续深挖可加读<strong>选读地基</strong>（AlexNet/ResNet/Adam…）或前沿新作。
     </p>
   </div>
 
   <div class="ask-teacher">
     <b>我是你的老师，随时提问。</b> 比如：「我想把 21 篇连成一张「现代 LLM 全景图」，怎么画？」「想验收自己学得怎样，给我出一套综合默写题？」
-    「我的某个真实项目（RAG/语音 agent/Grader），用这门课的框架该怎么重新审视？」——通关了，但学习不止于此。
+    「我的某个真实项目（RAG 知识库/语音 agent/LLM 评分器），用这门课的框架该怎么重新审视？」——通关了，但学习不止于此。
   </div>
 
   <div class="nav">
     <span class="cite"><a href="0021-react.html">&#8592; 第 21 课：ReAct (P20)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P21</code> → <strong>21/21 全部完成 🎉</strong></span>
+    <span class="cite">读完了？→ <strong>21/21 全部完成 🎉</strong></span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

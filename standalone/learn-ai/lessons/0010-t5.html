@@ -77,7 +77,7 @@
   </table>
 
   <p class="cite">
-    第 ③ 点对你尤其亲切：<strong>T5 本质是一篇「先搭统一 harness，再在上面做对照实验」的论文</strong>——和你做 tech-architecture bake-off、harness 方法论是同一个信条：<strong>先把接口统一，比较才有意义。</strong>
+    第 ③ 点值得单独记住：<strong>T5 本质是一篇「先搭统一实验框架，再在上面做对照实验」的论文</strong>——和工程上做技术选型对比（bake-off）时先统一测试接口是同一个信条：<strong>先把接口统一，比较才有意义。</strong>
   </p>
 
   <h2>四、动手玩：把五种不同任务，全改写成「文字进、文字出」</h2>
@@ -118,7 +118,7 @@
   <table>
     <tr><th>旋钮</th><th>T5 的选择 / 结论</th><th>对照你已学的</th></tr>
     <tr><td>预训练目标</td><td><strong>span corruption（片段损坏）</strong>胜出：随机遮掉<strong>连续的一小段</strong>词，用一个<strong>哨兵 token</strong>（<code>&lt;X&gt;</code>）占位，让模型<strong>生成被遮掉的那段</strong></td><td>比 BERT 的 <a href="0006-bert.html">MLM</a>（遮单个词、原位预测）更省、更贴合「生成」，也和 encoder-decoder 天生对味</td></tr>
-    <tr><td>训练数据</td><td>自建 <strong>C4</strong>（Colossal Clean Crawled Corpus）：把 Common Crawl <strong>狠狠清洗</strong>后得到 ~750GB 干净文本</td><td>呼应 <a href="0008-gpt-2.html">GPT-2 的 WebText</a> 与你的 RAG 供料层信条——<strong>质 ≥ 量</strong>，清洗是地基</td></tr>
+    <tr><td>训练数据</td><td>自建 <strong>C4</strong>（Colossal Clean Crawled Corpus）：把 Common Crawl <strong>狠狠清洗</strong>后得到 ~750GB 干净文本</td><td>呼应 <a href="0008-gpt-2.html">GPT-2 的 WebText</a>，也和搭 RAG 知识库时的选料信条一致——<strong>质 ≥ 量</strong>，清洗是地基</td></tr>
     <tr><td>规模</td><td>同一配方放大到 <strong>11B</strong>，越大越好（但成本陡升）</td><td>把悬念交给下一阶段：到底怎么配最划算？</td></tr>
   </table>
   <p class="cite">
@@ -129,10 +129,10 @@
   <table>
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
     <tr><td>对同一个 chat 模型，用 prompt 做分类 / 抽取 / 打分 / 翻译，从不换模型</td><td>就是 <strong>text-to-text 统一框架</strong>——「万物皆字符串变换」，今天 chat 范式的底座在这篇</td></tr>
-    <tr><td>你做 Grader / LLM-as-judge，让模型<strong>生成一个分数</strong>（如「7/10」）</td><td>就是 T5 把<strong>回归也变成「生成数字字符串」</strong>（STS-B 打分）的同一招——分数是生成出来的字，不是回归头算的</td></tr>
+    <tr><td>你用 LLM 给对话/输出打分（LLM-as-judge），让模型<strong>生成一个分数</strong>（如「7/10」）</td><td>就是 T5 把<strong>回归也变成「生成数字字符串」</strong>（STS-B 打分）的同一招——分数是生成出来的字，不是回归头算的</td></tr>
     <tr><td>你 prompt 开头那句「你是一个…请把以下…」</td><td>就是 T5 <strong>任务前缀（task prefix）</strong>的后代；指令微调（<strong>FLAN-T5</strong> 直接基于 T5）就是把前缀升级成自然语言指令</td></tr>
-    <tr><td>你做 tech-architecture bake-off / harness，先统一接口再对比方案</td><td>和 T5 同一方法论：<strong>先搭统一 harness，受控对比才公平</strong>——这篇论文本身就是一次巨型 bake-off</td></tr>
-    <tr><td>你的 RAG 供料层反复强调「清洗 &gt; 堆量」</td><td>就是 T5 造 <strong>C4</strong>（清洗 Common Crawl）的信条：<strong>数据质量是地基</strong></td></tr>
+    <tr><td>你做技术选型对比（bake-off），先统一测试接口再对比方案</td><td>和 T5 同一方法论：<strong>先搭统一的评测框架，受控对比才公平</strong>——这篇论文本身就是一次巨型 bake-off</td></tr>
+    <tr><td>你搭 RAG 知识库时强调「清洗 &gt; 堆量」</td><td>就是 T5 造 <strong>C4</strong>（清洗 Common Crawl）的信条：<strong>数据质量是地基</strong></td></tr>
   </table>
 
   <h2>八、检索练习（关掉上文，凭记忆答）</h2>
@@ -215,7 +215,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0009-gpt-3.html">&#8592; 第 9 课：GPT-3 (P08)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P09</code> → 明天 P10（Scaling Laws）</span>
+    <span class="cite">读完了？→ 下一课 P10（Scaling Laws）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

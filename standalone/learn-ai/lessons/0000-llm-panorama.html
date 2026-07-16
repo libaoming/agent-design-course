@@ -58,9 +58,9 @@
     <tr><td>LLM 是什么</td><td>两个文件：参数 + 运行代码</td><td>第 1 课（生成）</td></tr>
     <tr><td>怎么训出来</td><td>压缩互联网→base；微调→assistant</td><td>论文 P05–P08、P15</td></tr>
     <tr><td>它怎么工作</td><td>Transformer + 「靠评估驾驭造物」</td><td>第 2 课、论文 P01</td></tr>
-    <tr><td>能力外扩</td><td>多模态、语音（Her）</td><td>你的语音招聘 agent</td></tr>
+    <tr><td>能力外扩</td><td>多模态、语音（Her）</td><td>语音客服等语音 agent</td></tr>
     <tr><td>慢思考</td><td>System 1 → System 2，时间换准确率</td><td>o1 / 推理模型</td></tr>
-    <tr><td>自我提升</td><td>AlphaGo 类比，缺 reward criterion</td><td>你的 Grader / autoevolve</td></tr>
+    <tr><td>自我提升</td><td>AlphaGo 类比，缺 reward criterion</td><td>LLM 评分器 / prompt 自动调优环</td></tr>
     <tr><td>LLM OS</td><td>LLM=CPU，context=RAM，工具=外设</td><td>你的 Context Engineering</td></tr>
     <tr><td>安全</td><td>越狱 / 提示注入 / 投毒</td><td>你做线上 agent 的护栏</td></tr>
   </table>
@@ -109,7 +109,7 @@
   <div class="quiz" data-answer="2"
        data-ok="提示注入：别人在你 agent 会读到的外部内容（简历/网页）里藏指令，劫持它的行为甚至窃取数据——这是读外部内容的 agent 的头号威胁。"
        data-no="越狱靠用户自己诱导；这里的风险是外部内容里藏的指令——那叫提示注入。">
-    <div class="quiz-q">3. 你的招聘 agent 要读用户上传的简历，最该防的攻击是？</div>
+    <div class="quiz-q">3. 你的 agent 要读用户上传的简历，最该防的攻击是？</div>
     <button class="quiz-opt">模型窃取：别人复制走你的模型</button>
     <button class="quiz-opt">数据投毒：训练数据被埋后门</button>
     <button class="quiz-opt">提示注入：简历里藏了恶意指令</button>

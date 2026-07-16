@@ -17,7 +17,7 @@
   <div class="mission">
     前两课 <a href="0016-instructgpt-rlhf.html">RLHF</a> 和 <a href="0018-dpo.html">DPO</a> 都吃<b>海量人工偏好标注</b>——尤其「无害性」那部分，又贵、又慢、又不一致，还让标注者天天读有害内容、身心俱疲。而且这些价值观<b>藏在几万条标注里</b>，看不见、改不动。
     这一课 Constitutional AI 换个思路：<b>把人的活从「标几万条样本」挪到「写一部宪法」（一组自然语言原则），然后让 AI 照着宪法<u>自己批评、自己修改、自己互评</u>。</b>
-    它回答一个对你尤其亲切的问题：<b>能不能少用人工标注、让模型用一套<u>可读可改</u>的原则自我对齐？——这正是你做 LLM-as-judge 时在干的事的「对齐版」。</b>
+    它回答一个对写过 LLM 评分 rubric 的读者尤其亲切的问题：<b>能不能少用人工标注、让模型用一套<u>可读可改</u>的原则自我对齐？——这正是 LLM-as-judge 在干的事的「对齐版」。</b>
   </div>
 
   <div class="big-idea">
@@ -105,15 +105,15 @@
     <tr><td>仍需人来定宪法</td><td>没有消灭人的判断，只是<strong>把它前置、集中到「立法」环节</strong>——谁来写、写什么，仍是人的责任。</td></tr>
   </table>
   <p class="cite">
-    🔮 对齐演化主线收束：<strong>RLHF（人标 + RL）→ DPO（人标、免 RL）→ Constitutional AI（AI 照宪法自标）</strong>——人的角色一路从「标注员」走向「立法者」。这是 <strong>Anthropic 的方法、Claude 的根</strong>。<strong>阶段四「对齐与推理」到此基本收尾</strong>，接下来转入<strong>检索与 Agent</strong>（P19 RAG → P20 ReAct → P21 Toolformer）——正对你的主业。
+    🔮 对齐演化主线收束：<strong>RLHF（人标 + RL）→ DPO（人标、免 RL）→ Constitutional AI（AI 照宪法自标）</strong>——人的角色一路从「标注员」走向「立法者」。这是 <strong>Anthropic 的方法、Claude 的根</strong>。<strong>阶段四「对齐与推理」到此基本收尾</strong>，接下来转入<strong>检索与 Agent</strong>（P19 RAG → P20 ReAct → P21 Toolformer）——正是当下 AI 产品落地的主战场。
   </p>
 
   <h2>七、映射到你的项目</h2>
   <table>
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
-    <tr><td>你给 <strong>LLM-as-judge / Grader</strong> 写的 rubric</td><td>就是一部<strong>迷你宪法</strong>——一组让 AI 照着评判的成文原则。CAI 是「把这套评判反馈回去对齐模型」的完整闭环，你已经在用它的核心零件</td></tr>
+    <tr><td>你给 <strong>LLM 评分器（LLM-as-judge）</strong>写的 rubric</td><td>就是一部<strong>迷你宪法</strong>——一组让 AI 照着评判的成文原则。CAI 是「把这套评判反馈回去对齐模型」的完整闭环，你已经在用它的核心零件</td></tr>
     <tr><td>你想让 agent 输出更稳更安全，又不想人工逐条审</td><td>直接用 <strong>自我批评-修订循环</strong>：让模型照你的原则<strong>先批评自己的输出、再修订</strong>——不进人也能提质（通用 agent 技巧）</td></tr>
-    <tr><td>你的 <strong>autoevolve</strong> 缺人工偏好数据</td><td>RLAIF 给你一条路：<strong>用 AI 照成文标准自动生成偏好对</strong>，喂给 DPO/优化闭环——人只维护那份标准</td></tr>
+    <tr><td>你的 <strong>prompt 自动调优环（生成→评分→改 prompt 的闭环）</strong>缺人工偏好数据</td><td>RLAIF 给你一条路：<strong>用 AI 照成文标准自动生成偏好对</strong>，喂给 DPO/优化闭环——人只维护那份标准</td></tr>
     <tr><td>你要让产品的「价值观/风格」可被团队审查和迭代</td><td>CAI 的精神：<strong>把规则写成可读文档</strong>（而非埋在 prompt 碎片或标注里），团队能一起看、一起改——治理友好</td></tr>
     <tr><td>「AI 自己评自己，靠谱吗」</td><td>记住边界：<strong>AI 裁判继承基模盲点</strong>（会一起错），<strong>宪法质量是上限</strong>——所以仍要 held-out / 真人抽检兜底（同 <a href="0016-instructgpt-rlhf.html">Goodhart</a> 那一课）</td></tr>
   </table>
@@ -173,7 +173,7 @@
     <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">我能不能不训练模型，只借 CAI 的思路提升我 agent 的质量？</summary>
     <div style="padding:0.4rem 0 0.6rem">
       <p style="margin:0.3rem 0"><strong>完全可以，而且这是性价比最高的借用法。</strong>把 CAI 第一阶段的<strong>「自我批评-修订」搬到推理时</strong>：让你的 agent 产出初稿 → 用一段「请照以下原则检查这份输出的问题」prompt 让它<strong>自我批评</strong> → 让它<strong>据此修订</strong>，再输出。不碰任何权重，纯靠多一轮推理就显著提质（业界叫 self-refine / reflexion）。</p>
-      <p style="margin:0.3rem 0" class="cite">代价是<strong>多花 token 和延迟</strong>（和 <a href="0017-chain-of-thought.html">CoT</a> 同款取舍）——所以适合<strong>对质量/安全要求高、能容忍多一轮的环节</strong>，realtime 主链路要谨慎。心法：<strong>把你想要的标准写成一小段「原则」，让模型先自评再交付。</strong></p>
+      <p style="margin:0.3rem 0" class="cite">代价是<strong>多花 token 和延迟</strong>（和 <a href="0017-chain-of-thought.html">CoT</a> 同款取舍）——所以适合<strong>对质量/安全要求高、能容忍多一轮的环节</strong>，实时语音等低延迟主链路要谨慎。心法：<strong>把你想要的标准写成一小段「原则」，让模型先自评再交付。</strong></p>
     </div>
   </details>
 
@@ -205,7 +205,7 @@
     <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">宪法原则冲突了（无害 vs 有用打架）怎么办？</summary>
     <div style="padding:0.4rem 0 0.6rem">
       <p style="margin:0.3rem 0">CAI（和所有对齐）的中心张力，五层处理：① <strong>原则有优先级</strong>，常见框架 <strong>无害 ≳ 诚实 ≳ 有用</strong>，冲突先按序裁；② <strong>真正的解是「既…又…」</strong>——自我批评逼出同时无害且有用的回答（不教撬锁但给正当替代），多数表面冲突一个用心回答就化解；③ <strong>真两难交给模型按元原则权衡</strong>（学出来的取舍，非硬规则）；④ <strong>过度拒答 = 优先级配坏的症状</strong>，调宪法+数据更重视有用性可缓解（是校准问题）；⑤ <strong>残余张力消不掉</strong>（边界 case 是各家分化处）。</p>
-      <p style="margin:0.3rem 0" class="cite">对你写 Grader/agent 原则集：① <strong>显式排优先级</strong>（别留平级原则打架）；② 优先找 both/and 措辞；③ 接受有些是判断题；④ 把过度拒答/过度放行当<strong>校准信号</strong>去调，不当 bug 去堵。</p>
+      <p style="margin:0.3rem 0" class="cite">对你写 LLM 评分 rubric / agent 原则集：① <strong>显式排优先级</strong>（别留平级原则打架）；② 优先找 both/and 措辞；③ 接受有些是判断题；④ 把过度拒答/过度放行当<strong>校准信号</strong>去调，不当 bug 去堵。</p>
     </div>
   </details>
 
@@ -234,7 +234,7 @@
       延伸：Anthropic 的「<em>Claude's Constitution</em>」公开文档（看真实宪法长什么样）；以及 RLAIF 相关后续工作。
     </p>
     <p style="margin:0.3rem 0" class="cite">
-      <strong>阶段四「对齐与推理」收尾。</strong>下一阶段「检索与 Agent」开篇 <strong>P19 RAG</strong>：给模型外接知识库——直接对上你做的记忆/知识注入。再往后 <strong>P20 ReAct</strong> 就是你语音 agent 的理论原型。
+      <strong>阶段四「对齐与推理」收尾。</strong>下一阶段「检索与 Agent」开篇 <strong>P19 RAG</strong>：给模型外接知识库——知识库问答、记忆注入这类应用的理论根。再往后 <strong>P20 ReAct</strong> 就是工具调用 agent 的理论原型。
     </p>
   </div>
 
@@ -245,7 +245,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0018-dpo.html">&#8592; 第 18 课：DPO (P17)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P18</code> → 明天 P19（RAG）</span>
+    <span class="cite">读完了？→ 下一课 P19（RAG）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

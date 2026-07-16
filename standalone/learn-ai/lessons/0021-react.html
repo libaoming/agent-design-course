@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>第 21 课 · ReAct：想一步、做一步、看一步——你语音 agent 的循环骨架</title>
+<title>第 21 课 · ReAct：想一步、做一步、看一步——AI agent 的循环骨架</title>
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body>
@@ -12,19 +12,19 @@
   <div class="course-tag">Learn AI · 模型硬功底（由内而外）</div>
   <div class="lesson-no">第 21 课 / 经典论文 <strong>P20</strong> &nbsp;·&nbsp; 阶段五：检索与 Agent（Yao et al., 2022）</div>
 
-  <h1>ReAct：<br>想一步、做一步、看一步<br><span style="font-size:0.55em;color:#a8521a">——你语音 agent 的循环骨架</span></h1>
+  <h1>ReAct：<br>想一步、做一步、看一步<br><span style="font-size:0.55em;color:#a8521a">——AI agent 的循环骨架</span></h1>
 
   <div class="mission">
     你学的两块拼图，各有缺口：<a href="0017-chain-of-thought.html">CoT</a> 让模型「一步步想」，但想是<b>封闭</b>的——拿不到新信息、还可能越想越飘（无依据）；<a href="0020-rag.html">RAG</a> 能取信息，但<b>只在开头检索一次</b>，取完就定死。
     可真实任务往往是：<b>你得先想一下、才知道该查什么；查到结果后，再想下一步该干嘛</b>——要边想边做、按需取信息。
-    这一课 ReAct 把「想」和「做」<b>交错成一个循环</b>，组装出了 agent 的基本形态。它正是你语音 agent「感知→思考→行动→再感知」的理论原型：<b>一个会推理、会调工具、会根据结果调整的循环，到底长什么样、为什么这样才work？</b>
+    这一课 ReAct 把「想」和「做」<b>交错成一个循环</b>，组装出了 agent 的基本形态。它正是语音客服、编程助手这类 agent「感知→思考→行动→再感知」的理论原型：<b>一个会推理、会调工具、会根据结果调整的循环，到底长什么样、为什么这样才work？</b>
   </div>
 
   <div class="big-idea">
     一句话：<strong>ReAct = 把「推理（Reasoning）」和「行动（Acting）」交错成一个循环。</strong><br>
     <strong>Thought（想一步）→ Action（做一步，调工具/搜索）→ Observation（看结果）→ Thought → …</strong> 直到给出答案。<br>
     妙处在<strong>相互增强</strong>：<strong>推理决定该做什么动作（规划、拆解、处理异常）；动作把真实信息喂回来给推理接地（防幻觉、可纠错）。</strong>
-    <em>这就是现代几乎所有 agent（包括你的语音 agent）的循环骨架，也是 RAG 从「一次性检索」升级成「模型自己决定何时查、查完再想」的形态。</em>
+    <em>这就是现代几乎所有 agent（从编程助手到语音客服）的循环骨架，也是 RAG 从「一次性检索」升级成「模型自己决定何时查、查完再想」的形态。</em>
   </div>
 
   <h2>一、立靶：会想的不会做，会做的不会想</h2>
@@ -125,7 +125,7 @@
   <h2>七、映射到你的项目</h2>
   <table>
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
-    <tr><td>你的<strong>语音招聘 agent</strong>「听 → 想 → 调工具/查资料 → 据结果应答 → 再听」</td><td>就是 ReAct 循环：<strong>Thought（想）+ Action（调工具）+ Observation（结果）</strong>反复迭代——你做的就是这套</td></tr>
+    <tr><td><strong>语音客服 agent</strong> 的「听 → 想 → 调工具/查资料 → 据结果应答 → 再听」</td><td>就是 ReAct 循环：<strong>Thought（想）+ Action（调工具）+ Observation（结果）</strong>反复迭代——每个对话式 agent 搭的都是这套</td></tr>
     <tr><td>你想让 agent「先查知识库再回答」，且能多查几轮</td><td>就是 <strong>agentic RAG</strong>：把 <a href="0020-rag.html">RAG</a> 的一次性检索，变成模型<strong>在循环里自己决定何时检索、要不要追查</strong></td></tr>
     <tr><td>你的 agent <strong>function calling / 工具编排</strong></td><td>ReAct 是其推理骨架：每次工具调用前那段「为什么调、调哪个」的 Thought，决定编排质不质量</td></tr>
     <tr><td>你的 agent <strong>死循环、不停、乱调工具</strong>这些 bug</td><td>都是 ReAct 的经典失败模式——<strong>多在 Thought 环节修</strong>（让它显式判断「是否已够/是否在重复/该不该停」），而非加更多工具</td></tr>
@@ -187,7 +187,7 @@
     <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">ReAct 每轮都把推理和观察堆进上下文，会不会越跑越长、越贵越慢？</summary>
     <div style="padding:0.4rem 0 0.6rem">
       <p style="margin:0.3rem 0"><strong>会，这是 agent 的真实成本陷阱。</strong>每轮 Thought + Observation 都累加进上下文，多跑几轮，token、延迟、钱都线性涨（还可能「迷失在中间」）。尤其 <strong>Observation 可能很长</strong>（一整页搜索结果、一大段 API 返回），几轮就把窗口撑爆。</p>
-      <p style="margin:0.3rem 0" class="cite">缓解：① <strong>压缩 Observation</strong>（只留相关摘要再入上下文，别原样塞）；② <strong>限制步数 / 早停</strong>；③ <strong>阶段性总结</strong>（把前几轮压成一段记忆，丢掉原始细节）；④ <strong>对延迟敏感的 realtime 场景</strong>（你的语音 agent），更要控轮数、用更快的工具、把重活挪到不卡用户的环节——这是 <a href="0017-chain-of-thought.html">CoT</a>「想得多=慢而贵」取舍在 agent 上的放大版。</p>
+      <p style="margin:0.3rem 0" class="cite">缓解：① <strong>压缩 Observation</strong>（只留相关摘要再入上下文，别原样塞）；② <strong>限制步数 / 早停</strong>；③ <strong>阶段性总结</strong>（把前几轮压成一段记忆，丢掉原始细节）；④ <strong>对延迟敏感的实时语音场景</strong>（比如语音客服 agent），更要控轮数、用更快的工具、把重活挪到不卡用户的环节——这是 <a href="0017-chain-of-thought.html">CoT</a>「想得多=慢而贵」取舍在 agent 上的放大版。</p>
     </div>
   </details>
 
@@ -220,13 +220,13 @@
   </div>
 
   <div class="ask-teacher">
-    <b>我是你的老师，随时提问。</b> 比如：「多步 agent 出错了，我怎么定位是 Thought 错还是工具/Observation 错？」「ReAct 和 Plan-and-Execute（先规划全程再执行）哪种更适合我的语音 agent？」
+    <b>我是你的老师，随时提问。</b> 比如：「多步 agent 出错了，我怎么定位是 Thought 错还是工具/Observation 错？」「ReAct 和 Plan-and-Execute（先规划全程再执行）哪种更适合我的场景？」
     「Reflexion（让 agent 反思失败再重试）和 ReAct 是什么关系？」——别带着模糊往下走。
   </div>
 
   <div class="nav">
     <span class="cite"><a href="0020-rag.html">&#8592; 第 20 课：RAG (P19)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P20</code> → 明天 P21（Toolformer，收官）</span>
+    <span class="cite">读完了？→ 下一课 P21（Toolformer，收官）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

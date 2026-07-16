@@ -110,8 +110,8 @@
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
     <tr><td>你每天用的 LLM「生成」</td><td>就是 <strong>decoder 那一半</strong>：拿着上下文向量，自回归一个 token 一个 token 往外吐。GPT = 长满 attention 的 decoder。</td></tr>
     <tr><td>你调的 <code>max_tokens</code> / <code>stop</code></td><td>本质是在管这台 decoder「<strong>什么时候吐 &lt;EOS&gt; / 该不该停</strong>」——停止机制就是这篇定的。</td></tr>
-    <tr><td>语音招聘里的 ASR / 翻译 / 摘要</td><td>全是 <strong>seq2seq</strong>：语音序列 → 文字序列、长文 → 摘要，同一个 encoder-decoder 框架。</td></tr>
-    <tr><td>RAG 把一段话编码成<strong>一个向量</strong>做检索</td><td>就是这篇的 <strong>thought vector</strong> 直系后代——也<strong>继承了它的瓶颈</strong>：一个 dense 向量压不下长文档，这正是你<a href="../rag-供料层选型/MISSION.md">供料层选型</a>要切块、要聚合的根。</td></tr>
+    <tr><td>语音 agent 里的 ASR / 翻译 / 摘要</td><td>全是 <strong>seq2seq</strong>：语音序列 → 文字序列、长文 → 摘要，同一个 encoder-decoder 框架。</td></tr>
+    <tr><td>RAG 把一段话编码成<strong>一个向量</strong>做检索</td><td>就是这篇的 <strong>thought vector</strong> 直系后代——也<strong>继承了它的瓶颈</strong>：一个 dense 向量压不下长文档，这正是 RAG 要切块、要聚合的根。</td></tr>
   </table>
 
   <h2>六、检索练习（关掉上文，凭记忆答）</h2>
@@ -160,8 +160,8 @@
   <details class="faq" style="border:1.5px solid #e3d6bf;border-radius:8px;padding:0.4rem 0.9rem;margin:0.5rem 0;background:#fffaf3">
     <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">thought vector 和 sentence embedding 是一回事吗？</summary>
     <div style="padding:0.4rem 0 0.6rem">
-      <p style="margin:0.3rem 0"><strong>同源，但训练目标分了家。</strong>两者都是「一句话 → 一个定长向量」。但 thought vector 为<strong>生成 / 翻译</strong>顺带产生（够 decoder 解出译文就行）；sentence embedding（你 RAG 用的 <code>bge-small-zh</code>）为<strong>检索</strong>专门用对比学习训，目标是「语义相近 = 距离近」。</p>
-      <p style="margin:0.3rem 0">所以 RAG 里那个向量是 embedding、不是 thought vector，但同一血脉，也<strong>继承同一瓶颈</strong>：一个定长向量装不下长文——这就是你<a href="../rag-供料层选型/MISSION.md">供料层选型</a>要切块、要召回后聚合的根。</p>
+      <p style="margin:0.3rem 0"><strong>同源，但训练目标分了家。</strong>两者都是「一句话 → 一个定长向量」。但 thought vector 为<strong>生成 / 翻译</strong>顺带产生（够 decoder 解出译文就行）；sentence embedding（RAG 常用的 <code>bge</code> 系列等）为<strong>检索</strong>专门用对比学习训，目标是「语义相近 = 距离近」。</p>
+      <p style="margin:0.3rem 0">所以 RAG 里那个向量是 embedding、不是 thought vector，但同一血脉，也<strong>继承同一瓶颈</strong>：一个定长向量装不下长文——这就是 RAG 要切块、要召回后聚合的根。</p>
     </div>
   </details>
 
@@ -195,7 +195,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0003-neural-machine-translation-align-translate.html">&#8592; 第 3 课：Bahdanau Attention (P02)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P03</code> → 明天 P04</span>
+    <span class="cite">读完了？→ 下一课 P04</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

@@ -123,7 +123,7 @@
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
     <tr><td>你换个更大的模型，发现它「啥都会一点」、根本没训它</td><td>就是 GPT-2 的 <strong>zero-shot 多任务</strong>——能力是「猜下一个词 + 规模」涌现出来的，不是谁专门教的</td></tr>
     <tr><td>你写 <code>TL;DR:</code> / 「请翻译：」/「判断情感：」就让模型干活</td><td><strong>任务条件化</strong>的直系应用——你在用一句提示选中模型早已学会的某个任务</td></tr>
-    <tr><td>你做 RAG 供料层 / 数据集时纠结「要质还是要量」</td><td>GPT-2 用 <strong>WebText（Reddit 高赞过滤）</strong>立的范式：<strong>数据质量 ≥ 数据数量</strong></td></tr>
+    <tr><td>你做 RAG 语料 / 数据集时纠结「要质还是要量」</td><td>GPT-2 用 <strong>WebText（Reddit 高赞过滤）</strong>立的范式：<strong>数据质量 ≥ 数据数量</strong></td></tr>
     <tr><td>你按 token 计费、算上下文窗口</td><td>那个 token 来自 GPT-2 的 <strong>byte-level BPE</strong>（词表 50257）——一个词常是多个 token</td></tr>
     <tr><td>「换大模型常常一换就好」的玄学体感</td><td>就是 <strong>涌现</strong>：能力越过规模门槛才冒出来。下节 scaling laws 把它量化</td></tr>
   </table>
@@ -180,7 +180,7 @@
     <summary style="cursor:pointer;font-weight:600;color:#a8521a;padding:0.3rem 0">为什么数据质量这么关键？多堆点数据不行吗？</summary>
     <div style="padding:0.4rem 0 0.6rem">
       <p style="margin:0.3rem 0">关键在「<strong>任务示范的密度和干净度</strong>」。随便爬全网会混进大量垃圾、重复、机器生成的低质文本，模型学到的「下一个词分布」被污染。GPT-2 用 <strong>Reddit karma（高赞）</strong>当人工质量代理，等于让人群先帮你筛了一遍——筛出的 WebText 里，<strong>高质量的任务示范（总结、问答、翻译）密度更高</strong>。</p>
-      <p style="margin:0.3rem 0" class="cite">迁移到你：做 RAG 供料层 / 微调数据集时，<strong>「先狠狠过滤再喂」往往比「多喂」回报高</strong>——脏数据不是中性的，它会主动拉低分布质量。</p>
+      <p style="margin:0.3rem 0" class="cite">迁移到你：做 RAG 语料 / 微调数据集时，<strong>「先狠狠过滤再喂」往往比「多喂」回报高</strong>——脏数据不是中性的，它会主动拉低分布质量。</p>
     </div>
   </details>
 
@@ -229,7 +229,7 @@
         <tr><td>预训练（GPT-2/3）</td><td><strong>能力</strong>：模型会不会做（zero-shot 证明了它会）</td></tr>
         <tr><td>指令微调 + RLHF（P15）</td><td><strong>对齐</strong>：把「续写互联网」掰成「做有用/诚实/无害的助手」</td></tr>
       </table>
-      <p style="margin:0.3rem 0" class="cite">一句话：<strong>预训练给了「能做」的本事，RLHF 教会「该怎么做、该不该做」——前者是潜力，后者是教养。</strong>你「prompt 控不住行为」的困惑根源就在此：模型性格是 RLHF 训练时焊死的，光靠推理时的 prompt 有上限。RLHF 本质＝「人类打分→把模型往偏好推」，正是你 autoevolve 的工业化版。P15 InstructGPT 正式拆。🔮</p>
+      <p style="margin:0.3rem 0" class="cite">一句话：<strong>预训练给了「能做」的本事，RLHF 教会「该怎么做、该不该做」——前者是潜力，后者是教养。</strong>你「prompt 控不住行为」的困惑根源就在此：模型性格是 RLHF 训练时焊死的，光靠推理时的 prompt 有上限。RLHF 本质＝「人类打分→把模型往偏好推」，正是 prompt 自动调优环（生成→评分→改 prompt 的闭环）的工业化版。P15 InstructGPT 正式拆。🔮</p>
     </div>
   </details>
 
@@ -254,7 +254,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0007-gpt-1.html">&#8592; 第 7 课：GPT-1 (P06)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P07</code> → 明天 P08（GPT-3）</span>
+    <span class="cite">读完了？→ 下一课 P08（GPT-3）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

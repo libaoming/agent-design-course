@@ -118,7 +118,7 @@
     <tr><td>ChatGPT / Claude 一个 token 一个 token 往外蹦</td><td>就是 GPT-1 的<strong>「预测下一个词」自回归生成</strong>，原封不动放大了上万倍。你在<a href="0001-next-token-prediction.html">第 1 课</a>学的生成流水线，正是这条线的成品。</td></tr>
     <tr><td>你写 prompt 把任务「描述成一段话」喂给模型</td><td>GPT-1 的<strong>输入变换</strong>的直系后代——把任务塞进一段连续 token。区别只是它要微调、你不用。</td></tr>
     <tr><td>「为什么大模型啥都会，又没人专门教它」</td><td>因为通用能力是<strong>「猜下一个词」的副产品</strong>。猜准海量文本的下一个词，被迫把语法/事实/推理全学了。</td></tr>
-    <tr><td>你做 LLM-as-judge / autoevolve 时，模型「凭语感」打分</td><td>那份语感正是预训练「猜下一个词」副产品里的<strong>分布感</strong>——它知道「像不像人写的」，因为它就是按人写的分布训出来的。</td></tr>
+    <tr><td>你做 LLM-as-judge / prompt 自动调优时，模型「凭语感」打分</td><td>那份语感正是预训练「猜下一个词」副产品里的<strong>分布感</strong>——它知道「像不像人写的」，因为它就是按人写的分布训出来的。</td></tr>
   </table>
 
   <h2>八、检索练习（关掉上文，凭记忆答）</h2>
@@ -231,7 +231,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0006-bert.html">&#8592; 第 6 课：BERT (P05)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P06</code> → 明天 P07（GPT-2）</span>
+    <span class="cite">读完了？→ 下一课 P07（GPT-2）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

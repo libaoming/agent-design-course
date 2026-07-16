@@ -17,7 +17,7 @@
   <div class="mission">
     上一课 <a href="0013-lora.html">LoRA</a> 省的是<b>微调成本</b>（改 <u>什么</u>——只训低秩补丁）。这一课 FlashAttention 省的是<b>跑 attention 时的显存与时间</b>（改 <u>怎么算</u>——同样的结果、更聪明的内存顺序）。
     它戳破一个流行的误解：<b>attention 慢，大家以为卡在 O(N²) 的「计算量」上，真相却是卡在「把那张 N×N 大矩阵在 GPU 慢速显存里反复读写」的<u>搬运</u>上。</b>
-    这直接对应你 realtime 语音链路天天纠结的事：<b>为什么上下文一长，延迟和显存就爆？怎么在不牺牲效果的前提下把它压下去？</b>
+    这直接对应实时语音、长上下文应用天天纠结的事：<b>为什么上下文一长，延迟和显存就爆？怎么在不牺牲效果的前提下把它压下去？</b>
   </div>
 
   <div class="big-idea">
@@ -126,7 +126,7 @@
   <h2>七、映射到你的项目</h2>
   <table>
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
-    <tr><td>realtime 语音链路「上下文一长，延迟就飙」</td><td>正是 attention 的<strong>内存搬运瓶颈</strong>——FlashAttention 直接压低这块延迟，是长上下文低延迟的工程底</td></tr>
+    <tr><td>你做实时语音 agent 等低延迟应用，「上下文一长，延迟就飙」</td><td>正是 attention 的<strong>内存搬运瓶颈</strong>——FlashAttention 直接压低这块延迟，是长上下文低延迟的工程底</td></tr>
     <tr><td>你算「这个长上下文请求要吃多少显存 / 能不能放下」</td><td>记住：标准是 <strong>O(N²)</strong>、Flash 是 <strong>O(N)</strong>——长上下文能不能落地，差别全在这</td></tr>
     <tr><td>纠结「为了省钱要不要上稀疏/近似注意力，会不会掉效果」</td><td>先确认有没有用上 FlashAttention：<strong>它是无损白赚的</strong>，该先吃干净；近似方案是有损的，最后再考虑</td></tr>
     <tr><td>工程师说「换上 FlashAttention 快了 3 倍」，你想判断真假</td><td>合理——它不改结果、只改 IO，长序列上数倍提速是常态，且<strong>不该有质量变化</strong>（若效果变了，那不是 FlashAttention 的锅）</td></tr>
@@ -244,7 +244,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0013-lora.html">&#8592; 第 13 课：LoRA (P12)</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P13</code> → 明天 P14（MoE / Switch Transformers）</span>
+    <span class="cite">读完了？→ 下一课 P14（MoE / Switch Transformers）</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>

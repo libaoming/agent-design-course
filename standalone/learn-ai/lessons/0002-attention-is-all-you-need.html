@@ -134,7 +134,7 @@
   <table>
     <tr><th>你工作里的东西</th><th>其实就是这篇论文的什么</th></tr>
     <tr><td>你用的所有模型底座</td><td>就是这个 self-attention block <strong>堆叠几十层</strong>（GPT 是它的 decoder 部分）。</td></tr>
-    <tr><td>KV cache（realtime 降延迟）</td><td>生成时把已算过的 Key/Value 缓存下来，新 token 不必重算——直接来自这里的 K、V。</td></tr>
+    <tr><td>KV cache（实时语音等低延迟场景）</td><td>生成时把已算过的 Key/Value 缓存下来，新 token 不必重算——直接来自这里的 K、V。</td></tr>
     <tr><td>长上下文为什么又慢又贵</td><td>那个 <strong>O(n²)</strong>：上下文翻倍，注意力计算量翻四倍。FlashAttention（P13）就是来治它的。</td></tr>
     <tr><td>模型"能同时顾及多个方面"</td><td>multi-head：多组注意力并行，各看各的侧面。</td></tr>
   </table>
@@ -234,7 +234,7 @@
 
   <div class="nav">
     <span class="cite"><a href="0001-next-token-prediction.html">&#8592; 第 1 课：下一个 token 的概率分布</a></span>
-    <span class="cite">读完了？跑 <code>python3 scripts/today.py --done P01</code> → 明天 P02</span>
+    <span class="cite">读完了？→ 下一课 P02</span>
   </div>
 
   <p class="cite" style="margin-top:2rem">参考：<br>
