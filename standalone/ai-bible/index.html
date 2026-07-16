@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light" />
+<title>AI 圣经 · 18 篇大模型奠基论文精读 · 橙研所</title>
+<meta name="description" content="橙研所「AI 圣经」系列：从 Attention Is All You Need 到 Constitutional AI，18 篇大模型奠基论文的逐篇精读——注意力与序列、预训练范式、规模与效率、对齐与推理四个阶段，讲给产品经理和工程师都能读懂。" />
+<style>
+  :root{--bg:#f5f5f7;--paper:#fff;--ink:#1d1d1f;--ink-3:#6e6e73;--line:#d2d2d7;--clay:#ec5a16;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  .wrap{width:min(720px,calc(100% - 44px));margin:0 auto}
+  .topbar{border-bottom:1px solid var(--line);background:var(--paper)}
+  .topbar .wrap{display:flex;align-items:center;gap:10px;min-height:56px}
+  .mark{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:.95rem;background:var(--clay)}
+  .topbar b{font-weight:800;font-size:.95rem}
+  .topbar small{color:var(--ink-3);font-weight:500}
+  .topbar a{margin-left:auto;font-size:.85rem;color:var(--ink-3);text-decoration:none}
+  header.hero{padding:52px 0 10px}
+  .kicker{color:var(--clay);font-weight:700;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;font-family:ui-monospace,Menlo,monospace}
+  h1{font-size:clamp(1.7rem,3.6vw,2.3rem);line-height:1.18;letter-spacing:-.022em;font-weight:600;margin:14px 0 16px}
+  .lead{font-size:1.08rem;line-height:1.65;color:var(--ink-3);margin:0 0 8px}
+  h2{font-size:.98rem;font-weight:700;margin:40px 0 6px;color:var(--ink)}
+  .list{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+  .card{display:flex;align-items:baseline;gap:14px;text-decoration:none;color:var(--ink);background:var(--paper);
+    border:1px solid var(--line);border-radius:12px;padding:15px 18px;transition:border-color .12s,transform .12s}
+  .card:hover{border-color:var(--clay);transform:translateX(3px)}
+  .no{font-family:ui-monospace,Menlo,monospace;font-size:.76rem;font-weight:700;color:var(--clay);background:#fdf0e9;border-radius:6px;padding:3px 8px;white-space:nowrap}
+  .t{font-size:.99rem;line-height:1.45}
+  footer{margin:56px 0 60px;padding-top:22px;border-top:1px solid var(--line);color:var(--ink-3);font-size:.85rem;line-height:1.7}
+  footer a{color:var(--clay);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="wrap"><span class="mark">橙</span><b>橙研所</b><small>chengyansuo.com</small><a href="https://chengyansuo.com/">&#8592; 返回主站</a></div></div>
+<div class="wrap">
+<header class="hero">
+  <div class="kicker">AI Bible &middot; 18 Papers</div>
+  <h1>AI 圣经：18 篇大模型奠基论文精读</h1>
+  <p class="lead">从 Attention Is All You Need 到 Constitutional AI——今天所有大模型产品，几乎都站在这 18 篇论文上。一个 AI 产品经理的逐篇精读：讲清每篇解决了什么问题、动了哪根杠杆、在今天留下了什么。</p>
+</header>
+  <h2>阶段一 · 注意力与序列</h2>
+  <div class="list">
+      <a class="card" href="01-attention-is-all-you-need.html"><span class="no">01</span><span class="t">Attention Is All You Need</span></a>
+      <a class="card" href="02-bahdanau-attention.html"><span class="no">02</span><span class="t">Bahdanau Attention：注意力是怎么来的</span></a>
+      <a class="card" href="03-seq2seq.html"><span class="no">03</span><span class="t">Sequence to Sequence：一段进、一段出，AI 翻译骨架的诞生</span></a>
+      <a class="card" href="04-word2vec.html"><span class="no">04</span><span class="t">word2vec：词，是怎么变成向量的</span></a>
+  </div>
+  <h2>阶段二 · 预训练范式</h2>
+  <div class="list">
+      <a class="card" href="05-bert.html"><span class="no">05</span><span class="t">BERT：让机器学会「完形填空」，预训练范式登场</span></a>
+      <a class="card" href="06-gpt-1.html"><span class="no">06</span><span class="t">GPT：让机器学会「往下接龙」，生成式预训练登场</span></a>
+      <a class="card" href="07-gpt-2.html"><span class="no">07</span><span class="t">GPT-2：读了半个互联网之后，它开始「不学就会」</span></a>
+      <a class="card" href="08-gpt-3.html"><span class="no">08</span><span class="t">GPT-3：当参数放大到 1750 亿，「不学就会」终于成真</span></a>
+      <a class="card" href="09-t5.html"><span class="no">09</span><span class="t">T5：把所有 NLP 任务，统统变成「文本进、文本出」</span></a>
+  </div>
+  <h2>阶段三 · 规模与效率</h2>
+  <div class="list">
+      <a class="card" href="10-scaling-laws.html"><span class="no">10</span><span class="t">Scaling Laws：大模型的「变大」，是一门可以计算的科学</span></a>
+      <a class="card" href="11-chinchilla.html"><span class="no">11</span><span class="t">Chinchilla：DeepMind 重算了那笔账——70B 为什么能打败 280B</span></a>
+      <a class="card" href="12-lora.html"><span class="no">12</span><span class="t">LoRA：冻住 1750 亿参数，微调只动万分之一</span></a>
+      <a class="card" href="13-flashattention.html"><span class="no">13</span><span class="t">FlashAttention：数学一字不改，注意力凭什么快 7.6 倍</span></a>
+      <a class="card" href="14-moe.html"><span class="no">14</span><span class="t">MoE 混合专家：万亿参数，为什么可以只算零头</span></a>
+  </div>
+  <h2>阶段四 · 对齐与推理</h2>
+  <div class="list">
+      <a class="card" href="15-instructgpt-rlhf.html"><span class="no">15</span><span class="t">InstructGPT / RLHF：怎么把复读机，调教成听话的助手</span></a>
+      <a class="card" href="16-chain-of-thought.html"><span class="no">16</span><span class="t">思维链 CoT：只要让模型「把话一步步说出来」，它就突然会推理了</span></a>
+      <a class="card" href="17-dpo.html"><span class="no">17</span><span class="t">DPO：不训裁判、不跑强化学习，把 RLHF 三步蒸成一步</span></a>
+      <a class="card" href="18-constitutional-ai.html"><span class="no">18</span><span class="t">Constitutional AI：给 AI 一部宪法，让 AI 给 AI 当裁判</span></a>
+  </div>
+<footer>本系列首发于公众号「橙研所」，随学随更。姊妹篇：<a href="../learn-ai/">Learn AI · 模型硬功底</a>（同一条论文线的交互课版本）。</footer>
+</div>
+</body>
+</html>

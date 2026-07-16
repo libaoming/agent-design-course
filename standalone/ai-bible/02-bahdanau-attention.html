@@ -1,0 +1,273 @@
+<!doctype html>
+<!--
+  橙研所成品骨架 · NOTES 工程笔记体（新行文模式，2026-06-21 定）
+  基准 = Tw93《你不知道的 Claude Code》。和老 skeleton.html（文字主体长文）是两套，转写/工程拆解类默认走本骨架。
+
+  ▎行文模式铁律（"别用原来的文字主体长文"——这才是区别）
+   1. 太长不读开场：正文第一块就是 .note「太长不读」，2–4 句直接抛全文结论，不先立后破、不铺垫。
+   2. 编号大节 00/01/02…：每节标题是高浓缩名词词组（"上下文不是不够长，是太吵"）。
+   3. 每节结构固定：短引子(1–2 句) → 一张横幅图 figure → 具体料(代码块 / 命令 / 列表 / .note)。图是主体，不是点缀。
+   4. 段落要短：每段 2–4 句，能拆就拆。陈述+口语+第一人称("我后来很快发现")都行，但不耍机灵、不堆 emoji。
+   5. 给可抄的东西：真实代码块、命令表、YAML/JSON 配置、ASCII 树。.codeblock 用深色底，是这套的视觉指纹。
+   6. 横幅图：inline SVG banner（eyebrow + 标题 + 几个简单形状/标签），文字少、留白足，verify 必查无重叠/出界。
+   7. 轻量收口：一句可复用判断收尾，不用自检清单。转写类 footer 必给原文出处 + 作者署名。
+
+  ▎沿用的硬约束
+   · 视觉走苹果风格（2026-06-25 用户固化为默认，取代旧 Claude DS 暖纸感）：浅灰底 #f5f5f7 / 近黑 #1d1d1f / 灰 #86868b / 橙 #ec5a16 仅 logo·眉标·卡标签·h2序号 / SF Pro·全无衬线 / 标题 600 字重负字距 / .note 白卡细边。配色锁定见 style-guide「苹果正文标准」。codeblock 仍保留深色（笔记体指纹）。
+   · 含图复制靠复制台 SVG→PNG；外部截图必 base64 内嵌（否则复制台丢图）。
+   · 禁 <table>（微信粘贴列宽坏）→ 用 .note 卡 / 横幅图 / CSS Grid。
+   · 复制台只内联白名单 selector：h2/h3/p/li/strong/em/code/figcaption/.note/.codeblock。
+
+  ▎用法
+   复制本文件 → 改 title/kicker/文章头 → 写太长不读 → 按"短引子+图+代码"逐节填 → verify.py 整页查 → 发布。
+  组件：.note(含 .lbl 太长不读) / figure+svg 横幅图 / .codeblock(.cap 标题 .cm 注释 .k 关键字) / h2 .num / 列表
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>AI圣经02 《Bahdanau Attention：注意力是怎么来的》</title>
+  <meta name="description" content="注意力机制不是 Transformer 发明的。回到 2014 年 Bahdanau 的起点：为翻译长句子，让模型逐词回看原文、按相关度取料——这就是注意力的出生。" />
+  <style>
+    :root{
+      --bg:#f5f5f7; --paper:#ffffff; --paper-2:#f0f0f2; --oat:#e8e8ed;
+      --ink:#1d1d1f; --ink-2:#2c2c2e; --ink-3:#6e6e73; --ink-4:#86868b;
+      --line:#d2d2d7; --line-2:#c7c7cc;
+      --clay:#ec5a16; --accent:#ec5a16; --clay-soft:#fdf0e9;
+      --olive:#788c5d; --fig:#c46686; --sky:#6a9bcc;
+      --sans:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+      --serif:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif;
+      --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+      --measure:720px; --radius:12px; --radius-lg:16px; --radius-sm:8px;
+      font-family:var(--sans);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth;background:var(--bg)}
+    body{margin:0;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+    a{color:var(--accent);text-decoration:none}
+    .eng{font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase}
+    .wrap{width:min(var(--measure),calc(100% - 44px));margin:0 auto}
+    .topbar{border-bottom:1px solid var(--line);background:var(--paper)}
+    .topbar .wrap{display:flex;align-items:center;gap:10px;min-height:56px}
+    .brand-mark{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:.95rem;background:var(--clay)}
+    .topbar b{font-weight:800;font-size:.95rem}
+    .topbar small{color:var(--ink-3);font-weight:500}
+    header.post{padding:46px 0 8px}
+    .post .kicker{color:var(--accent);font-weight:700;font-size:.74rem;margin-bottom:16px}
+    h1{font-family:var(--sans);font-size:clamp(1.7rem,3.6vw,2.36rem);line-height:1.18;letter-spacing:-.022em;font-weight:600;margin:0 0 18px}
+    .standfirst{font-family:var(--serif);font-size:1.14rem;line-height:1.6;letter-spacing:-.01em;color:var(--ink-3);font-weight:400;margin:0 0 20px}
+    .byline{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;color:var(--ink-3);font-size:.86rem;padding-bottom:22px;border-bottom:1px solid var(--line)}
+    .byline .tag{color:var(--accent);font-weight:600}
+    .prose{padding:8px 0 20px}
+    .prose > p{font-family:var(--sans);font-size:1.06rem;line-height:1.9;color:var(--ink-2);margin:0 0 1.15em}
+    .prose > p strong{color:var(--ink);font-weight:700}
+    .prose h2{font-family:var(--sans);font-size:1.46rem;line-height:1.3;font-weight:600;letter-spacing:-.022em;margin:2em 0 .62em;color:var(--ink)}
+    .prose h2 .num{color:var(--clay);font-variant-numeric:tabular-nums;margin-right:.45rem;font-weight:600}
+    .prose h3{font-family:var(--sans);font-size:1.04rem;font-weight:600;letter-spacing:-.01em;margin:1.5em 0 .4em;color:var(--ink)}
+    .prose code{font-family:var(--mono);font-size:.86em;background:var(--paper);border:1px solid var(--line-2);border-radius:6px;padding:.06em .42em;color:var(--clay)}
+    .prose em{font-style:normal;color:var(--ink);font-weight:600}
+    .prose ul{margin:.2em 0 1.2em;padding-left:1.25em}
+    .prose li{font-family:var(--sans);font-size:1.02rem;line-height:1.8;color:var(--ink-2);margin:.45em 0}
+    .prose li strong{color:var(--ink);font-weight:700}
+    .prose table{width:100%;border-collapse:collapse;margin:1.4em 0;font-family:var(--sans);font-size:.92rem;line-height:1.6}
+    .prose th{border:1px solid var(--line-2);padding:9px 11px;background:var(--paper);color:var(--ink);font-weight:700;text-align:left}
+    .prose td{border:1px solid var(--line-2);padding:9px 11px;color:var(--ink-2)}
+    .note{margin:1.3em 0;padding:18px 22px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);font-size:1.0rem;line-height:1.78;color:var(--ink-2)}
+    .note b{color:var(--ink)}
+    .note .lbl{display:block;color:var(--accent);font-weight:700;font-size:.78rem;margin-bottom:6px}
+    /* 代码块 = 工程笔记体的视觉指纹（深色底）。.cap 文件名/标题 · .cm 注释 · .k 关键字 */
+    .codeblock{margin:1.3em 0;background:#1f1b18;border-radius:10px;padding:14px 16px;overflow-x:auto}
+    .codeblock pre{margin:0;font-family:var(--mono);font-size:.78rem;line-height:1.72;color:#e7e1d6;white-space:pre}
+    .codeblock .cm{color:#ff9a5a}
+    .codeblock .k{color:#9ec9e0}
+    .codeblock .cap{display:block;color:#bdb7ac;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;font-family:var(--mono)}
+    figure{margin:1.4em 0 1.4em}
+    figure svg{display:block;width:100%;height:auto;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius)}
+    figure img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:var(--radius)}
+    figure figcaption{color:var(--ink-3);font-size:.85rem;line-height:1.6;text-align:center;margin-top:9px}
+    figure.cover{margin:.5em 0 1.6em}
+    footer{margin-top:34px;padding:32px 0 60px;background:var(--paper);border-top:1px solid var(--line)}
+    footer .wrap{font-size:.96rem;color:var(--ink-2);line-height:1.75}
+    footer .next{color:var(--ink);font-weight:700;margin-bottom:8px}
+    footer .sig{margin-top:14px;color:var(--ink-3);font-size:.9rem}
+    .s-ink{fill:#1d1d1f} .s-mut{fill:#86868b} .s-or{fill:#ec5a16} .s-wt{fill:#fff} .s-gn{fill:#788c5d} .s-rd{fill:#ec5a16} .s-sk{fill:#6a9bcc}
+    @media (max-width:520px){ .prose > p{font-size:1.05rem} h1{font-size:1.56rem} .codeblock pre{font-size:.72rem} }
+  </style>
+</head>
+<body id="top">
+  <div class="topbar">
+    <div class="wrap"><span class="brand-mark">橙</span><b>橙研所</b><small>· 方法论 × Agent 拆解</small></div>
+  </div>
+
+  <header class="post">
+    <div class="wrap">
+      <div class="kicker eng">AI 科普 · Explainer</div>
+      <h1>AI圣经02 《Bahdanau Attention：注意力是怎么来的》</h1>
+      <p class="standfirst">你天天在 GPT、Claude 听到的「注意力」，最早不是为大模型发明的——它出生在 2014 年，是三个人为了把长句子翻译好，打的一个补丁。这篇用大白话讲清它解决了什么、怎么解决的。</p>
+      <div class="byline">
+        <span class="tag">AI 科普 · Explainer</span><span>注意力的起源 + 读完自测</span><span>源自 Bahdanau et al. 2014</span>
+      </div>
+    </div>
+  </header>
+
+  <article class="wrap prose">
+<figure class="cover">
+  <img src="data:image/png;base64,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" alt="封面 · AI圣经02 Bahdanau Attention" style="width:100%;display:block;border-radius:6px;"/>
+</figure>
+
+<div class="note seriesnav"><span class="lbl">📚 AI 圣经 · 系列导览</span>这是「<b>AI 圣经</b>」系列第 <b>02</b> 篇。我会带你逐篇精读撑起今天所有大模型的 <b>21 篇经典论文</b>，分 5 个阶段层层递进（<em>本篇已高亮</em>）：
+<ul>
+<li><b>阶段一 · 地基</b>：P01《Attention Is All You Need》 · <em>P02 Bahdanau Attention · 本篇</em> · P03 seq2seq · P04 word2vec</li>
+<li><b>阶段二 · 预训练范式</b>：P05 BERT · P06 GPT-1 · P07 GPT-2 · P08 GPT-3 · P09 T5</li>
+<li><b>阶段三 · 规模与效率</b>：P10 Scaling Laws · P11 Chinchilla · P12 LoRA · P13 FlashAttention · P14 MoE</li>
+<li><b>阶段四 · 对齐与推理</b>：P15 InstructGPT（RLHF）· P16 思维链 CoT · P17 DPO · P18 Constitutional AI</li>
+<li><b>阶段五 · 检索与 Agent</b>：P19 RAG · P20 ReAct · P21 Toolformer</li>
+</ul>
+<b>本篇论文</b>：《Neural Machine Translation by Jointly Learning to Align and Translate》· Bahdanau, Cho, Bengio 2014 · ICLR 2015。地址 <b>arXiv:1409.0473</b>（arxiv.org/abs/1409.0473）。其余各篇论文地址，随当期文章给出。<br>
+<b>📩 回复「AI圣经02」，领取本篇论文 PDF。</b></div>
+
+<p class="note"><span class="lbl">太长不读</span>上一篇我们讲了 Transformer——口号是「注意力，就是你需要的全部」。但<b>「注意力」这个想法并不是 Transformer 发明的</b>。它出生在更早的 <b>2014 年</b>，出自 Bahdanau、Cho、Bengio 的一篇翻译论文，当时还只是<b>挂在老式神经网络上的一个小补丁</b>。这篇讲清：注意力到底为解决什么问题被想出来、它的「软对齐」是怎么回事。读完你能拿到一条清晰的历史线——<b>注意力如何从一个翻译补丁，长成今天所有大模型的地基。</b></p>
+
+<p class="note"><span class="lbl">上篇回顾 · 先答一题</span>AI圣经01 拆的是《Attention Is All You Need》：Transformer 扔掉「一个词一个词排队」的老办法，让一句话里每个词<b>同时互相看一眼</b>（还记得那个「查资料」比方吗——Query 带问题去问、Key 是标签、Value 是内容）。<b>小问</b>：Transformer 最大的本事是「任意两个词一步直连」，那它<b>扔掉的那个排队的老东西</b>叫什么？答案就在本篇——它正是今天的主角的「母体」。</p>
+
+<p class="note"><span class="lbl">关于这篇论文</span>《Neural Machine Translation by Jointly Learning to Align and Translate》，2014 年 9 月提交、2015 年发表于深度学习顶会 ICLR。作者是 Dzmitry Bahdanau、Kyunghyun Cho，以及<b>深度学习三巨头之一、2018 年图灵奖得主 Yoshua Bengio</b>。它第一次把「注意力」用进神经机器翻译，比《Attention Is All You Need》早了<b>约 3 年</b>。</p>
+
+<h2><span class="num">01</span>先说那个「死结」：把一整句话，压进一个向量</h2>
+<p>2014 年，机器翻译刚开始用神经网络，主流做法叫 <em>seq2seq（序列到序列）</em>，结构是「编码器—解码器」两段：<strong>编码器</strong>先把整句原文从头读到尾、<strong>压成一个固定长度的向量</strong>（理解成「把一整段话总结成一张固定大小的便签」）；<strong>解码器</strong>再拿着这张便签，一个词一个词写出译文。</p>
+<p>问题就出在那张「便签」上。无论原文是 5 个词还是 50 个词，都得塞进<strong>同样大小</strong>的一个向量。短句还行，句子一长，便签就写不下了——前面的信息被后面挤掉，翻译质量<strong>断崖式下跌</strong>。论文把这个痛点点得很重：<em>固定长度向量，是这套老办法的瓶颈</em>。</p>
+<figure>
+  <svg viewBox="0 0 720 230" role="img" aria-label="老 seq2seq 的固定向量瓶颈">
+    <text x="40" y="30" class="eng s-or" font-size="11" font-weight="700">SEQ2SEQ · 老办法的瓶颈</text>
+    <text x="40" y="72" class="s-mut" font-size="12">原文（任意长）</text>
+    <g>
+      <circle cx="58" cy="100" r="9" class="s-or" fill="#ec5a16"/><circle cx="84" cy="100" r="9" class="s-or" fill="#ec5a16"/><circle cx="110" cy="100" r="9" class="s-or" fill="#ec5a16"/><circle cx="136" cy="100" r="9" class="s-or" fill="#ec5a16"/><circle cx="162" cy="100" r="9" class="s-or" fill="#ec5a16"/>
+    </g>
+    <rect x="200" y="80" width="92" height="44" rx="10" fill="#fff" stroke="#c7c7cc" stroke-width="1.5"/>
+    <text x="246" y="107" text-anchor="middle" class="s-ink" font-size="13" font-weight="800">编码器</text>
+    <text x="312" y="107" text-anchor="middle" class="s-mut" font-size="20">→</text>
+    <rect x="332" y="84" width="56" height="36" rx="8" fill="#ec5a16"/>
+    <text x="360" y="107" text-anchor="middle" class="s-wt" font-size="12" font-weight="800">便签</text>
+    <text x="408" y="107" text-anchor="middle" class="s-mut" font-size="20">→</text>
+    <rect x="428" y="80" width="92" height="44" rx="10" fill="#fff" stroke="#c7c7cc" stroke-width="1.5"/>
+    <text x="474" y="107" text-anchor="middle" class="s-ink" font-size="13" font-weight="800">解码器</text>
+    <text x="540" y="107" text-anchor="middle" class="s-mut" font-size="20">→</text>
+    <text x="565" y="107" class="s-ink" font-size="13" font-weight="700">译文</text>
+    <text x="332" y="150" class="s-or" font-size="12" font-weight="700" fill="#ec5a16">↑ 无论原文多长，都压进这一个固定大小的向量</text>
+    <text x="40" y="200" class="s-mut" font-size="12.5">句子越长，「便签」越写不下 → 前面的信息被挤掉 → 长句翻译质量断崖下跌。</text>
+  </svg>
+  <figcaption>图 1 · 老 seq2seq：整句被压进一个固定大小的「便签」，长句压不下、信息丢失</figcaption>
+</figure>
+
+<h2><span class="num">02</span>Bahdanau 的点子：每写一个词，就回头看一遍原文</h2>
+<p>三个作者的想法很朴素，甚至有点「偷懒」：<strong>既然压成一个便签会丢信息，那就别压了。</strong>让解码器在写每一个译文词时，<strong>回头重新看一遍原文的所有词</strong>，并且<strong>自己决定这一下该重点看哪几个</strong>。</p>
+<p>举个例子，把法语「la maison」翻成英语「the house」：写「the」时，注意力<strong>主要放在「la」</strong>上；写「house」时，注意力<strong>挪到「maison」</strong>上。模型不再依赖那张被压扁的便签，而是<strong>每一步都按需去原文里取料</strong>——原文有多长，它就能看多长，瓶颈没了。</p>
+<figure>
+  <svg viewBox="0 0 720 250" role="img" aria-label="Bahdanau 注意力逐词回看原文">
+    <text x="40" y="30" class="eng s-or" font-size="11" font-weight="700">ATTENTION · 逐词回看原文</text>
+    <text x="40" y="66" class="s-mut" font-size="12">原文</text>
+    <rect x="120" y="50" width="150" height="44" rx="11" fill="#fff" stroke="#c7c7cc" stroke-width="1.5"/>
+    <text x="195" y="78" text-anchor="middle" class="s-ink" font-size="15" font-weight="800">la</text>
+    <rect x="300" y="50" width="180" height="44" rx="11" fill="#fff" stroke="#c7c7cc" stroke-width="1.5"/>
+    <text x="390" y="78" text-anchor="middle" class="s-ink" font-size="15" font-weight="800">maison</text>
+    <text x="40" y="200" class="s-mut" font-size="12">译文</text>
+    <rect x="120" y="184" width="150" height="44" rx="11" fill="#ec5a16"/>
+    <text x="195" y="212" text-anchor="middle" class="s-wt" font-size="15" font-weight="800">the</text>
+    <rect x="300" y="184" width="180" height="44" rx="11" fill="#ec5a16"/>
+    <text x="390" y="212" text-anchor="middle" class="s-wt" font-size="15" font-weight="800">house</text>
+    <path d="M195 184 L195 94" stroke="#ec5a16" stroke-width="3" fill="none"/>
+    <path d="M390 184 L390 94" stroke="#ec5a16" stroke-width="3" fill="none"/>
+    <path d="M210 184 C260 150 330 130 372 96" stroke="#c7c7cc" stroke-width="1.2" fill="none" opacity=".7"/>
+    <path d="M375 184 C330 150 250 130 210 96" stroke="#c7c7cc" stroke-width="1.2" fill="none" opacity=".7"/>
+    <text x="510" y="120" class="s-ink" font-size="12.5" font-weight="700">写「the」→ 重点看「la」</text>
+    <text x="510" y="150" class="s-ink" font-size="12.5" font-weight="700">写「house」→ 重点看「maison」</text>
+    <text x="510" y="180" class="s-mut" font-size="11.5">粗线=权重高，细线=权重低</text>
+  </svg>
+  <figcaption>图 2 · Bahdanau：解码每个词时回看原文全部词，按权重取料（the→la，house→maison）</figcaption>
+</figure>
+
+<h2><span class="num">03</span>「软对齐」：注意力的雏形，其实就三步</h2>
+<p>作者给这套机制起的名字叫 <em>alignment（对齐）</em>——让译文词和原文词「对上号」。关键在于它是「<strong>软</strong>」的：不是硬规定「the 只能看 la」，而是给原文<strong>每一个词都算一个权重</strong>（加起来等于 100% 的占比），再<strong>加权</strong>汇总。写「the」时，「la」的权重也许 0.9，其它词分掉剩下的 0.1。</p>
+<p>这三步，读过上一篇会觉得眼熟：① <strong>算相关度</strong>（现写的位置去和原文每个词比一比）→ ② <strong>归一成权重</strong>（softmax，凑成 100%）→ ③ <strong>加权取料</strong>。没错，这就是后来 Transformer 里 <em>Query / Key / Value</em> 的最初版本。</p>
+<p>区别只在于：2014 年这套机制还<strong>黏在一个双向 RNN 上</strong>（一种一个词一个词顺序处理的老网络），是它的「配件」；要再等三年，2017 年 Transformer 才把 RNN 整个扔掉、让注意力<strong>独立成网、唱主角</strong>。而且漂亮的是：这套对齐<strong>不需要人工标注</strong>哪个词对哪个词，权重是模型<strong>自己在训练里学出来的</strong>。</p>
+<figure>
+  <svg viewBox="0 0 720 200" role="img" aria-label="软对齐三步=后来 QKV 雏形">
+    <text x="40" y="30" class="eng s-or" font-size="11" font-weight="700">软对齐 · 三步</text>
+    <rect x="40" y="56" width="184" height="70" rx="12" fill="#fff" stroke="#c7c7cc" stroke-width="1.5"/>
+    <text x="132" y="86" text-anchor="middle" class="s-ink" font-size="14" font-weight="800">① 算相关度</text>
+    <text x="132" y="110" text-anchor="middle" class="s-mut" font-size="12">现写的位置 vs 原文每个词</text>
+    <text x="240" y="96" text-anchor="middle" class="s-mut" font-size="22">→</text>
+    <rect x="262" y="56" width="184" height="70" rx="12" fill="#fff" stroke="#c7c7cc" stroke-width="1.5"/>
+    <text x="354" y="86" text-anchor="middle" class="s-ink" font-size="14" font-weight="800">② 归一成权重</text>
+    <text x="354" y="110" text-anchor="middle" class="s-mut" font-size="12">softmax：加起来 = 100%</text>
+    <text x="462" y="96" text-anchor="middle" class="s-mut" font-size="22">→</text>
+    <rect x="484" y="56" width="196" height="70" rx="12" fill="#ec5a16"/>
+    <text x="582" y="86" text-anchor="middle" class="s-wt" font-size="14" font-weight="800">③ 加权取料</text>
+    <text x="582" y="110" text-anchor="middle" class="s-wt" font-size="12">按占比汇总原文信息</text>
+    <text x="40" y="172" class="s-ink" font-size="13" font-weight="700">这三步，就是后来 Transformer 里 <tspan class="s-or" fill="#ec5a16">Query / Key / Value</tspan> 的最初版本。</text>
+  </svg>
+  <figcaption>图 3 · 软对齐三步（算相关度 → softmax 归一 → 加权取料）= 后来 Q/K/V 的雏形</figcaption>
+</figure>
+
+<h2><span class="num">04</span>它真的管用吗：长句不再崩</h2>
+<p>空说没用，论文拿数据说话。作者把「带注意力的新模型」（论文里叫 <em>RNNsearch</em>）和「老的固定向量模型」（<em>RNNencdec</em>）放一起比，用 <em>BLEU 分</em>（翻译质量自动评分，越高越好）衡量。结论很干脆：老模型的质量<strong>随句子变长一路下滑</strong>；带注意力的新模型<strong>几乎不受句长影响</strong>，长句也稳得住。</p>
+<p>作者还把模型「在看哪」画了出来——一张<strong>注意力热力图</strong>：横轴原文、纵轴译文，越亮代表对齐越强。图上能看到一条大致的<strong>对角线</strong>（语序相近的部分一一对上），还有<strong>局部交叉</strong>（法语和英语形容词、名词顺序不同处，注意力会「拐个弯」对上）。这是第一次，人们能<strong>直接看见</strong>模型把哪个词对到了哪个词。</p>
+<figure>
+  <svg viewBox="0 0 720 360" role="img" aria-label="注意力对齐热力图">
+    <text x="40" y="30" class="eng s-or" font-size="11" font-weight="700">ALIGNMENT · 看得见的对齐</text>
+    <text x="180" y="46" class="s-mut" font-size="12">原文（法语）→</text>
+    <text x="40" y="180" class="s-mut" font-size="12">译文</text>
+    <text x="40" y="198" class="s-mut" font-size="12">（英语）</text>
+    <text x="40" y="216" class="s-mut" font-size="12">↓</text>
+    <text x="202.0" y="62" text-anchor="middle" class="s-mut" font-size="11">L'</text><text x="248.0" y="62" text-anchor="middle" class="s-mut" font-size="11">accord</text><text x="294.0" y="62" text-anchor="middle" class="s-mut" font-size="11">sur</text><text x="340.0" y="62" text-anchor="middle" class="s-mut" font-size="11">la</text><text x="386.0" y="62" text-anchor="middle" class="s-mut" font-size="11">zone</text><text x="170" y="97.0" text-anchor="end" class="s-ink" font-size="11" font-weight="700">The</text><text x="170" y="143.0" text-anchor="end" class="s-ink" font-size="11" font-weight="700">agree-</text><text x="170" y="189.0" text-anchor="end" class="s-ink" font-size="11" font-weight="700">ment</text><text x="170" y="235.0" text-anchor="end" class="s-ink" font-size="11" font-weight="700">on</text><text x="170" y="281.0" text-anchor="end" class="s-ink" font-size="11" font-weight="700">area</text><rect x="180" y="70" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.9"/><rect x="226" y="70" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.05"/><rect x="272" y="70" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="318" y="70" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="364" y="70" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="180" y="116" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.05"/><rect x="226" y="116" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.8"/><rect x="272" y="116" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.1"/><rect x="318" y="116" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="364" y="116" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="180" y="162" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="226" y="162" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.7"/><rect x="272" y="162" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.2"/><rect x="318" y="162" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="364" y="162" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="180" y="208" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="226" y="208" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="272" y="208" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.1"/><rect x="318" y="208" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.85"/><rect x="364" y="208" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.05"/><rect x="180" y="254" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="226" y="254" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="272" y="254" width="44" height="44" rx="3" fill="#ec5a16" opacity="0"/><rect x="318" y="254" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.1"/><rect x="364" y="254" width="44" height="44" rx="3" fill="#ec5a16" opacity="0.85"/>
+    <text x="180" y="335" class="s-mut" font-size="12.5">越亮 = 对齐越强。能看到主对角线（语序相近一一对上）+ 局部交叉（语序不同处「拐个弯」对上）。</text>
+  </svg>
+  <figcaption>图 4 · 注意力热力图：横原文、纵译文，亮处=对齐强；主对角线 + 语序差异处的交叉</figcaption>
+</figure>
+
+<h2><span class="num">05</span>历史定位：注意力的「三级跳」</h2>
+<p>把镜头拉远，这篇 2014 年的论文站在一条清晰的线上：<strong>2014 出生</strong>——注意力作为补丁挂在 RNN 上，治「固定向量瓶颈」；<strong>2017 封神</strong>——Transformer 说「注意力就够了」，扔掉 RNN，注意力独立成网（上一篇的主角）；<strong>今天地基</strong>——GPT、Claude、文心、通义，内核都是这套注意力。</p>
+<p>有意思的是，<strong>当年的解药，正在变成今天的新约束</strong>。注意力为了「看全原文」，要让每个词都去看其它所有词——这件事到了超长文本上，成本会<strong>随长度平方级膨胀</strong>。这正是你今天能直接感受到的两件事：大模型<strong>长上下文又贵又慢</strong>，而且喂太长还会<strong>「读到中间走神」</strong>（注意力对开头结尾更上心，中间容易被忽略）。一部 AI 技术史，常常就是这样<em>用新瓶颈换旧瓶颈</em>地往前走。</p>
+<figure>
+  <svg viewBox="0 0 720 200" role="img" aria-label="注意力三级跳时间线">
+    <text x="40" y="30" class="eng s-or" font-size="11" font-weight="700">注意力的三级跳</text>
+    <line x1="60" y1="96" x2="660" y2="96" stroke="#c7c7cc" stroke-width="2"/>
+    <circle cx="130" cy="96" r="7" fill="#ec5a16"/><circle cx="360" cy="96" r="7" fill="#ec5a16"/><circle cx="600" cy="96" r="7" fill="#ec5a16"/>
+    <text x="130" y="74" text-anchor="middle" class="s-ink" font-size="13" font-weight="800">2014 · 出生</text>
+    <text x="130" y="128" text-anchor="middle" class="s-mut" font-size="11.5">注意力是补丁，黏在 RNN 上</text>
+    <text x="360" y="74" text-anchor="middle" class="s-ink" font-size="13" font-weight="800">2017 · 封神</text>
+    <text x="360" y="128" text-anchor="middle" class="s-mut" font-size="11.5">Transformer 扔掉 RNN，注意力独立成网</text>
+    <text x="600" y="74" text-anchor="middle" class="s-ink" font-size="13" font-weight="800">今天 · 地基</text>
+    <text x="600" y="128" text-anchor="middle" class="s-mut" font-size="11.5">几乎所有大模型的内核</text>
+    <text x="60" y="178" class="s-mut" font-size="12.5">↗ 而当年的解药（注意力），如今它自己的平方级成本，又成了「长上下文又贵又走神」的新瓶颈。</text>
+  </svg>
+  <figcaption>图 5 · 注意力的三级跳：2014 出生（RNN 配件）→ 2017 封神（独立成网）→ 今天（大模型地基）</figcaption>
+</figure>
+
+<h2><span class="num">✎</span>读完自测：先别往下翻，试着答</h2>
+<p>主动回忆一遍才记得住（这点「小难度」是故意的）。三问，想好再看答案：</p>
+<ul>
+<li>1. 老 seq2seq 的「死结」是什么？</li>
+<li>2. Bahdanau 的注意力，一句话说它干了什么？</li>
+<li>3. 「软对齐」的「软」体现在哪？</li>
+</ul>
+<p class="note"><span class="lbl">答案</span>1. 把整句原文<b>压进一个固定长度的向量</b>，句子一长就装不下、信息丢失。2. 解码器每写一个译文词，就<b>回头看一遍原文所有词、按需取料</b>，不再依赖那个被压扁的向量。3. 不是硬性「一对一」，而是给原文每个词<b>算一个连续权重</b>（加起来 100%）再加权汇总，且权重是<b>模型自己学出来的</b>、无需人工标注。</p>
+
+<h2><span class="num">→</span>一句话带走，和下一步</h2>
+<p>只记一句：<strong>Bahdanau 在 2014 年，为了翻译长句子，让模型「逐词回看原文、按相关度取料」——这就是注意力的出生。</strong>三年后 Transformer 把它扶正成主角，于是有了今天的大模型。现在你可以把「注意力是怎么来的」讲给任何一个好奇的朋友了。</p>
+<p class="note"><span class="lbl">想再深入一点</span>最好的可视化讲解是 Jay Alammar 的《Visualizing A Neural Machine Translation Model》（专讲 Bahdanau 这套注意力，全程动图，搜标题即得）。想顺历史线往下走，下一篇 <b>AI圣经03</b> 我们回到注意力的「母体」——<b>seq2seq</b> 本身，看「编码器—解码器」这个沿用至今的骨架是怎么来的。<br>你最早是从哪个产品意识到「机器翻译突然变好了」的？评论区聊聊。</p>
+
+  </article>
+
+  <footer>
+    <div class="wrap">
+      <p class="next">下一篇 · AI圣经03《seq2seq：编码器—解码器的诞生》。</p>
+      <p>科普源：Bahdanau, Cho, Bengio《Neural Machine Translation by Jointly Learning to Align and Translate》, ICLR 2015 (arXiv:1409.0473)。本文为面向一般读者的科普解读，论文原图版权归原作者。</p>
+      <p class="sig">橙研所 · 拆开 Agent，看清产品。</p>
+    </div>
+  </footer>
+<div style="max-width:720px;margin:0 auto;padding:28px 22px 56px">
+  <a href="index.html" style="display:inline-block;font:600 .9rem -apple-system,'PingFang SC',sans-serif;color:#ec5a16;text-decoration:none">&#8592; 返回 AI 圣经目录</a>
+</div>
+</body>
+</html>
