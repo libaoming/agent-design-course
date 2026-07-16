@@ -825,6 +825,11 @@ def build_lang(lang, lectures, examples, labs):
         home.append(f'<a class="thread-link" href="module-{mod}.html">{html.escape(tr(MODULES[mod]["name"], lang))}<span class="arr">&#8594;</span></a>')
     home.append(f'<a class="thread-link" href="examples.html">{html.escape(tr(EXAMPLES_TITLE, lang))}<span class="arr">&#8594;</span></a>')
     home.append(f'<a class="thread-link" href="lab.html">{html.escape(tr(LAB_TITLE, lang))}<span class="arr">&#8594;</span></a>')
+    # 独立板块入口（standalone/，只在根域名下，故用绝对路径兼容 /en/）
+    learn_ai_label = "Learn AI · 模型硬功底" if lang == "zh" else "Learn AI · Model Fundamentals (Chinese)"
+    ai_bible_label = "AI 圣经 · 18 篇论文精读" if lang == "zh" else "AI Bible · 18 Papers (Chinese)"
+    home.append(f'<a class="thread-link" href="/learn-ai/">{learn_ai_label}<span class="arr">&#8594;</span></a>')
+    home.append(f'<a class="thread-link" href="/ai-bible/">{ai_bible_label}<span class="arr">&#8594;</span></a>')
     home.append('</nav></section>')
     home.append(author_block(lang))
     for mod in MODULES:
