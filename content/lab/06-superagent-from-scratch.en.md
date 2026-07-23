@@ -7,11 +7,11 @@ repo: https://github.com/libaoming/superagent-from-scratch
 slug: superagent-from-scratch
 tags: [teaching rebuild, agent loop, zero framework]
 related_lecture: c
-summary: A ~1,000-line, zero-framework, teaching-first rebuild of a modern SuperAgent harness — the agent core distilled out of deer-flow's 185k lines, readable in an afternoon.
+summary: An under-2,000-line, zero-framework, teaching-first rebuild of a modern SuperAgent harness — the agent core distilled out of deer-flow's 185k lines, built slice by slice in public, now at slice 11.
 order: 6
 ---
 
-> If you want to understand the core of a modern Agent framework, both usual roads are blocked: top open-source projects are unlearnable — deer-flow (76k stars) has a 185k-line backend with 2,300 lines of agent core buried inside a product shell; tutorials are too shallow — they stop at function calling and never reach context management, defensive middleware, or subagent isolation. superagent-from-scratch takes a third road: distill deer-flow's core architecture into a zero-framework teaching implementation with under 700 lines in src/, where the `messages → LLM → tools → append` loop is finally laid bare.
+> If you want to understand the core of a modern Agent framework, both usual roads are blocked: top open-source projects are unlearnable — deer-flow (76k stars) has a 185k-line backend with 2,300 lines of agent core buried inside a product shell; tutorials are too shallow — they stop at function calling and never reach context management, defensive middleware, or subagent isolation. superagent-from-scratch takes a third road: distill deer-flow's core architecture into a zero-framework teaching implementation with ~1,650 lines in src/ (budget ≤1,900), where the `messages → LLM → tools → append` loop is finally laid bare — built slice by slice in public, each slice with a git tag, offline tests, and a teardown note.
 
 ## What it solves
 
@@ -21,9 +21,9 @@ order: 6
 | Tutorials are too shallow | They end at function calling — middleware, subagents, and long-horizon tasks never appear |
 | Frameworks hide the essence | One LangChain black-box line, and you never see what the loop actually looks like |
 
-## How it works: five linear slices
+## How it works: linear slices, built in public
 
-Each slice has a git tag (sfs-s1…s5), offline tests, and a why-first teardown note:
+Season one — five slices — is the mainline course. Each has a git tag (sfs-s1…s5), offline tests, and a why-first teardown note:
 
 | Slice | Content |
 |---|---|
@@ -33,11 +33,13 @@ Each slice has a git tag (sfs-s1…s5), offline tests, and a why-first teardown 
 | S4 | Skills system (SKILL.md discovery + slash activation) |
 | S5 | Long-horizon tasks (write_todos + goal-resume loop + HITL interrupts) |
 
-Tests run on recorded LLM fixtures, never mock.patch — 62 offline tests all green, and the only runtime dependencies are anthropic + pyyaml.
+After season one wrapped, season two keeps cutting deeper into the harness: S6 long-term memory, S7 checkpointing, S8 deferred tools (capabilities injected on demand), S10 loop detection + budget gate, and S11 read-before-write versioning are all landed (tags up to sfs-s11), with S9 eval loop and two execution-safety slices on the way.
+
+Tests run on recorded LLM fixtures, never mock.patch — 122 offline tests all green, and the only runtime dependencies are anthropic + pyyaml.
 
 ## How to use it
 
-`git clone` → `uv sync` → `uv run pytest -q`. Fully offline, no API key needed. Read the code and teardown notes slice by slice — done in an afternoon.
+`git clone` → `uv sync` → `uv run pytest -q`. Fully offline, no API key needed. Read season one's code and teardown notes in order — done in an afternoon; season two's slices each stand alone as lessons, take what you need.
 
 ## In one sentence
 

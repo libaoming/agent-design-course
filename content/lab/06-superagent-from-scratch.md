@@ -7,11 +7,11 @@ repo: https://github.com/libaoming/superagent-from-scratch
 slug: superagent-from-scratch
 tags: [教学复刻, agent loop, 零框架]
 related_lecture: c
-summary: 千行级、零框架、教学优先的 SuperAgent harness 复刻——从 18.5 万行的 deer-flow 里蒸馏出 agent 核心，一个下午读完。
+summary: 两千行内、零框架、教学优先的 SuperAgent harness 复刻——从 18.5 万行的 deer-flow 里蒸馏出 agent 核心，逐切片公开构建，已推进到第 11 刀。
 order: 6
 ---
 
-> 想搞懂现代 Agent 框架的内核，你有两条路都走不通：头部开源学不动——deer-flow（76k star）backend 18.5 万行，2,300 行 agent 核心埋在产品壳里；教程又太浅——停在 function calling，够不着上下文管理、防御 middleware、子 agent 隔离。superagent-from-scratch 走第三条路：把 deer-flow 的核心架构蒸馏成一个零框架、src/ 不到 700 行的教学实现，`messages → LLM → tools → append` 这个循环第一次裸露在你眼前。
+> 想搞懂现代 Agent 框架的内核，你有两条路都走不通：头部开源学不动——deer-flow（76k star）backend 18.5 万行，2,300 行 agent 核心埋在产品壳里；教程又太浅——停在 function calling，够不着上下文管理、防御 middleware、子 agent 隔离。superagent-from-scratch 走第三条路：把 deer-flow 的核心架构蒸馏成一个零框架、src/ 约 1,650 行（预算 ≤1,900）的教学实现，`messages → LLM → tools → append` 这个循环第一次裸露在你眼前——而且逐切片公开构建，每一刀带 git tag、离线测试和拆解笔记。
 
 ## 它解决什么
 
@@ -21,9 +21,9 @@ order: 6
 | 教程太浅 | 讲到 function calling 就停，middleware / 子 agent / 长任务全缺席 |
 | 框架遮蔽本质 | LangChain 一行黑盒，看不到循环本体长什么样 |
 
-## 核心机制：五个线性切片
+## 核心机制：线性切片，逐刀公开
 
-每个切片一个 git tag（sfs-s1…s5），配离线测试和「why 先行」的拆解笔记：
+第一季五刀是主线课程，每刀一个 git tag（sfs-s1…s5），配离线测试和「why 先行」的拆解笔记：
 
 | 切片 | 内容 |
 |---|---|
@@ -33,11 +33,13 @@ order: 6
 | S4 | skills 系统（SKILL.md 发现 + 斜杠激活） |
 | S5 | 长任务（write_todos + goal 续跑闭环 + HITL 中断） |
 
-测试跑在录制好的 LLM fixture 上，从不 mock.patch——62 条离线测试全绿，运行时依赖只有 anthropic + pyyaml。
+五刀收官后第二季继续往 harness 深处切：S6 长期记忆、S7 断点持久化、S8 deferred tools（能力按需注入）、S10 防打转 + 预算闸、S11 写前版本门均已收口（tag 到 sfs-s11），S9 eval loop 与两刀执行安全在路上。
+
+测试跑在录制好的 LLM fixture 上，从不 mock.patch——122 条离线测试全绿，运行时依赖只有 anthropic + pyyaml。
 
 ## 怎么用
 
-`git clone` → `uv sync` → `uv run pytest -q`。全程离线，不需要 API key。按切片顺序读代码 + 拆解笔记，一个下午过完。
+`git clone` → `uv sync` → `uv run pytest -q`。全程离线，不需要 API key。第一季五刀按顺序读代码 + 拆解笔记，一个下午过完；第二季各刀独立成课，按需取用。
 
 ## 一句话
 
