@@ -314,13 +314,13 @@ EXAMPLES_INTRO = {
 LAB_TITLE = {"zh": "实验室", "en": "Lab"}
 LAB_INTRO = {
     "zh": (
-        "讲义是想明白的，实战是拆解过的，实验室是**做出来的**——这一区陈列我自己写的开源项目。"
+        "讲义是想明白的，实战是拆解过的，实验室是**做出来的**——这一区陈列我自己造的项目：多数已开源，也有跑在生产里的系统。"
         "都是为了同一件事造的工具：让 Agent 在长任务里不漂移、有记忆、上下文可控、用量看得清。"
         "每个项目一页，固定结构：解决什么 → 核心机制 → 怎么用。"
     ),
     "en": (
         "Lectures are what I've thought through, case studies are what I've taken apart, and the Lab is what I've **actually built** — "
-        "this section lists my own open-source projects. They're all tools made for the same goal: keeping Agents from drifting on long tasks, "
+        "this section lists projects I made myself: most are open source, some run in production. They're all tools made for the same goal: keeping Agents from drifting on long tasks, "
         "giving them memory, keeping context under control, and making usage legible. One page per project: what it solves, how it works, how to use it."
     ),
 }
@@ -329,6 +329,7 @@ STATUS_LABEL = {
     "open-source": {"zh": "已开源", "en": "Open Source"},
     "experimental": {"zh": "试验中", "en": "Experimental"},
     "local-only": {"zh": "本地未推", "en": "Local Only"},
+    "in-production": {"zh": "生产中", "en": "In Production"},
 }
 
 # 访问统计（GoatCounter）。留空 = 不接入任何第三方脚本。
@@ -696,6 +697,11 @@ SLUG_ICON = {
     "context-engineering-kit": '<rect x="4" y="4.5" width="16" height="4.3" rx="1.2"/><rect x="4" y="11" width="16" height="3" rx="1" stroke-dasharray="2.5 2.5"/><rect x="4" y="16" width="16" height="3" rx="1" stroke-dasharray="2.5 2.5"/>',
     "claude-usage": '<path d="M4 16.5a8 8 0 0 1 16 0"/><path d="M12 16.5l4.5-4"/><circle cx="12" cy="16.5" r="1.2"/>',
     "agent-skill-case-studies": '<rect x="4" y="4" width="16" height="13" rx="1.5"/><path d="M4 8h16"/><circle cx="11" cy="12.5" r="2.6"/><path d="M13 14.5L15.5 17"/>',
+    "superagent-from-scratch": '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M17.5 3.5v3.5H14"/><rect x="9.4" y="9.4" width="5.2" height="5.2" rx="1"/>',
+    "skill-catalog-pipeline": '<path d="M4 4.5h16L14.5 11v6.5l-5 3V11z"/><path d="M8 7.5h8"/>',
+    "meet-scribe": '<rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21M8.5 21h7"/>',
+    "openknowledge-py": '<path d="M12 6.5C10 4.8 7.2 4.2 4 4.5v14c3.2-.3 6 .3 8 2 2-1.7 4.8-2.3 8-2v-14c-3.2-.3-6 .3-8 2z"/><path d="M12 6.5v14"/>',
+    "voice-agent": '<path d="M6.8 3.5c.6 0 1.1.4 1.3 1l1 3.2c.2.6 0 1.2-.5 1.6l-1.5 1.2a12.5 12.5 0 0 0 6.4 6.4l1.2-1.5c.4-.5 1-.7 1.6-.5l3.2 1c.6.2 1 .7 1 1.3v2.3c0 .8-.6 1.4-1.4 1.4A16.5 16.5 0 0 1 3.5 5v-.1c0-.8.6-1.4 1.4-1.4z"/><path d="M15 7.5c1 .4 1.8 1.2 2.2 2.2M15.5 4a7 7 0 0 1 4.5 4.5"/>',
 }
 
 def icon_for(slug, mod):

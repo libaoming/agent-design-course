@@ -13,6 +13,9 @@
 ## 📄 2026-07-06 新增 Module C 第7讲「Workflow 编排」（S6）
 **C07_workflow_orchestration passing**：`content/module-c/07-workflow-orchestration.{md,en.md}`，讲义体（立靶=multi-agent 自由协作翻车 → 三类动机表 + pipeline vs barrier + 质量模式库 → sourcing 流水线真实 case（29→26→12→11 漏斗）→ 最小骨架 + 八条纪律 → 一句话收口）。verify 全绿：build 32 讲、中英 HTML 均产出、无 emoji、FAIL=0、模块 C 列表可达、表格渲染 2 张。脱敏：case 只写「候选人 sourcing」，无私人项目名。源头：同日 Claude Code Workflow 工具实测（复刻 Anthropic PM _catwu 公开用例）。
 
+## 🧪 Lab 第二批扩容（2026-07-23，5→10 个项目）
+新增 5 页（`content/lab/06–10`，中英各一）：superagent-from-scratch / skill-catalog-pipeline / meet-scribe / openknowledge-py（均 status: open-source）+ **蓝领招聘语音 Agent 一页总集**（slug `voice-agent`，新增 status `in-production`「生产中」，repo 链公开的 livekit-voice-agent-demo）。语音页**脱敏**：无「妙招/豆包/火山/ECS」等业务名与供应商名（grep 零命中已验）；四端形态（电话/Web/小程序/质检）+ 三个实时语音工程坑。build.py 改动：STATUS_LABEL 加 in-production、SLUG_ICON 加 5 个 line-SVG、LAB_INTRO 从「开源项目」放宽为「多数已开源，也有生产中」。verify FAIL=0，中英 4 张 headless 截图肉眼核查通过。排除项：ai-job-search（fork 非原创）、claude-plugins（与 harness-kit 重复）、x-feed/jike-feed（private）。
+
 ## 🧪 新增「实验室 / Lab」区（2026-06-20 上线，第三条内容线）
 网站第三足：**讲义=想明白的 / 实战=拆解过的 / 实验室=做出来的（开源工程产出）**。首批 5 个项目（全已开源）：harness-kit（互链模块 C）/ agent-memory-kit / context-engineering-kit（互链模块 E）/ claude-usage / agent-skill-case-studies。
 - **内容**：`content/lab/NN-slug.md(+.en.md)` 中英各 5 篇，固定结构「解决什么→核心机制→怎么用→一句话」，frontmatter 含 `status`/`repo`/`related_lecture`。禁比喻禁 emoji、脱敏干净。
