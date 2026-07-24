@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>delphi-clone · 把真人蒸馏成可对话的数字分身</title>
+<style>
+/* ============ Claude DS tokens（与 keynote 同源） ============ */
+:root{
+  --ivory-light:#faf9f5; --ivory-medium:#f0eee6; --ivory-dark:#e8e6dc;
+  --slate-dark:#141413; --slate-medium:#3d3d3a; --slate-light:#5e5d59;
+  --cloud-dark:#87867f; --cloud-medium:#b0aea5; --cloud-light:#d1cfc5;
+  --clay:#d97757; --clay-soft:#f1d5c9; --accent:#c6613f;
+  --olive:#788c5d; --olive-soft:#dde3d3; --sky:#6a9bcc; --fig:#c46686;
+  --sans:"Anthropic Sans",-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",Roboto,sans-serif;
+  --serif:"Anthropic Serif",Georgia,"Songti SC","Times New Roman",serif;
+  --mono:"Anthropic Mono","JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:var(--slate-dark)}
+body{font-family:var(--sans);color:var(--slate-dark)}
+.deck{height:100%}
+.slide{display:none;height:100%;flex-direction:column;justify-content:center;background:var(--ivory-light);padding:5vh 7vw;overflow:hidden}
+.slide.active{display:flex}
+.slide--title{background:var(--slate-dark);color:var(--ivory-light);align-items:flex-start}
+.slide--title .kicker{color:var(--clay)}
+.slide--title h1{font-family:var(--serif);font-weight:500;font-size:clamp(2.6rem,6.5vw,5rem);line-height:1.12;margin:.5em 0 .6em}
+.slide--title .meta{color:var(--cloud-medium);font-size:clamp(.9rem,1.4vw,1.15rem)}
+.slide--title .meta b{color:var(--ivory-light);font-weight:600}
+.slide--interstitial{background:var(--clay);color:var(--slate-dark);align-items:flex-start;justify-content:center}
+.slide--interstitial .pre{font-size:clamp(.85rem,1.3vw,1.05rem);color:rgba(20,20,19,.75);margin-bottom:.8em;text-align:center;width:100%}
+.slide--interstitial h2{font-weight:800;font-size:clamp(2.4rem,6vw,4.6rem);line-height:1.1;letter-spacing:-.01em;width:100%;text-align:center}
+.slide--interstitial .pill-code{display:block;width:max-content;margin:1.6em auto 0;font-family:var(--mono);font-size:clamp(.85rem,1.4vw,1.1rem);background:rgba(20,20,19,.82);color:var(--ivory-light);padding:.5em 1.2em;border-radius:8px}
+.slide--interstitial .pill-code b{color:var(--clay-soft)}
+.slide--dark{background:#0d0d0c;color:var(--ivory-light)}
+.slide--dark .kicker{color:var(--cloud-dark)}
+.slide--dark h2{color:var(--ivory-light)}
+.slide--dark h2 .hot{color:var(--clay)}
+.slide--dark .lede{color:var(--cloud-medium)}
+.slide--dark .dbox{background:#1c1c1a;border-color:#33332f;color:var(--ivory-medium)}
+.slide--dark .dbox b{color:var(--ivory-light)}
+.kicker{font-family:var(--mono);font-size:clamp(.72rem,1vw,.9rem);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.en-sub{font-size:clamp(.78rem,1.2vw,.98rem);color:var(--cloud-dark);letter-spacing:.03em;margin:-.1em 0 .7em;font-style:italic}
+.slide--title .en-sub,.slide--dark .en-sub{color:var(--cloud-medium)}
+.en-k{display:block;font-family:var(--mono);font-size:.72em;font-weight:400;color:var(--cloud-dark);letter-spacing:.04em;margin-top:.2em}
+.num-tag{font-family:var(--mono);font-size:clamp(.9rem,1.4vw,1.15rem);color:var(--cloud-dark);margin-right:.6em}
+.slide h2{font-weight:700;font-size:clamp(1.6rem,3.2vw,2.5rem);line-height:1.2;margin:.3em 0 .3em;letter-spacing:-.01em}
+.slide .lede{font-size:clamp(.98rem,1.6vw,1.25rem);line-height:1.7;color:var(--slate-light);max-width:40em;margin-bottom:1em}
+.slide ul{list-style:none;margin-top:.3em}
+.slide ul li{position:relative;padding-left:1.5em;margin:.7em 0;font-size:clamp(1rem,1.8vw,1.4rem);line-height:1.6;color:var(--slate-medium);max-width:32em}
+.slide ul li::before{content:"";position:absolute;left:.1em;top:.65em;width:.5em;height:.5em;border-radius:50%;background:var(--clay)}
+.slide ul li b{color:var(--slate-dark);font-weight:600}
+.slide code{font-family:var(--mono);font-size:.88em;background:var(--ivory-dark);padding:.12em .4em;border-radius:4px}
+.concept-head{display:flex;align-items:baseline;gap:.6em}
+.concept-sub{color:var(--slate-light);font-size:clamp(.9rem,1.4vw,1.15rem);margin-bottom:1em}
+.canvas{background:#fff;border:1px solid var(--ivory-dark);border-radius:14px;padding:1.6em 1.8em;box-shadow:0 1px 3px rgba(20,20,19,.04)}
+.drow{display:flex;gap:1em;justify-content:center;align-items:stretch;margin:.6em 0;flex-wrap:wrap}
+.dbox{background:#fff;border:1px solid var(--cloud-light);border-radius:8px;padding:.65em 1.1em;text-align:center;font-size:clamp(.78rem,1.2vw,.95rem);line-height:1.4;color:var(--slate-medium)}
+.dbox b{display:block;color:var(--slate-dark);font-size:1.05em}
+.dbox small{display:block;font-size:.8em;color:var(--slate-light)}
+.dbox--managed{background:var(--clay-soft);border-color:var(--clay)}
+.dbox--env{background:var(--olive-soft);border-color:var(--olive)}
+.darrow{align-self:center;color:var(--cloud-dark);font-size:1.2em}
+.legend{display:flex;gap:1.4em;justify-content:flex-end;margin-top:1em;font-size:clamp(.72rem,1.05vw,.85rem);color:var(--slate-light)}
+.legend .sw{display:inline-block;width:.9em;height:.9em;border-radius:3px;vertical-align:-.1em;margin-right:.4em}
+.legend .sw--managed{background:var(--clay-soft);border:1px solid var(--clay)}
+.legend .sw--yours{background:#fff;border:1px solid var(--cloud-light)}
+.card-wall{display:grid;grid-template-columns:repeat(3,1fr);gap:.9em;margin-top:.5em}
+.card{background:#fff;border:1px solid var(--ivory-dark);border-radius:10px;padding:1em 1.1em}
+.card h4{font-size:clamp(.88rem,1.35vw,1.08rem);color:var(--slate-dark);margin-bottom:.35em}
+.card p{font-size:clamp(.73rem,1.05vw,.88rem);line-height:1.5;color:var(--slate-light)}
+.card .ev{font-family:var(--mono);font-size:clamp(.6rem,.9vw,.72rem);color:var(--cloud-dark);margin-top:.5em;border-top:1px dashed var(--ivory-dark);padding-top:.45em;line-height:1.45}
+.stack-compare{display:grid;grid-template-columns:repeat(3,1fr);gap:2.4em;margin-top:1em}
+.stack-col h3{text-align:center;font-size:clamp(.95rem,1.5vw,1.2rem);margin-bottom:1em;color:var(--slate-dark)}
+.stack-item{background:var(--ivory-medium);border-radius:8px;text-align:center;padding:.65em .5em;margin:.5em 0;font-size:clamp(.8rem,1.25vw,1rem);color:var(--slate-medium)}
+.stack-item--managed{background:var(--clay);color:#fff;font-weight:600}
+.stack-item--off{background:transparent;border:1px dashed var(--cloud-light);color:var(--cloud-medium)}
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:2.5vw;margin-top:.8em}
+.ba .panel{border-radius:12px;padding:1.4em 1.5em}
+.ba .panel h3{font-size:clamp(.9rem,1.4vw,1.1rem);margin-bottom:.9em;color:var(--slate-dark)}
+.ba .panel p{font-size:clamp(.8rem,1.2vw,.95rem);color:var(--slate-light);line-height:1.55;margin-top:.9em}
+.panel--before{background:var(--ivory-medium)}
+.panel--after{background:#fff;border:1px solid var(--ivory-dark)}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:1.3em;margin-top:.9em}
+.trio .card .check{color:var(--olive);font-size:1.4em;display:block;margin-bottom:.4em}
+.status-pill{display:block;width:max-content;margin:.5em auto 0;font-family:var(--mono);font-size:.72em;padding:.15em .6em;border-radius:100px}
+.status-pill--live{background:var(--olive-soft);color:var(--olive)}
+.status-pill--planned{background:var(--ivory-medium);color:var(--slate-light);border:1px dashed var(--cloud-light)}
+.pipe-note{font-family:var(--mono);font-size:clamp(.65rem,.98vw,.78rem);color:var(--cloud-dark);text-align:center;margin-top:.6em}
+.perf-callout{display:flex;gap:3em;margin-top:.9em;justify-content:center}
+.perf-callout .pc b{font-size:clamp(1.5rem,3vw,2.3rem);color:var(--slate-dark)}
+.perf-callout .pc b small{font-size:.5em;color:var(--cloud-dark);font-weight:600}
+.perf-callout .pc span{display:block;font-size:clamp(.7rem,1vw,.85rem);color:var(--slate-light);margin-top:.2em;max-width:16em}
+.flow-n{display:inline-block;font-family:var(--mono);font-size:.75em;background:var(--slate-dark);color:#fff;border-radius:50%;width:1.6em;height:1.6em;line-height:1.6em;text-align:center;margin-right:.4em}
+/* ---- 机制解剖版新增 ---- */
+.split-mech{display:grid;grid-template-columns:1.08fr .92fr;gap:1.8vw;align-items:start;margin-top:.5em}
+.mech{display:flex;flex-direction:column;gap:.4em}
+.gate{background:#fff;border:1px solid var(--cloud-light);border-left:4px solid var(--clay);border-radius:8px;padding:.5em .9em;font-size:clamp(.7rem,1.08vw,.88rem);line-height:1.5;color:var(--slate-medium);text-align:left}
+.gate b{color:var(--slate-dark)}
+.gate .gp{font-family:var(--mono);font-size:.82em;color:var(--accent)}
+.gate--soft{border-left-color:var(--olive)}
+.gate--defer{border-left-color:var(--cloud-light);border-style:dashed;background:transparent;color:var(--slate-light)}
+.mech .ga{align-self:center;color:var(--cloud-dark);font-size:clamp(.65rem,.95vw,.78rem);font-family:var(--mono);line-height:1.3}
+.specimen{background:#fff;border:1px solid var(--ivory-dark);border-radius:10px;overflow:hidden}
+.specimen .sp-head{font-family:var(--mono);font-size:clamp(.6rem,.92vw,.72rem);letter-spacing:.08em;color:var(--slate-light);background:var(--ivory-medium);padding:.5em 1em;text-transform:uppercase}
+.specimen .sp-body{padding:.7em 1em;font-family:var(--mono);font-size:clamp(.6rem,.95vw,.76rem);line-height:1.6;color:var(--slate-medium);white-space:pre-wrap;word-break:break-word}
+.sp-q{color:var(--slate-dark);font-weight:700}
+.spec-hot{color:var(--accent)}
+.sp-tag{display:inline-block;background:var(--ivory-medium);border-radius:4px;padding:0 .5em;margin-right:.4em;font-size:.88em;color:var(--slate-light)}
+.sp-score{float:right;color:var(--olive);font-weight:700}
+.sp-note{font-family:var(--sans);color:var(--cloud-dark);font-size:.92em;border-top:1px dashed var(--ivory-dark);margin-top:.5em;padding-top:.4em;white-space:normal}
+/* ---- 系统快照页（Anthropic 冻结帧） ---- */
+.sys{background:#fff;border:1px solid var(--ivory-dark);border-radius:14px;padding:1.3em 1.5em}
+.sys-grid{display:grid;grid-template-columns:1.1fr auto 1fr auto 1.1fr;gap:.8em;align-items:center}
+.zone{border:1.5px dashed var(--cloud-light);border-radius:12px;padding:.8em}
+.zone-t{font-family:var(--mono);font-size:clamp(.55rem,.85vw,.68rem);letter-spacing:.06em;color:var(--cloud-dark);margin-bottom:.4em;text-transform:uppercase}
+.sess{display:flex;align-items:center;gap:.5em;background:var(--ivory-light);border:1px solid var(--ivory-dark);border-radius:8px;padding:.45em .6em;margin:.4em 0;font-family:var(--mono);font-size:clamp(.55rem,.85vw,.66rem);color:var(--slate-medium)}
+.sess .av{width:1em;height:1em;border-radius:3px;background:var(--clay);flex:none}
+.sess .sid{color:var(--cloud-dark)}
+.dots{margin-left:auto;white-space:nowrap}
+.dots i{display:inline-block;width:.5em;height:.34em;border-radius:2px;background:var(--ivory-dark);margin-left:2px}
+.dots i.on{background:var(--slate-dark)}
+.dots i.hotd{background:var(--clay)}
+.store{background:var(--ivory-medium);border-radius:10px;padding:.7em .9em;font-family:var(--mono);font-size:clamp(.55rem,.86vw,.68rem);line-height:1.75;color:var(--slate-medium);white-space:pre-line}
+.store b{display:block;color:var(--slate-dark);margin-bottom:.2em}
+.verbs{background:#dcdbd3;border-radius:10px;padding:.6em 1em;text-align:center;font-size:clamp(.56rem,.9vw,.72rem)}
+.verbs b{display:block;font-family:var(--serif);font-size:1.25em;color:var(--slate-dark);margin-bottom:.25em}
+.verbs span{display:block;color:var(--slate-medium);margin:.12em 0;font-weight:600}
+.sarrow{font-family:var(--mono);color:var(--slate-light);text-align:center;line-height:1.5;font-size:clamp(.68rem,1vw,.82rem)}
+.cap-strip{display:flex;border-top:1.5px dashed var(--cloud-light);margin-top:1em;padding-top:.8em;gap:2em;justify-content:space-around;text-align:center}
+.cap-strip .cap{font-size:clamp(.63rem,.95vw,.8rem);color:var(--slate-medium)}
+.cap-strip .cap b{display:block;color:var(--slate-dark)}
+.cap-strip .cap .status-pill{margin:.35em auto 0}
+/* ---- notes / HUD / 打印 ---- */
+.notes{display:none}
+body.show-notes .slide.active .notes{display:block;position:fixed;left:0;right:0;bottom:0;z-index:9;background:rgba(20,20,19,.94);color:var(--ivory-medium);font-size:.92rem;line-height:1.65;padding:1em 8vw 1.3em;border-top:3px solid var(--clay);max-height:46vh;overflow-y:auto}
+.notes::before{content:"SPEAKER NOTES · 按 N 关闭";display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;color:var(--clay);margin-bottom:.5em}
+.hud{position:fixed;right:1.4rem;bottom:1.1rem;z-index:8;font-family:var(--mono);font-size:.78rem;color:var(--cloud-dark);user-select:none}
+.progress{position:fixed;left:0;bottom:0;height:3px;background:var(--clay);z-index:8;transition:width .25s ease}
+@media print{
+  @page{size:338.7mm 190.5mm;margin:0}
+  html,body{height:auto;background:#fff}
+  .slide{display:flex !important;height:190.5mm;page-break-after:always;overflow:hidden}
+  .hud,.progress,.notes{display:none !important}
+}
+
+/* ---- v2 重构新增页型 ---- */
+.evo4{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr auto 1fr;gap:.35em;align-items:start;margin-top:1em}
+.evo4 .cell{background:#fff;border:1px solid var(--ivory-dark);border-radius:12px;padding:.8em .85em;font-family:var(--mono);font-size:clamp(.5rem,.78vw,.63rem);line-height:1.8;color:var(--slate-light);white-space:pre-line;min-height:8.2em}
+.evo4 .cell b{display:block;color:var(--slate-dark);margin-bottom:.35em;font-size:1.06em}
+.evo4 .cell--now{background:var(--olive-soft);border-color:var(--olive)}
+.evo4 .cell--next{background:transparent;border-style:dashed;border-color:var(--cloud-light);color:var(--cloud-medium)}
+.evo4 .cell--next b{color:var(--slate-light)}
+.evo4 .lab{text-align:center;margin-top:.6em;font-family:var(--serif);font-size:clamp(.76rem,1.2vw,1rem);color:var(--slate-dark)}
+.evo4 .lab small{display:block;font-family:var(--mono);font-weight:400;font-size:.6em;color:var(--cloud-dark);margin-top:.2em;letter-spacing:.04em}
+.evo4 .ea{align-self:start;color:var(--cloud-medium);font-size:1.15em;padding-top:3.2em}
+.thesis{display:grid;grid-template-columns:1.12fr .88fr;gap:2.6vw;margin-top:.7em;align-items:start}
+.vb{background:#fff;border:1px solid var(--ivory-dark);border-left:4px solid var(--clay);border-radius:8px;padding:.72em 1.1em;margin-bottom:.6em;font-size:clamp(.76rem,1.18vw,.94rem);color:var(--slate-medium);line-height:1.55;position:relative;padding-right:5em}
+.vb b{font-family:var(--serif);color:var(--slate-dark);font-size:1.12em;margin-right:.5em}
+.vb .vt{position:absolute;right:1em;top:.78em;font-family:var(--mono);font-size:.68em;color:var(--cloud-dark)}
+.tnote{font-size:clamp(.68rem,1.02vw,.83rem);color:var(--slate-light);margin-top:.75em;line-height:1.55}
+.tnote b{color:var(--slate-dark)}
+.gauge{background:var(--ivory-medium);border-radius:12px;padding:.85em 1.2em;margin-bottom:.65em}
+.gauge b{font-family:var(--serif);font-size:clamp(1.7rem,3.4vw,2.7rem);color:var(--slate-dark);display:block;line-height:1.05}
+.gauge b small{font-size:.34em;color:var(--cloud-dark);font-weight:400;letter-spacing:.02em}
+.gauge span{display:block;font-size:clamp(.66rem,.98vw,.8rem);color:var(--slate-light);line-height:1.5;margin-top:.35em}
+.gauge--truth{background:var(--clay-soft)}
+.pf{margin-left:auto;flex:none;font-family:var(--mono);font-size:.92em;color:var(--accent);background:#fff;border:1px solid var(--clay-soft);padding:0 .5em;border-radius:4px}
+.pf--next{color:var(--cloud-dark);background:transparent;border:1px dashed var(--cloud-light)}
+.core-band{background:var(--slate-dark);color:var(--ivory-light);border-radius:10px;padding:.75em 1.2em;text-align:center;font-family:var(--mono);font-size:clamp(.68rem,1.05vw,.85rem);margin-top:.6em;letter-spacing:.02em}
+/* ---- 信任拓扑图 + eval flow（2026-07-22） ---- */
+.topo{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.9em;align-items:stretch}
+.tzone{border:1.5px dashed var(--cloud-light);border-radius:12px;padding:.7em .9em}
+.tzone .zone-t{display:flex;align-items:center;gap:.3em}
+.tzone--lock{background:var(--ivory-medium)}
+.tzone--target{border:1.5px solid var(--clay)}
+.store--write{background:var(--clay-soft);border:1px solid var(--clay)}
+.store--write b{color:var(--accent)}
+.topo-evolve{display:grid;grid-template-columns:1fr 1.5fr;gap:.9em;margin-top:.8em;align-items:center}
+.twrite{background:var(--slate-dark);color:var(--ivory-light);border-radius:10px;padding:.7em 1.1em;text-align:center;font-family:var(--mono);font-size:clamp(.66rem,1vw,.82rem);line-height:1.7}
+.twrite b{color:var(--clay)}
+.twrite .rd{color:var(--cloud-medium);font-size:.88em;display:block;margin-top:.2em}
+.flow{display:flex;flex-direction:column;gap:.35em;align-items:stretch;margin-top:.5em}
+.frow{display:flex;align-items:stretch;gap:.6em;justify-content:center;flex-wrap:wrap}
+.fnode{background:#fff;border:1px solid var(--cloud-light);border-radius:8px;padding:.5em .9em;font-size:clamp(.66rem,1vw,.82rem);color:var(--slate-medium);text-align:center;min-width:8em}
+.fnode b{color:var(--slate-dark);display:block;margin-bottom:.12em}
+.fnode--gate{background:var(--ivory-medium);border-color:var(--cloud-medium)}
+.fnode--red{border-color:var(--fig);color:var(--fig)}
+.fnode--green{border-color:var(--olive)}
+.fnode--judge{background:var(--clay-soft);border-color:var(--clay)}
+.fnode--stop{background:var(--slate-dark);color:var(--ivory-light)}
+.fnode--stop b{color:var(--clay)}
+.fdown{text-align:center;color:var(--cloud-dark);font-family:var(--mono);font-size:.8em;line-height:1}
+.fbranch{font-family:var(--mono);font-size:.72em;color:var(--accent)}
+.core-band b{color:var(--clay)}
+.radiate{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1em}
+.radiate .dn{text-align:center;color:var(--cloud-dark);font-family:var(--mono);font-size:clamp(.62rem,.94vw,.76rem);padding:.55em 0 .45em}
+.radiate .card p b{color:var(--slate-dark)}
+</style>
+</head>
+<body>
+<main class="deck">
+
+<!-- 1 · 封面 -->
+<section class="slide slide--title">
+  <div class="kicker">DELPHI-CLONE · 面试作品讲解</div>
+  <h1>把真人蒸馏成<br>可对话的数字分身</h1>
+  <div class="en-sub">Distilling a real person into a conversational digital mind</div>
+  <div class="meta"><b>宝明</b> · inbound 自克隆平台 · 代本人 7×24 答受众 · 2026-07</div>
+  <aside class="notes">这个项目叫 delphi-clone，对标 Delphi.ai 的 clean-room 复刻：机制借鉴、代码全原创。它做一件事——把一个真人专家蒸馏成可对话的数字分身，代他 7×24 回答受众问题。今天二十分钟我不铺功能清单，讲四个工程决策，每个决策都带真实的机制和真实的数据，因为这个项目最值钱的部分是每一步的取舍。先从「为什么做」讲起。</aside>
+</section>
+
+<!-- 2 · 为什么做 + 三刀 -->
+<section class="slide">
+  <div class="kicker">Why this project</div>
+  <h2>复刻起步，砍刀定形</h2>
+  <div class="en-sub">Clone to learn, cut scope to define the product</div>
+  <div class="lede">clean-room 复刻 Delphi.ai：机制借鉴、代码 100% 原创。拆 4 份 teardown + 50 张产品实拍定内核；范围上先砍三刀——<b>每一刀都是产品决策</b>。</div>
+  <div class="card-wall">
+    <div class="card"><h4>✂ 砍掉 outbound 外呼<span class="en-k">Inbound only</span></h4><p>只做 inbound：受众主动来找分身。场景干净、冷启动不靠骚扰、合规面减半</p><div class="ev">定位三边界 ①（ADR-0001）</div></div>
+    <div class="card"><h4>✂ 砍掉代配他人<span class="en-k">Self-clone only</span></h4><p>只本人自配（self-clone）：数据授权与人格权都在本人手里</p><div class="ev">定位三边界 ② · 对齐 NO FAKES Act + 《深度合成规定》</div></div>
+    <div class="card"><h4>✂ 砍掉双边市场<span class="en-k">Single-sided tool</span></h4><p>单边创作者工具：不碰流量分发，价值闭环只有专家↔受众两端</p><div class="ev">定位三边界 ③ · 不养平台侧</div></div>
+  </div>
+  <aside class="notes">先回答「为什么做这个」。两个理由：一，复刻是我验证过的最快学习路径——把赛道最好的产品拆到机制层再全部原创实现，比读十篇分析深一个量级；二，它是我整套 AI 协作开发方法论的全尺寸试验场，这个后面会看到证据。定位上开工前先砍了三刀：不做外呼、不做代配他人、不做双边市场——三刀分别砍掉了增长的诱惑、合规的雷区、平台的幻觉。这三刀写在项目最早的决策记录里，之后每次功能取舍都拿它当依据：有了「不做什么」，「做什么」才站得住。接下来看这个产品从哪一代演进来。</aside>
+</section>
+
+<!-- 3 · 演进四格 🆕 -->
+<section class="slide">
+  <div class="kicker">演进 · FOUR DONE, ONE AHEAD</div>
+  <h2>从像语气，到能证明像——下一格是能办事</h2>
+  <div class="en-sub">From mimicking tone, to proving fidelity, to getting a whole job done his way</div>
+  <div class="evo4">
+    <div>
+      <div class="cell"><b>system_prompt</b>你是李宝明
+说话简洁 · 爱举例
+第一人称作答</div>
+      <div class="lab">人设 prompt<small>Personality prompt</small></div>
+    </div>
+    <span class="ea">&rarr;</span>
+    <div>
+      <div class="cell"><b>chunks/c13</b>小米 · 小爱同学
+smartHome 2020.04-
+score 0.79</div>
+      <div class="lab">语料 RAG<small>Corpus retrieval</small></div>
+    </div>
+    <span class="ea">&rarr;</span>
+    <div>
+      <div class="cell"><b>assertions/C_boundary</b>claim「链条空转」
+grounding: inferred
+confidence: 0.6</div>
+      <div class="lab">心智蒸馏<small>Mind distillation</small></div>
+    </div>
+    <span class="ea">&rarr;</span>
+    <div>
+      <div class="cell cell--now"><b>holdout.json</b>_note: 禁入检索/训练集
+real_answer: 「在海纳…」
+fidelity 4.93 vs 4.29</div>
+      <div class="lab">保真可度量<small>Measured fidelity</small></div>
+    </div>
+    <span class="ea">&rarr;</span>
+    <div>
+      <div class="cell cell--next"><b>skills/analyze-company/</b>SKILL.md · 任务型整包装载
+step 2 判据 [assertion:B-…]
+step 5 边界 [assertion:C-…]
+无溯源步骤 → 编译期拒绝</div>
+      <div class="lab">心智编译<small>Compiled procedure</small><span class="status-pill status-pill--planned">已立项 ADR-0039</span></div>
+    </div>
+  </div>
+  <div class="pipe-note">三家融资竞品（$100M / $51M / $18M）全停在第三格——我在第四格；第五格是路线图：从<b style="color:var(--accent)">引用他的观点</b>到<b style="color:var(--accent)">按他的方式做完一件事</b></div>
+  <aside class="notes">先把这个品类的演进说清楚，你们才知道我站在哪一格。第一代是人设 prompt，system prompt 里写「你是谁、你怎么说话」——只有语气，问到具体事就露馅。第二代是语料 RAG，市面上绝大多数数字分身产品都在这一代：把文章播客切块进向量库，我用的是本地 bge 中文 embedding、余弦阈值零点四、top-k 六，检索命中了照着说。屏上这条是我库里的真 chunk，c13，我简历里小米那段，零点七九分被召回。它能让分身「知道他说过什么」，但两个天花板：本人没写下来的判断它永远不知道，单点观点像、让它完整干一件事就散架。第三代是心智蒸馏，delphi-clone 补的层——不只存他说过的话，还要蒸他的判断方式，屏上是一条真断言：边界桶，claim 是「链条空转」，grounding 标 inferred、置信零点六。注意第三代还捎带解决了语气：不是靠 prompt 里写「你说话要像他」，是从真实反馈里蒸出腔调断言，流畅度从二点七九提到四点七一就是这么来的。第四代是我认为真正的分水岭，也是我最重的下注：保真可度量。屏上这个文件是 holdout 信封，文件头写死禁入检索和训练集，里面是真人的真答案，分身全程看不到——有了它，「像不像」才第一次有客观分数，我的四点九三对原版四点二九。底下这行是我调研三家融资竞品得到的结论：一亿、五千一百万、一千八百万美金的三家，全停在第三格，没有一家做保真度量。最后这个虚线格是路线图，我先预告一句：前四格解决的都是「答得像不像、能不能证明」，但受众问「按你的方法完整分析一家公司」的时候，一条条独立断言拼不出流程——步骤顺序、每步判据、边界挂载点全缺位。第五格叫心智编译：离线把 B 桶高置信断言加 C 桶护栏编译成任务级 SOP，落成一个 markdown skill 包，任务型请求整包装载。它守的还是同一条契约——每步尾注断言 id，编译期强制校验，没有溯源的步骤直接拒绝，编译不许无中生有加步骤；而且运行时只装载零改写，要改只能重编译再过人审。首个目标是「分析一家公司」。追问弹药，这条我主动讲最有说服力：这一格现在连度量都还没有——我勘察过 holdout 里现存十二道题全是单点事实和边界题，没有一道任务型真答，所以 ADR 里写死了前置条件：任务型 holdout 至少五题、owner 确认真答之后才准开工。也就是说我给自己的新 feature 也设了评测前置闸，这跟等下 takeaway 里那条「评测先行」是同一条纪律，不是说给你们听的。这一格还没建成，它对应的正是下一页痛点墙里的第六个问题，我先把问题铺开。</aside>
+</section>
+
+<!-- 4 · 痛点墙 -->
+<section class="slide">
+  <h2>数字分身的六个真问题</h2>
+  <div class="en-sub">Six real problems of digital clones</div>
+  <div class="card-wall">
+    <div class="card"><h4>编造<span class="en-k">Fabrication</span></h4><p>资料没有也硬答，替本人说他没说过的话</p><div class="ev">实测：Delphi 原版把运行平台当雇主、把读过的文章当亲身经历</div></div>
+    <div class="card"><h4>知识的诅咒<span class="en-k">Curse of knowledge</span></h4><p>本人最值钱的判断，往往自己想不起来说，永远不在语料里</p><div class="ev">真访谈：「破例边界」在第二层追问才出现（见决策②实录）</div></div>
+    <div class="card"><h4>追问深度<span class="en-k">Probing depth</span></h4><p>AI 访谈赛道公认第一短板：钻两层就停，深洞见被腰斩</p><div class="ev">Listen Labs $100M 赛道通病 · 我方 max_depth=2 也踩了</div></div>
+    <div class="card"><h4>保真无法度量<span class="en-k">Unmeasured fidelity</span></h4><p>「像不像」全凭感觉，没有对真人真答的客观分数</p><div class="ev">三家融资竞品（$100M/$51M/$18M）共同空白</div></div>
+    <div class="card"><h4>不进化<span class="en-k">No self-improvement</span></h4><p>答错的问题下次还错，每天的对话不回流成能力</p><div class="ev">现状：对话全量落库但曾长期沉睡（记忆体系立项动因）</div></div>
+    <div class="card"><h4>碎片拼不出流程<span class="en-k">Fragments ≠ workflows</span></h4><p>单点观点像；「按你的方法完整分析 X」就散架</p><div class="ev">心智编译层（F36）的立项动因</div></div>
+  </div>
+  <aside class="notes">这六张卡每张下面都压了一行真证据。编造那张：我实测 Delphi 原版，它把运行平台说成雇主、把本人读过的文章说成亲身踩的坑——这是这个赛道的死刑罪。知识的诅咒：等下决策②的真实访谈实录里你会看到，本人最深的「破例边界」是在第二层追问才被挖出来的——他自己从没写进任何文章。追问深度：一亿美金的 Listen Labs 都被点名这个短板，而我自己的 max_depth=2 也踩了同一个坑，后面 Lessons 会讲。保真度量是三家融资竞品共同的空白，这是我最重的下注点。六个问题里权重最高的是编造——它逼出了这个项目的全场论点，下一页我把话说死。</aside>
+</section>
+
+<!-- 5 · 全场论点轴 🆕 -->
+<section class="slide">
+  <div class="kicker">全场论点 · THE THESIS</div>
+  <h2>「像」和「真」冲突时，我选真</h2>
+  <div class="en-sub">When sounding like him conflicts with being true to him, truth wins — and it is a mechanism, not a slogan</div>
+  <div class="thesis">
+    <div>
+      <div class="vb"><b>萃取</b>结构化可溯源——每条断言带出处、置信度、grounding 三态<span class="vt">决策 ②</span></div>
+      <div class="vb"><b>作答</b>不编造强契约——五道闸，零命中即拒答<span class="vt">决策 ①</span></div>
+      <div class="vb"><b>验收</b>对真人真答度量——holdout 隔离，判分函数禁止自评<span class="vt">决策 ③</span></div>
+      <div class="tnote">这三条就是接下来四个决策的全部内容——<b>每一条都是「选真」在一个环节上的兑现</b>；第三条是三家融资竞品的共同空白，也是我最重的下注。</div>
+    </div>
+    <div>
+      <div class="gauge"><b>4.71<small> / 5 · 流畅度</small></b><span>「像」的刻度 — 2.79 → 4.71<br>靠 D 表达桶从真实反馈蒸出的腔调</span></div>
+      <div class="gauge gauge--truth"><b>0<small> 条编造 / 9 道陷阱题</small></b><span>「真」的刻度 — 消融探针实测<br>无据即拒答，拒得像本人</span></div>
+      <div class="tnote">两个数字必须<b>同时</b>成立——只要「像」会编造，只要「真」像念说明书。<b>这就是这个产品的全部难度。</b></div>
+    </div>
+  </div>
+  <aside class="notes">六个问题背后其实是同一个张力，这页是我今天全场的论点，后面所有机制都挂在这句话上：「像」和「真」冲突的时候，我选真。左边三行是这句话的三次兑现，也正好是接下来的三个决策：萃取环节，萃取物必须结构化可溯源，每条断言带出处、置信度、grounding 三态；作答环节，不编造强契约，五道闸，检索零命中就拒答；验收环节，保真必须对真人真答度量，判分函数里禁止自评。右边是这个张力的两把尺子。上面是「像」的刻度：流畅度从二点七九到四点七一，靠的是 D 表达桶——从我给分身的真实反馈里蒸出来的腔调断言，不是 prompt 里写一句「你要像他」。下面是「真」的刻度：九道陷阱题零编造，这是消融探针的实测基线。关键在最后这句：两个数字必须同时成立。只要「像」，它会开始替我编我没说过的话；只要「真」，它会变成一个念说明书的检索机器人。同时成立才叫数字分身，这就是这个产品的全部难度。追问弹药：如果被问「那你怎么权衡」——我的答案是不权衡，选真是排序不是配比：先守住不编造的底线，再在底线之内把像做到最好；D 表达桶之所以敢不锚事实，正是因为 A、B、C 三桶把事实锁死了。往下四页，一页一个决策，每个决策我都带机制和真实数据。先看输入面：知识是怎么进来的。</aside>
+</section>
+
+<!-- 6 · 输入层汇流 🆕 -->
+<section class="slide">
+  <div class="kicker">输入层 · INTAKE</div>
+  <h2>源可以多，管线只有一条</h2>
+  <div class="en-sub">Many sources, one pipeline — distilled twice, into two knowledge faces</div>
+  <div class="sys">
+    <div class="sys-grid" style="grid-template-columns:.95fr auto 1.02fr auto 1.12fr">
+      <div class="zone">
+        <div class="zone-t">四类源 · 都从这进</div>
+        <div class="sess"><span class="av"></span>文件 <span class="sid">简历 &rarr; 19 chunk</span><span class="pf">profile</span></div>
+        <div class="sess"><span class="av"></span>文章 URL <span class="sid">48 页 &rarr; 960</span><span class="pf">corpus</span></div>
+        <div class="sess"><span class="av"></span>笔记 / 问答 <span class="sid">CLI · web</span><span class="pf">corpus</span></div>
+        <div class="sess"><span class="av" style="background:var(--cloud-light)"></span>账号源 <span class="sid">OAuth 增量</span><span class="pf pf--next">feeds</span></div>
+      </div>
+      <div class="sarrow">&rarr;<br>统一入口<br>无 per-source 分支</div>
+      <div class="zone">
+        <div class="zone-t">一条管线 · 蒸两次</div>
+        <div class="verbs"><b>① 切块 · embedding</b><span>~200 字/块 · overlap</span><span>bge-small-zh · dim512</span></div>
+        <div class="verbs" style="background:var(--clay-soft);margin-top:.55em"><b>② 四道闸 · 萃取</b><span>无源 chunk 不产出 · 只抽明确陈述</span><span>每源 ≤8 条 · tripwire 余弦 ≥0.25</span></div>
+        <div class="pipe-note" style="margin-top:.55em;text-align:left;line-height:1.85;white-space:pre-line">换的是<b style="color:var(--accent)">参数</b>不是分支
+profile · 16 条 · 0.80 · durable
+corpus · 8 条 · 0.75
+feeds · 4 条 · 0.70 · current 90d 衰减</div>
+      </div>
+      <div class="sarrow">&rarr;<br>双产出<br>作答时并联</div>
+      <div class="zone">
+        <div class="zone-t">两个知识面</div>
+        <div class="store"><b>chunks 向量库 ×988</b>原文原样 · 供引用出处
+citations 锚在这里</div>
+        <div class="store" style="margin-top:.55em"><b>四桶 typed 断言库</b><span class="spec-hot">A ← 采集萃取（本页这条线）</span>
+B / C ← 访谈折叠 · 下一页
+D ← 反馈蒸馏 · 管腔调</div>
+      </div>
+    </div>
+    <div class="cap-strip">
+      <div class="cap"><b>本页真跑</b>chunk c13 &rarr; 6 条 A_fact 全带 refs<br><span style="font-family:var(--mono);font-size:.92em">baoming-001-A-375c3556 · conf 0.75</span></div>
+      <div class="cap"><b>feeds 画像的两个否决</b>主题槽用固定枚举（focus / employer / project）——否决 LLM 产槽名，槽名一漂替换就失灵；否决 <code>valid_until</code> 硬过期——那需要预知未来<span class="status-pill status-pill--planned">F25 / F26 已立项 · ADR-0029</span></div>
+      <div class="cap"><b>存量诚实</b>988 条存量 chunk 不回填，只对新采集生效<span class="status-pill status-pill--live">✓ 代码在库</span></div>
+    </div>
+  </div>
+  <aside class="notes">先看知识怎么进来。左边四类源：文件走 pypdf，我的简历十九块就是这么进来的；文章 URL 走 trafilatura 抓正文，我自己网站整站四十八页九百六十块；笔记和问答对走 CLI 和 web 双入口；第四类账号源，OAuth 云文档和动态流，现在只是注册桩还没接萃取，但方案已经过闸了——每个源右边那个标签就是它走哪套画像。为什么动态流不能跟前三类同参数：一条动态往往是「我最近在看什么」，它是当下状态不是长期事实。所以 feeds 画像四个参数全不一样，中间这行写着：每源只抽四条而不是八条，动态流噪声大要筛严；置信零点七；时效语义标 current，召回时按九十天半衰期衰减；而简历那类标 durable，只可被替换、不衰减。一句话，这条管线换的是参数不是分支。关键是中间这一步：不管哪类源进来，走的是同一条管线，没有 per-source 的特殊分支。管线里蒸两次——第一次切块加 embedding，进向量库；第二次是正文过四道闸萃取，四道闸分别是：没有源 chunk 出处直接不产出、prompt 只允许抽原文明确陈述的不推断不补全、一行一条每源最多八条防长文档爆断言、最后 tripwire 拿每条 claim 跟原文算余弦，低于零点二五说明抽出了原文没有的实体，当幻觉丢掉。右边是双产出，也是这页最想让你们记住的：同一批语料出两个知识面。chunk 面存原文原样，作答时供引用，citations 锚的就是它；断言面存结构化断言，四个桶各有来路——A 桶来自采集萃取，就是本页这条线；B 和 C 来自访谈折叠，下一页整页讲；D 来自反馈蒸馏，管腔调。底下三条：本页这条线是真跑的，c13 那块简历过一遍萃出六条 A_fact 断言，全带 refs 可以回原文核对，屏上这个 id 是真实运行输出。中间这条是 feeds 方案里我主动否决掉的两个设计，比参数值本身值钱：第一，主题槽用固定枚举——current_focus、current_employer、current_project 三个槽，我否决了让 LLM 自己产槽名，因为槽名一漂移，新断言就替换不掉旧的，整个替换机制直接失灵；第二，否决 valid_until 硬过期，因为设过期时间需要预知未来，我改用衰减加槽替换。背后是同一条判据：错误的合并比错过的合并伤害大——错合并会废掉一条还活着的真断言，而错过合并只是多留一条旧的。追问弹药：为什么不给每类源写专门的萃取分支——管线越少，防编造契约越好守，画像是一张可打印可审计的参数表，将来还能挂 autoevolve 自动调参；策略和机制分离是 ADR-0029 的主决策。第三条是诚实标注：存量九百八十八块不回填，每块过一遍 LLM 的钱不值得为沉睡语料花，只对新采集生效。这是有出处的事实怎么进来；下一个决策讲没出处的判断怎么挖出来。</aside>
+</section>
+
+<!-- 7 · 决策① 防编造 -->
+<section class="slide">
+  <div class="kicker">决策 ①</div>
+  <h2>宁可拒答，不许编造</h2>
+  <div class="en-sub">Refuse rather than fabricate — truth over eloquence</div>
+  <div class="sys">
+    <div class="sys-grid" style="grid-template-columns:1.05fr .95fr;gap:1em">
+      <div class="zone">
+        <div class="zone-t">有据之路 · 真实 trace（E12 修复后）</div>
+        <div class="sess"><span class="av"></span><span class="sp-q">Q 你在小米做过什么？</span><span class="dots"><i class="hotd"></i></span></div>
+        <div class="store" style="margin:.4em 0"><b>检索 · 余弦 ≥ 0.40（floor 0.30 保底）</b>简历「小爱同学 smartHome」 ✓ 过闸
+<span class="spec-hot">简历「智能家居语控 · IOT」 ✓ E12 补齐召回</span>
+父块供料 n_parents=3 · personal 保底</div>
+        <div class="store" style="margin:.4em 0;background:#fff;border:1px solid var(--ivory-dark)"><b>生成 · grounding 三态契约</b>个人事实🔒材料有才说 · 通用✅限领域内
+发挥度 strict / balanced / predictive</div>
+        <div class="sess"><span class="av" style="background:var(--olive)"></span>「小爱同学的端侧对话体验…具体做到什么程度，我没详细记录」<span style="margin-left:auto;color:var(--olive);font-weight:700">0.85</span></div>
+      </div>
+      <div class="zone">
+        <div class="zone-t">无据之路 · 同一套闸</div>
+        <div class="sess"><span class="av"></span><span class="sp-q">Q 你今天午饭吃了什么？</span><span class="dots"><i class="hotd"></i></span></div>
+        <div class="store" style="margin:.4em 0"><b>检索 · 零命中</b>→ 触发拒答闸（唯一确定性拒答点）
+「这个我确实没相关记录，
+就不替自己编了」</div>
+        <div class="sess"><span class="av" style="background:var(--olive)"></span>「我没记录，所以我也不会给你瞎编一个『今天吃了牛肉面』出来」<span style="margin-left:auto;color:var(--olive);font-weight:700">0.85</span></div>
+      </div>
+    </div>
+    <div class="cap-strip">
+      <div class="cap"><b>有据 · 溯源作答</b>答准还认怂——数字没底就直说没记录</div>
+      <div class="cap"><b>无据 · 像本人一样拒答</b>拒答话术走 D 桶腔调，拒得也像他</div>
+    </div>
+  </div>
+  <div class="pipe-note">第五道闸 token-锚定后校验：设计完成 → 消融探针裸基线 9 题陷阱零编造 → 主动 DEFER（根因在数据层：pypdf 把「小米」解析成康熙部首 ⼩⽶，NFKC 归一修复）</div>
+  <aside class="notes">论点落成机制，第一道就是防编造。这页是同一条流水线的两次真实运行，对比就是论证。左边有据之路：问「你在小米做过什么」，检索层两条简历 chunk 过闸——标橙那条「智能家居语控」是 E12 修复后才召得回的；那次修复救的是相似度零点三六卡在零点四阈值下的履历块，配了每类 floor 零点三保底和 BM25 字面臂救专名。生成层走 grounding 三态契约：个人事实锁死、通用知识限专业领域内、发挥度三档旋钮对映 Delphi Creativity 但雇主/履历/数字三档钉死。输出答准了小爱同学，但「做到什么程度」没记录就直说没记录——有据答准、数字认怂，零点八五分。右边无据之路：午饭题检索零命中，直接触发拒答闸——这是全链路唯一的确定性拒答点；注意拒答话术「不会给你瞎编一个今天吃了牛肉面」，拒得像本人，那是 D 桶的腔调。最下面是第五道闸的故事：token-锚定后校验我完整设计过——数字走正则、个人事实小模型判定加转写——但上开发前跑消融探针，裸基线九道陷阱题零编造，于是把自己的方案否决了；根因竟是 pypdf 把「小米」解析成康熙部首字符导致检索永远召不回、模型只好自己编——修的是 Unicode，不是模型。</aside>
+</section>
+
+<!-- 8 · 决策② 萃取结构化 -->
+<section class="slide">
+  <div class="kicker">决策 ②</div>
+  <h2>萃取物必须结构化可溯源</h2>
+  <div class="en-sub">Extraction must be structured and traceable</div>
+  <div class="sys">
+    <div class="sys-grid">
+      <div class="zone">
+        <div class="zone-t">访谈 session · 进行中（owner --live）</div>
+        <div class="store" style="background:var(--ivory-light);border:1px solid var(--ivory-dark);margin-bottom:.4em"><b>锚点 ← A 桶（fact-seeded）</b>妙招四阶段：AI RPO→猎头→招聘→工作台</div>
+        <div class="sess"><span class="av"></span>种子「先把产品矩阵和路线图想清楚再动手」</div>
+        <div class="sess"><span class="av"></span>追问① 翻车：「踩坑 = AI 招聘全流程链条空转」</div>
+        <div class="sess"><span class="av"></span><span class="spec-hot">追问② 破例：「小步快跑，但 C 端体验+Badcase 死线」</span></div>
+      </div>
+      <div class="sarrow">←<br>gen_q<br>LLM 只生成问题</div>
+      <div class="verbs"><b>钻探控制器</b><span>确定性选维 K=3</span><span>模板两级：翻车→破例</span><span>答空即停 · MAX_DEPTH=2</span></div>
+      <div class="sarrow">→<br>fold<br>非 LLM</div>
+      <div class="store"><b>折叠产物 · typed 断言</b>B「路线图先行」 conf 0.7
+<span class="spec-hot">C「链条空转」 conf 0.6 ← 刚折入</span>
+C「C端+Badcase 死线」 conf 0.6
+grounding 一律 inferred · refs=[]</div>
+    </div>
+    <div class="cap-strip">
+      <div class="cap"><b>问 · fact-seeded</b>拿真事实当锚点，只问本人答得出的</div>
+      <div class="cap"><b>控 · 确定性</b>追问一失控访谈就废，控制流不交给模型</div>
+      <div class="cap"><b>存 · 强制诚实</b>现状 append · reconcile 人审已立项 ADR-0038</div>
+    </div>
+  </div>
+  <aside class="notes">第二个决策讲萃取机制，这页冻结的是一场真访谈。左边是 session 现场：最上面的锚点卡来自 A 桶真事实——妙招四阶段，所以控制器问出来的都是「只有他本人才答得出」的问题，不空泛。三行对话是真实实录：种子层是他愿意主动讲的原则；第一层追问按「翻车」模板挖出「链条空转」这个具体的坑；标橙那句破例边界是第二层追问才挖出来的——他从没写进任何文章，这就是知识的诅咒被机制解开的现场。中间控制器只做三件事：确定性选维、两级模板追问、答空即停——大模型在全流程里只负责一件事，把模板问题问得贴合上文（gen_q），因为赛道调研的结论是：追问一交给模型自由发挥，访谈就失控，这是一亿美金公司都没解好的问题。右边折叠产物：种子进 B 桶置信零点七、钻出物进 C 桶零点六，全部强制标 inferred、refs 空数组——访谈现答永远不冒充有出处的事实。底部第三条注脚是诚实标注：冲突处理现状是 append 不去重，合并去重走人审的方案已立项还没开发。</aside>
+</section>
+
+<!-- 9 · 决策③ 保真度量 ♻️ -->
+<section class="slide">
+  <div class="kicker">决策 ③</div>
+  <h2>保真必须对真人真答度量，不许自评</h2>
+  <div class="en-sub">Fidelity is graded against the person's real answers — self-grading is blocked in code</div>
+  <div class="sys">
+    <div class="sys-grid" style="grid-template-columns:1.02fr auto 1.06fr auto .95fr">
+      <div class="zone">
+        <div class="zone-t">只读 · 萃取开始前就锁死</div>
+        <div class="store"><b>fixtures/eval/holdout.json</b>_note:「防泄漏 ADR-0006」
+本文件禁入检索 / 训练集
+question:「你在哪家公司？」
+real_answer:「在海纳做 AI 产品…」</div>
+        <div class="pipe-note" style="text-align:left;margin-top:.45em"><span class="flow-n">1</span> 预留在萃取之前 · 分身全程看不到</div>
+      </div>
+      <div class="sarrow"><span class="flow-n">2</span><br>&rarr;<br>同题<br>问分身</div>
+      <div class="zone">
+        <div class="zone-t">judge · reference-based</div>
+        <div class="mech">
+          <div class="gate"><b>第一行就检查真答</b>——没有 real_answer 直接抛 ValueError <span class="gp">防自评＝代码约束，不是纪律</span></div>
+          <div class="gate"><b>fidelity 连续值 [0,1]</b>——3 锚点：1.0 一致 / 0.5 部分 / 0.0 编造</div>
+          <div class="gate gate--soft"><b>先理由后分数</b>——rubric 强制 reasons 在前、score 在后 <span class="gp">ADR-0041 · 学 Anthropic evals</span></div>
+        </div>
+      </div>
+      <div class="sarrow"><span class="flow-n">3</span><br>&rarr;<br>相对阈值</div>
+      <div class="zone">
+        <div class="zone-t">产出 · 只留可行动信号</div>
+        <div class="store"><b>点名机制</b>均值 −1σ 以下才点名
+全批低但均匀 &rarr; 不点名
+全同分 &rarr; 不点名</div>
+        <div class="gate gate--defer" style="margin-top:.55em"><span class="flow-n">4</span> <b>失分回灌</b>——答错的题归因到维度<br>&rarr; 变成下轮访谈追问<span class="status-pill status-pill--planned" style="margin:.35em 0 0">已立项 · 见黑底页</span></div>
+      </div>
+    </div>
+    <div class="cap-strip">
+      <div class="cap"><b style="font-family:var(--serif);font-size:1.7em">4.93</b>vs 4.29 · 保真度<br><span style="font-size:.9em">同题对照 delphi.ai 原版 · 14 题</span></div>
+      <div class="cap"><b style="font-family:var(--serif);font-size:1.7em">4.71</b>vs 4.36 · 流畅度<br><span style="font-size:.9em">D 表达桶上线前 2.79</span></div>
+      <div class="cap"><b>口径诚实</b>Claude 按 rubric 判分，不是人工盲测——趋势扎实，我不把它当决定性证据</div>
+    </div>
+  </div>
+  <aside class="notes">第三个决策：怎么知道分身像不像。行业通行做法是 LLM 自评或者用户拍脑袋，我的做法按一二三四走。第一步，holdout 预留，注意时间点——在萃取开始之前就锁定一批真人真答，屏上是真实文件，文件头那行 _note 写死「本文件禁入检索和训练集」，分身全程看不到这些答案。第二步，同题问分身，答案送 judge，judge 是 reference-based 的，三个机制：最关键的是判分函数第一行就检查有没有真答，没有直接抛 ValueError——防自评在我这里是代码约束，不是纪律，注释原话是「分身自评等于退回 Delphi 的满意度飞轮」；保真度是零到一的连续值，三个锚点，一点零一致、零点五部分、零编造；第三条是我上周按 Anthropic 那场 evals 分享刚做的形制修正——把 rubric 从先出分改成先写理由再落分数，先出分会让模型为已经出口的分数辩护到底，这笔记在 ADR-0041。第三步，点名用相对阈值：均值减一个标准差以下才点名，全批都低但均匀不点名，全同分不点名——这是防「凑一个绝对分」的过拟合。第四步失分回灌，已立项还没开发，等下黑底那页单独讲，它是我 roadmap 上优先级最高的一步。底下两个数字：保真四点九三对原版四点二九，流畅四点七一对四点三六，第三格是口径诚实——这是同题对照 delphi.ai 上的原版分身、Claude 按 rubric 判分，不是人工盲测，趋势扎实但我不把它当决定性证据。追问弹药：holdout 为什么必须在萃取之前锁——之后锁的话素材已经进了库，测的就是记忆不是泛化；点名机制为什么用相对阈值——绝对阈值会诱导我去调分数而不是修系统。这套评测其实是四个真文件构成的工程，下一页单独拆它的构造、我还欠的账、和一条最锋利的设计判断。</aside>
+</section>
+
+<!-- 10 · 决策③深挖 · eval 工程全景 🆕 -->
+<section class="slide">
+  <div class="kicker">决策 ③ · 深挖 · EVAL HARNESS</div>
+  <h2>保真评估：四环节已在，欠的账我列得出</h2>
+  <div class="en-sub">Fidelity eval as engineering — four stages live, five debts named, self-grading impossible by construction</div>
+  <div class="sys">
+    <div class="sys-grid" style="grid-template-columns:1fr auto 1fr auto 1fr auto 1fr">
+      <div class="zone">
+        <div class="zone-t">① 采题 · collect_holdout.py</div>
+        <div class="store"><b>真人陪聊才落盘</b>holdout 12 题
+fact_recall 5 · boundary 7
+<span class="spec-hot">⚠️ 欠 ≥40 · 缺心智桶</span></div>
+      </div>
+      <div class="sarrow">&rarr;</div>
+      <div class="zone">
+        <div class="zone-t">② 打分 · scoring.py</div>
+        <div class="store"><b>reference-based</b>缺真答 &rarr; 抛 ValueError
+先理由后分数 · parse 不静默
+临界 0.4–0.6 best-of-3</div>
+      </div>
+      <div class="sarrow">&rarr;</div>
+      <div class="zone">
+        <div class="zone-t">③ 评测 · eval.py</div>
+        <div class="store"><b>两维不混算</b>保真＝北极星主指标
+流畅＝并行体验指标
+各取均值 · 各看胜负</div>
+      </div>
+      <div class="sarrow">&rarr;</div>
+      <div class="zone">
+        <div class="zone-t">④ 点名 · preview.py</div>
+        <div class="store"><b>相对阈值防凑分</b>mean − 1σ 以下才点名
+全同分 / 全批均匀
+都不冤枉点名</div>
+      </div>
+    </div>
+    <div class="core-band" style="margin-top:.7em">优化分身的手，全系统只能碰一个文件 <b>SYSTEM_PROMPT_ANSWER</b> —— holdout / rubric / 校准集全在禁触区，<b>作弊在架构上不可能，不靠自觉</b></div>
+    <div class="cap-strip">
+      <div class="cap"><b>确定性归 code，nuance 归 judge</b>拒答 / 溯源 / 泄漏用断言判定，绝不请示 LLM；judge 只留质量判断——用反了两头吃亏</div>
+      <div class="cap"><b>尺子自己也要被验</b>owner 亲手打 15+ 题当校准集，judge 与人分一致率 ≥80% 才可信（meta-eval）</div>
+      <div class="cap"><b>五笔清欠 · 按投入产出排</b>✓ judge 形制刚落 ADR-0041｜规划：code graders · 记账 · 题量→40 · autoevolve 爬坡<span class="status-pill status-pill--planned">ADR-0041 accepted</span></div>
+    </div>
+  </div>
+  <aside class="notes">决策③讲了保真怎么度量，这页把它当一套工程系统拆开——面试里最容易被追问的就是「你这评测是玩具还是真工程」。它是四个真文件，不是一个打分脚本。第一环采题，collect_holdout，真人陪聊才落盘、合成答绝不污染题集；这里我先自曝一个短板——现在只有十二题，事实召回五题、边界七题，离我自己 ADR 定的四十题还差得远，而且心智桶的题全缺，这是下一步 owner 要补的账。第二环打分，scoring，reference-based，缺真答直接抛异常；judge 有三条纪律，最关键一条是先理由后分数——rubric 强制先写一致点和分歧点、最后才出分，因为先出分模型会为那个分辩护到底，这是我上周按 Anthropic 那场 evals 分享刚做的形制修正，记在 ADR-0041；另外抓不到分数不静默给中间分、临界区自动判三次取中位。第三环评测，eval，保真和流畅两维各取均值、各看胜负，绝不混成一个分——保真是北极星主指标、流畅是并行体验指标。第四环点名，preview，相对阈值，均值减一个标准差以下才点名，全批均匀或全同分都不冤枉，防的是凑一个绝对分。中间这条黑带是我最想让你们记住的设计判断，也是防编造契约的最后一环：将来做自动进化的那个 agent，在整个系统里只有一个可写点，就是作答的 system prompt；holdout、评分规则、校准集全在它碰不到的禁触区——所以它想作弊刷分，在架构上就不可能，不是靠我叮嘱它别作弊。底下三格是诚实交代：左边是 code 和 judge 的分工判据，能用断言判定的绝不花钱问 LLM；中间是尺子自己也要被考，owner 亲手打十五题当校准集，judge 打分跟人一致率到八成这把尺子才算可信；右边是我还欠的五笔账，按投入产出排好了——code grader 层、记账、题量补到四十、自动爬坡，judge 形制是刚落的第一笔。追问弹药：六笔欠账 D1 到 D6 的 verify 口径都在 ADR-0041，比如 code graders 那笔的验收是「制造一个已知回归、对应 grader 必须变红」；为什么 code 和 judge 要分工——拒答有没有触发、溯源在不在库、题有没有泄漏这类确定性行为绝不请示 LLM，judge 判确定性行为是花钱买不确定、code 判 nuance 会脆；信任拓扑那条是 ADR-0041 决策八，accepted。下一个决策：分身怎么越用越像。</aside>
+</section>
+
+<!-- 11 · 信任拓扑图 🆕 -->
+<section class="slide">
+  <div class="kicker">决策 ③ · 深挖 · 信任拓扑</div>
+  <h2>信任边界，就是写权限边界</h2>
+  <div class="en-sub">Trust boundary = write boundary — the optimizer can touch exactly one file</div>
+  <div class="sys">
+    <div class="topo">
+      <div class="tzone tzone--lock">
+        <div class="zone-t">🔒 Owner 亲手区 · agent 禁触</div>
+        <div class="store">holdout.json · 12→40 真人真答
+JUDGE_RUBRIC · 版本入 git
+judge-calibration · owner 打 15+</div>
+        <div class="pipe-note" style="text-align:left;margin-top:.4em">👤 owner 手跑 holdout 防过拟合 · 批 rubric 变更</div>
+      </div>
+      <div class="tzone">
+        <div class="zone-t">📏 度量层 · 只读被测系统</div>
+        <div class="store">eval_run.py · runner
+C1–C5 · code graders
+J1 · fidelity judge（先理由后分）
+runs.jsonl · git sha join key</div>
+      </div>
+      <div class="tzone tzone--target">
+        <div class="zone-t">🎯 被测系统</div>
+        <div class="store store--write"><b>★ SYSTEM_PROMPT_ANSWER</b>唯一 agent 可写点</div>
+        <div class="store" style="margin-top:.45em">rag.answer · chunks 库
+（度量层只读、不改）</div>
+      </div>
+    </div>
+    <div class="topo-evolve">
+      <div class="tzone">
+        <div class="zone-t">🔁 优化层 · autoevolve（ADR-0008）</div>
+        <div class="store">train_set ~15 · 可见题面 · <span class="spec-hot">禁看真答</span>
+program.md · 长跑进化 agent</div>
+      </div>
+      <div class="twrite">program.md ──<b>唯一写入</b>──▶ SYSTEM_PROMPT_ANSWER<span class="rd">整张图指向被测系统的写边只有这一条 · 其余全是读</span></div>
+    </div>
+    <div class="cap-strip">
+      <div class="cap"><b>一条写入边</b>优化 agent 能改的只有作答 prompt，评测集/规则/校准全够不着</div>
+      <div class="cap"><b>禁触区锁死作弊面</b>想过拟合 holdout、想改尺子刷分——在架构上碰不到那些文件</div>
+      <div class="cap"><b>信任＝拓扑，不＝自觉</b>作弊不是被禁止，是结构上做不到；不靠「我叮嘱它别作弊」</div>
+    </div>
+  </div>
+  <aside class="notes">上一页四环节讲的是评测怎么跑，这页单讲一件事——也是我全场最想让懂技术的人记住的设计判断：这套系统一旦上自动进化，评估者就变成一个会主动找洞刷分的 agent，光靠规则约束它没用。我的做法是把「信任」这个软问题，变成「写权限」这个硬问题。你看这张图分四个区，按谁能写谁只能读切开：左边是 Owner 亲手区，holdout 真答、评分规则 rubric、judge 校准集全在这，agent 一个字都碰不到；中间度量层，跑评测、code grader、judge、记账，它只读被测系统、不改；右边被测系统，注意那个橙色的框——SYSTEM_PROMPT_ANSWER，作答的 system prompt，这是整个系统里优化 agent 唯一能写的一个文件；下面优化层，长跑进化 agent 拿 train 集的分数当反馈，但它看不到真答。中间那条黑带是全图的论点：从优化层指向被测系统的写入边，整张图只有这一条——program.md 改作答 prompt，其余所有箭头全是读。所以底下三句收口：优化 agent 能改的只有作答 prompt；它想过拟合 holdout、想偷偷改评分尺子刷个高分，在架构上根本够不着那些文件；作弊不是被我禁止的，是结构上做不到的——我不需要叮嘱一个 agent「别作弊」，我让它碰不到能作弊的东西。这就是「信任等于拓扑，不等于自觉」。追问弹药：这是 ADR-0041 决策八，配套 ADR-0008 的 autoevolve；train 集和 holdout 为什么必须分开——同一题集两用的话，自动爬坡会把评测集喂进优化，等于对着答案考试；owner 那条手跑 holdout 是最后一道防过拟合闸，agent 只在 train 集上爬，owner 每隔十轮手动拿 holdout 验一次，train 涨 holdout 掉就是过拟合、人工回滚。这套写权限拓扑，就是防编造契约从作答层一路延伸到了优化层。</aside>
+</section>
+
+<!-- 12 · 决策④ 进化环 -->
+<section class="slide">
+  <div class="kicker">决策 ④</div>
+  <h2>分身要越用越像：三层自进化环</h2>
+  <div class="en-sub">The clone improves with use: a three-layer self-improvement loop</div>
+  <div class="sys">
+    <div class="sys-grid">
+      <div class="zone">
+        <div class="zone-t">在线 · 边干边记</div>
+        <div class="sess"><span class="av"></span>受众对话 <span class="sid">conv_18</span><span class="dots"><i class="on"></i><i class="on"></i><i class="hotd"></i><i></i><i></i></span></div>
+        <div class="sess"><span class="av"></span>受众对话 <span class="sid">conv_19</span><span class="dots"><i class="on"></i><i class="hotd"></i><i></i><i></i><i></i></span></div>
+        <div class="sess"><span class="av"></span>Train 精修 <span class="sid">train_07</span><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="hotd"></i><i></i></span></div>
+      </div>
+      <div class="sarrow">读 ↑<br>断言召回<br>写 ↓<br>只进原料层</div>
+      <div>
+        <div class="store"><b>四桶断言库</b>A · 妙招四阶段（简历）
+B · 「路线图先行」
+<span class="spec-hot">C · 「链条空转」← 访谈刚折入</span>
+D · 拒答腔调（反馈蒸馏）</div>
+        <div class="store" style="margin-top:.5em;background:var(--ivory-light);border:1px dashed var(--cloud-light)"><b>原料层（Reflect 写这里）</b>messages 全量 · visitor_memories
+<span class="spec-hot">memory_candidates ← 待人审 2 条</span></div>
+      </div>
+      <div class="sarrow">⇄<br>建议→人审<br>不强写</div>
+      <div class="zone">
+        <div class="zone-t">带外 · session 之间</div>
+        <div class="verbs"><b>Dreaming</b><span>合并冲突</span><span>降权过时</span><span>沉淀洞察</span></div>
+        <div class="verbs" style="background:var(--clay-soft);margin-top:.5em"><b>心智编译</b><span>断言 → SOP</span><span>步步溯源</span></div>
+      </div>
+    </div>
+    <div class="cap-strip">
+      <div class="cap"><b>Reflect · 在线写原料</b>session 收尾蒸原料：访客记忆自动写、owner 事实候选进人审——<b>断言库不直写</b><span class="status-pill status-pill--live">✓ 代码在库</span></div>
+      <div class="cap"><b>Dreaming + 编译 · 带外理</b>批处理整理与编译，产物一律过人审<span class="status-pill status-pill--planned">已立项 ADR-0038 / 0039</span></div>
+    </div>
+  </div>
+  <div class="pipe-note">断言库只有三个写入口：访谈折叠（B/C）· 采集萃取（A）/反馈蒸馏（D）· 人审批准（候选升格）——Reflect 与 Dreaming 都只碰原料层和候选队列</div>
+  <aside class="notes">第四个决策回答「分身怎么越用越像」。这页是整个系统的一帧冻结画面，中间箭头注意是读写分向的：读的方向每一轮都发生——作答管线从断言库按相关性召回断言；写的方向发生在 session 收尾——Reflect 把这场对话蒸成原料，但注意它写的是下面那个虚线框的原料层：访客情景记忆自动写、对话全量落库、owner 透露的新事实蒸成候选进人审队列——断言库本身 Reflect 碰不到。断言库只有三个写入口：访谈折叠、采集萃取、还有人审批准把候选升格进来。这是防编造契约在记忆系统的延伸：任何自动过程都不许直写「本人说过什么」。右边带外区：Dreaming 批处理做合并冲突、降权过时、沉淀洞察，产物同样只出建议进人审；编译层把断言变成可执行 SOP。底部两个注脚是论证：在线写原料、带外理结构，两种节奏一虚线之隔。状态诚实标注：左半在库运行，右半已立项。编译层和第 8 页 B 心智桶的关系值得单独讲：B 桶是原料仓库，编译层是架在它上面的编译器——同一批程序性知识，B 桶存的是陈述形态，一条条独立断言，检索命中了分身能「引用他的观点」；编译层把它还原成程序形态，按维度聚类成完整 SOP，任务型请求整包装载，分身才能「按他的方式执行」一个完整任务。锁死这层关系的是溯源：SOP 每步指回具体断言 id，skill 包里不存在 B 桶没有的知识，只是形态转换——防编造契约延伸到了编译面。三层连起来就是「记、悟、会做」。追问弹药——Dreaming 具体怎么重组：天级批处理聚合高频问题模式进 insights 表、对冲突断言出合并建议、对过时判断出降权归档建议，全部进人审队列批准才生效，上线后新旧并跑一周再收敛。心智编译怎么落地：请求先走规则分类，任务型才装载流程包，拿不准一律回退观点型通路；产物是独立 markdown 可 diff 可回滚；首个编译目标「分析一家公司」。四个决策讲完，下一页看受众真正摸到什么；右边 Dreaming 那个盒子稍后单独展开一页。</aside>
+</section>
+
+<!-- 13 · 应用层三次兑现 ♻️ -->
+<section class="slide">
+  <div class="kicker">应用层 · SURFACE</div>
+  <h2>同一个契约，三次兑现</h2>
+  <div class="en-sub">One contract, three surfaces — the anti-fabrication contract reaches text, voice, and citations</div>
+  <div class="core-band">防编造契约 · grounding 三态：<b>个人事实锁死</b> · 通用知识限专业域内 · <b>无据即拒答</b></div>
+  <div class="radiate">
+    <div>
+      <div class="dn">&darr; 在文字里怎么兑现</div>
+      <div class="card">
+        <h4>文字对话<span class="en-k">Chat</span></h4>
+        <p><b>答不出就说没记录，不硬凑</b>——而且拒答也得拒得像他本人</p>
+        <div class="ev">真实拒答：「不会给你瞎编一个今天吃了牛肉面」<br>分层澄清开场 · 记得访客（F32 跨 session）<span class="status-pill status-pill--live" style="margin:.45em 0 0">✓ 生产在跑</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="dn">&darr; 在声音里怎么兑现</div>
+      <div class="card">
+        <h4>语音通话<span class="en-k">Voice</span></h4>
+        <p><b>TTS 零改写守约</b>——朗读的逐字＝作答原文，声音层不许自由发挥</p>
+        <div class="ev">本人声线 S_ZWf3iEoV1（火山 ICL 2.0）· owner 人耳确认<br>首句 2.17s ＝ VAD 0.7 ＋ 首句 1.15 ＋ TTS 0.32<span class="status-pill status-pill--live" style="margin:.45em 0 0">✓ F10 / F24 passing</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="dn">&darr; 在证据里怎么兑现</div>
+      <div class="card">
+        <h4>溯源面板<span class="en-k">Citations</span></h4>
+        <p><b>每句话都能走回原文</b>——访谈现答标「据访谈推断」，绝不冒充文献</p>
+        <div class="ev">citations 锚 chunk_id ＋ score（0.79–0.81 实测）<br>inferred 与 retrieval 分开标注<span class="status-pill status-pill--live" style="margin:.45em 0 0">✓ 代码在库</span></div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">四个决策讲完，看受众真正摸到的东西。这页我特意不做成功能清单，因为这三样不是三个功能——是同一个契约在三个界面上的三次兑现，黑色这条带就是那个契约：grounding 三态，个人事实锁死、通用知识限在专业域内、无据即拒答。第一次兑现在文字里：答不出就说没记录，不硬凑；但光拒答不够，拒答还得像他本人，屏上这句是真实输出——「不会给你瞎编一个今天吃了牛肉面」，那个腔调来自 D 表达桶。附带的能力是含糊问题先分层澄清、以及记得访客，同一个人跨 session 接着上次聊。第二次兑现在声音里，这是我最想现场演示的：本人音色是火山 ICL 二点零克隆的我的声线，人耳验收我给的原话是「是本人声音」；但真正的守约在这句——TTS 零改写，朗读出来的逐字必须等于文字作答的原文，声音层不许自己润色。为什么这条重要？因为语音是最容易偷偷加戏的地方，一旦允许 TTS 层改写，防编造契约在最后一米就漏了。延迟这里也交代清楚：首句两点一七秒，等于 VAD 零点七加检索生成一点一五加 TTS 首片零点三二，压在两点五秒的闸门内。第三次兑现在证据里：每个回答带 chunk id 和相似分数，受众自己能走回原文；而且访谈现答标 inferred、有出处的标 retrieval，两种引用分开标注，绝不让「他访谈里现说的」冒充「他文章里写过的」。三次兑现连起来是一句话：契约不是写在文档里的，是在每个受众能摸到的地方都兑现一次。追问弹药：语音的合规——AI 合成语音有标识，凭据和声纹配置不入库；F28 通话增强还在开发中。说一千道一万，真机看。</aside>
+</section>
+
+<!-- 14 · Live demo -->
+<section class="slide slide--interstitial">
+  <div class="pre">训练流 · 受众对话 · 拒答现场</div>
+  <h2>Live demo</h2>
+  <div class="pill-code">web dev · 真库真断言 · <b>生产同款</b></div>
+  <aside class="notes">切真机演示三分钟，三个点：一看训练流——系统怎么访谈我、怎么按「翻车→破例」两级追问；二看受众对话——问一个语料里有的问题，展示引用出处；三特意问一个资料外的问题，展示拒答——刚才第 7 页那两段拒答实录就是这个环节的真实输出。演示完回来收尾。</aside>
+</section>
+
+<!-- 15 · 黑底 · 评测驱动器 -->
+<section class="slide slide--dark">
+  <div class="kicker">One thing to remember</div>
+  <h2>评测不是终点，<span class="hot">是萃取的驱动器</span></h2>
+  <div class="en-sub">Evaluation is not the finish line — it is the engine of extraction</div>
+  <div class="lede">分身答错的每道 holdout 题，都会变成下次访谈的追问——错在哪，就往哪深挖。</div>
+  <div class="drow">
+    <div class="dbox">答错一题</div>
+    <span class="darrow">→</span>
+    <div class="dbox">归因到维度</div>
+    <span class="darrow">→</span>
+    <div class="dbox">生成追问</div>
+    <span class="darrow">→</span>
+    <div class="dbox"><b>下轮访谈更准</b></div>
+  </div>
+  <div class="pipe-note">打分闭环已在跑 · 回灌环已立项（0028·F38，前置=失分归因从「桶」细化到「维度」）——roadmap 上优先级最高的一步</div>
+  <aside class="notes">如果今天只记住一件事，记这页。行业把评测当验收：打完分就完了。我的设计里评测是驱动器——每道答错的 holdout 题归因到具体维度，变成下一轮访谈的追问，错在哪就往哪深挖。状态说清楚：打分闭环已经在跑，回灌环已立项未开发，有个明确的技术前置——现在失分只能归因到桶，要细化到维度级才能生成精准追问。但它是我 roadmap 上优先级最高的一步，因为竞品没有 ground truth 结构上做不了这个环，自克隆场景天然有——本人就在这。这是这个项目最深的结构性杠杆，也是「评估驱动开发」方法论在产品里的直接应用。</aside>
+</section>
+
+<!-- 16 · How Dreaming works -->
+<section class="slide">
+  <div class="kicker">决策 ④ · 深挖</div>
+  <h2>How Dreaming works：重组自动跑，落账要人批</h2>
+  <div class="en-sub">Reorganisation runs out-of-band — nothing lands in the assertion store without review</div>
+  <div class="sys">
+    <div class="sys-grid" style="grid-template-columns:1fr auto 1.05fr auto 1.2fr">
+      <div class="zone">
+        <div class="zone-t">只读输入 · read-only</div>
+        <div class="store"><b>断言库快照 · 四桶</b>A / B / C / D
+⛔ Dreaming 零写权</div>
+        <div class="store" style="margin-top:.5em"><b>当天 transcripts</b>conv_18 · conv_19
+train_07</div>
+      </div>
+      <div class="sarrow"><span class="flow-n">1</span><br>→<br>只读快照</div>
+      <div class="zone">
+        <div class="zone-t">run_daily · delphi-jobs 天级</div>
+        <div class="verbs" style="background:var(--clay);color:#fff"><b style="color:#fff">Dreaming</b><span style="color:#fff">合并冲突</span><span style="color:#fff">沉淀洞察</span><span style="color:#fff">降权过时</span></div>
+        <div class="pipe-note" style="margin-top:.4em"><span class="flow-n">2</span> 带外批处理 · 不进热路径</div>
+      </div>
+      <div class="sarrow"><span class="flow-n">3</span><br>→<br>分道写出</div>
+      <div class="zone">
+        <div class="zone-t">两条出路 · 写权分级</div>
+        <div class="mech">
+          <div class="gate gate--soft"><b>自动层</b>——daily_insights 表（注入链可消费）· visitor_memories 整理（supersede 现成）</div>
+          <div class="gate"><b>人审层</b>——assertions 重组建议 → memory_candidates 队列 → owner 批准（F17 链路）才生效</div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-strip">
+      <div class="cap"><b>对照 Anthropic 原版</b>官方 clone 全库→人看 diff→切换；我的闸位更前——断言库对 Dreaming 零写权</div>
+      <div class="cap"><b>新旧并跑</b>上线后与旧汇总逻辑并跑一周再收敛</div>
+      <div class="cap"><b>状态</b>Reflect 在库运行；Dreaming 重组<span class="status-pill status-pill--planned">已立项 ADR-0038 · F35</span></div>
+    </div>
+  </div>
+  <aside class="notes">第 12 页那张进化环里，Dreaming 只是带外区一个盒，这页把它展开，按一二三走读。第一步，只读快照：Dreaming 每天由 delphi-jobs 触发，吃两样输入——断言库的当前态和当天的 session 对话，注意它对断言库是零写权，纯读。第二步，重组，三个动词：合并冲突——同一话题新旧结论打架的，出合并建议；沉淀洞察——高频问题模式聚合进 daily_insights；降权过时——不再成立的判断出归档建议。全程带外批处理，不进作答热路径，零延迟代价。第三步，分道写出，按写权分级：洞察和访客记忆整理走自动层——daily_insights 是数据库表、注入链直接消费，visitor_memories 本来就是自动写层、supersede 机制现成；但凡涉及断言库——「本人说过什么」——一律只出建议，进 memory_candidates 人审队列，owner 批准走 F17 链路才生效。底部第一条注脚是和 Anthropic 原版的对照，这个对比面试值得主动讲：官方的做法是 clone 整个记忆库出一个 output store、人看 diff、满意再切换，闸在切换那一步；我的闸位更前——断言库对 Dreaming 直接零写权。同一个保守哲学——优化是提议不是强写——但我的场景是分身替真人说话，防编造契约要求闸放在写入口前面，而不是写完再审。追问弹药：为什么 insights 用 DB 表不用 markdown——生产端四服务架构要在注入链里消费它，md 文件进不了链路，而且 daily_runs 已有 DB 审计先例；为什么不删旧汇总逻辑——新旧并跑一周对比再收敛，这是 ADR 里明写的守约；命名分层——会话级叫 Reflect、写原料只追加，天级叫 Dreaming、写结构做重组，这个命名就是从 Anthropic 这场分享里学的，机制对照过再落的自己的设计。这是往前看的部分；收尾之前，先讲三个往回看的坑。</aside>
+</section>
+
+<!-- 17 · Lessons 三个坑 -->
+<section class="slide">
+  <div class="kicker">Lessons</div>
+  <h2>踩过的三个坑，都是评测先发现的</h2>
+  <div class="en-sub">Three pitfalls — every one caught first by the eval system</div>
+  <div class="trio">
+    <div class="card"><h4>比的是素材，不是能力<span class="en-k">Comparing corpora, not capability</span></h4><p>早期对照评测把 Delphi 答对的题判成「编造」——根因是两边喂的素材不一致。公开更正错账</p><div class="ev">重评后 4.93 vs 4.29 · 护城河从「全面领先」收窄到 3 题优势</div></div>
+    <div class="card"><h4>N=12 的分数会说谎<span class="en-k">Small-N scores lie</span></h4><p>holdout 均值单次波动比一次真实检索修复的效应还大——差点把修好当成修坏</p><div class="ev">0.692→0.652 判为噪声带内 · 波动 ±0.3 &gt; E12 效应</div></div>
+    <div class="card"><h4>一个常量腰斩了深度<span class="en-k">One constant capped the depth</span></h4><p>max_depth=2 让所有维度钻两层就停，深洞见被硬生生截断</p><div class="ev">drill.py:27 · 饱和自适应已立项（0028 vNext）</div></div>
+  </div>
+  <aside class="notes">收尾前主动讲三个坑。第一个最疼也最有价值：早期竞品对比里我把 Delphi 答对的题判成编造，后来核对本人简历才发现是我方数据库素材更稀疏——比的是素材不是能力。我公开更正了错账，把护城河叙事从全面领先收窄到三题优势。这教会我 eval 的第一课：先对齐输入，再比输出。第二个坑是统计学的：十二道题的均值单次波动正负零点三，比检索修复的真实效应还大，差点让我把一次修好的改动当回归回滚掉——样本小的时候，分数不能当优化信号。第三个坑在萃取侧：一个写死的深度常量把所有追问腰斩在第二层，饱和自适应的方案已立项。三个坑的共同点是都被评测系统先揪出来——这也是我坚持评测先行的原因：它不光度量产品，还纠正我自己的判断。</aside>
+</section>
+
+<!-- 18 · Takeaways 三方法 -->
+<section class="slide">
+  <div class="kicker">Takeaways</div>
+  <h2>讲完这场，可以带走的三个方法</h2>
+  <div class="en-sub">Three transferable methods — beyond this project</div>
+  <div class="trio">
+    <div class="card"><h4>评测先行<span class="en-k">Eval-first</span></h4><p>机制：预留真答（被测者不可见）→ reference-based 盲测 → 相对阈值防凑分 → 小样本多采样。没有裁判，一切「优化」都只是感觉</p></div>
+    <div class="card"><h4>评估闸开发<span class="en-k">Proposal → ADR → verify</span></h4><p>机制：方案文档（含否决的备选）→ 人工评估闸 → ADR 记决策 → verify 真跑通才标完成。管住 agent 的不是 prompt，是闸门</p></div>
+    <div class="card"><h4>砍刀定形<span class="en-k">Scope by cutting</span></h4><p>机制：开工前把「不做什么」写进项目宪法（本项目三刀）；此后每个需求先对边界，撞线即拒</p></div>
+  </div>
+  <aside class="notes">收口前送三个可以直接拿走的方法，都不限于这个项目。第一，评测先行：任何 AI 产品，先回答「怎么判定它变好了」再动手——刚才三个坑每一个都是评测系统先抓到的，这不是巧合，是因果。第二，评估闸开发：这个项目三十九个 ADR 背后是同一条流水线——方案先行、人工评估、机器验证，AI 写代码的时代人的价值在设闸门，这套方法我沉淀成了开源的 harness-kit。第三，砍刀定形：范围决策做在第一天比做在第一百天便宜一百倍。如果这三个方法里有任何一个对你们团队有用，这二十分钟就值了。最后一页收个尾。</aside>
+</section>
+
+<!-- 19 · Recap 三件事 -->
+<section class="slide">
+  <h2>这个项目证明的三件事</h2>
+  <div class="en-sub">Three things this project proves</div>
+  <div class="trio">
+    <div class="card"><span class="check">✓</span><h4>产品判断<span class="en-k">Product judgment</span></h4><p>分身该「真」不只「像」：拒答与溯源是信任的来源，不是体验的妥协</p></div>
+    <div class="card"><span class="check">✓</span><h4>工程纪律<span class="en-k">Engineering discipline</span></h4><p>39 个 ADR：每个 feature 先过 proposal 评估闸，verify 真跑通才算完成</p></div>
+    <div class="card"><span class="check">✓</span><h4>真实结果<span class="en-k">Real results</span></h4><p>35 features / 23 passing，生产环境在跑，真受众在对话</p></div>
+  </div>
+  <ul>
+    <li>全程 AI 协作开发：harness 方法论 + 4 层防御体系</li>
+  </ul>
+  <aside class="notes">收尾对应开场的承诺。第一，产品判断：在「像」和「真」之间我选真，并且把它落成了五道闸的机制而不是口号。第二，工程纪律：这个项目有三十九个 ADR，每个功能先写方案过评估闸再开工，验证真跑通才标完成——包括今天讲的 token-锚定后校验，是我自己用消融实验否决掉的方案，否决也记进了 ADR。第三，真实结果：三十五个 feature 里二十三个 passing，生产在跑，真受众在用。三件事合起来是我想展示的能力：把一个模糊的产品命题，拆成可验证的工程决策，并且真的做出来。谢谢，欢迎提问。</aside>
+</section>
+
+<!-- 附录 · F39 企业身份注入（追问弹药：正常放映跳过，按 A 键调出） -->
+<section class="slide slide--appendix">
+  <div class="kicker" style="color:var(--clay)">Appendix · 追问弹药（按 A 调出 / 方向键回主线）</div>
+  <h2>企业落地：从 owner 二元，到成员-角色-scoped（F39）</h2>
+  <div class="en-sub">From binary ownership to member-role-scoped identity — blueprint: Buzz</div>
+  <div style="display:grid;grid-template-columns:1fr .8fr 1.15fr;gap:1.2em;align-items:stretch;margin-top:1.1em">
+    <div class="card" style="background:#fff;border:1px solid var(--ivory-dark);border-radius:10px;padding:1.1em 1.2em">
+      <h4 style="margin:0 0 .5em">现状 · 二元<span class="en-k">Binary today</span></h4>
+      <p style="margin:0;font-size:.92em;line-height:1.7"><code>minds.owner_account_id</code> 1:1 归属（F13）<br>· owner 全权 <code>owned_mind</code>，非 owner→403<br>· visitor 只读「已发布」<b>全部</b><br>· <code>publish_status</code> 二元</p>
+      <div class="ev" style="margin-top:.7em">痛点：一个专家分身无法被组织内多角色按不同<b>深度</b>访问</div>
+    </div>
+    <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;color:var(--slate-medium)">
+      <div style="font-size:1.8em;color:var(--clay);line-height:1">→</div>
+      <div style="font-size:.82em;line-height:1.6;margin-top:.5em"><b style="color:var(--clay)">Buzz 蓝本</b><br>agent 是成员不是 bot<br><i>scoped by identity,<br>not by flags</i></div>
+    </div>
+    <div class="card" style="background:#fff;border:2px solid var(--clay);border-radius:10px;padding:1.1em 1.2em">
+      <h4 style="margin:0 0 .5em;color:var(--accent)">目标 · 成员×角色×scoped<span class="en-k">Member-role-scoped</span></h4>
+      <p style="margin:0;font-size:.9em;line-height:1.65">· <code>mind_members</code>（mind × principal × role）<br>· 五角色 owner/admin/member/guest/service<br>· 角色→桶白名单（A/B/C/D），<b>召回层</b>过滤<br>· <code>scoped token</code>（role+桶+限频）替 owner 全权<br>· visitor 注入 <code>{org,dept,role}</code> provenance</p>
+    </div>
+  </div>
+  <div style="margin-top:1.1em;font-size:.82em;color:var(--slate-light);line-height:1.6;border-top:1px solid var(--ivory-dark);padding-top:.7em">
+    <b>ADR-0040</b> · <code>owner_account_id</code> 零破坏迁移成 <code>role=owner</code> 特例 · 注入身份<b>只读不进断言库</b>（防编造契约不破）· 审计升 hash-chain = 面后 P1（Buzz 第②条）
+  </div>
+  <aside class="notes">这页正常放映不出现，被问到「企业怎么落地／多租户／不同人看到的分身一样吗」时按 A 调出。一句话主线：我现在的权限是二元的——一个分身归一个 owner，owner 全权、访客只读已发布的全部，这是借鉴 Buzz 之前的状态。企业场景撑不住：一个总监的数字心智，本部门同事该能深问他的判断（B 心智桶），外部访客只该看事实（A 桶）且限频，团队管理该能加成员——二元模型表达不了「谁看哪些桶、能问多深、谁能管成员」。关键是这不是我硬套 Buzz：我路线图 ADR-0038 早就埋了 F39 企业身份注入这个钩子，一直没设计；拆 Buzz 时发现它「agent 是成员不是机器人、用身份不用权限位」正是 F39 缺的答案。落成 ADR-0040 七条决策：权限载体用 mind_members 成员表不是 flag 矩阵——flag 随功能爆炸、成员关系不会，这是 Buzz 最锋利的一刀；五角色对齐；角色映射桶白名单、在 RAG 召回层过滤不是事后删；scoped token 带角色和桶范围替代 owner 全权透传，拒绝复用 owner session 降权——会污染 owner 语义；注入的部门角色是「谁在问」的元数据，只读、带 provenance、绝不进断言库，防编造契约在权限层的延伸；owner_account_id 零破坏迁移成 role=owner 特例，历史无主分身不变。这一条最能证明的能力：我能把一个竞品的设计判断，接到自己项目已有的路线图钩子上，落成守住原有契约的工程决策——不是抄功能，是抄判断。</aside>
+</section>
+<!-- 附录B · eval run flow 🆕 -->
+<section class="slide slide--appendix">
+  <div class="kicker">附录 · 按 A 键 · EVAL RUN FLOW</div>
+  <h2>一次 eval run：便宜的先跑，红了知道怎么办</h2>
+  <div class="en-sub">Cheap deterministic checks first, judge last — every red has a next action</div>
+  <div class="flow">
+    <div class="frow"><div class="fnode"><b>取一题 holdout</b> → rag.answer(q)</div></div>
+    <div class="fdown">↓</div>
+    <div class="frow">
+      <div class="fnode fnode--gate"><b>C1–C5 code graders</b>确定性断言先跑 · 零成本</div>
+      <span class="fbranch">红 ▸</span>
+      <div class="fnode fnode--red">按行动表定位<br>阈值 / 素材 / 链路 bug / 泄漏</div>
+    </div>
+    <div class="fdown">↓ 绿</div>
+    <div class="frow">
+      <div class="fnode fnode--gate"><b>refused?</b></div>
+      <span class="fbranch">是 · boundary 桶=正确 ▸</span>
+      <div class="fnode fnode--green">记账</div>
+    </div>
+    <div class="fdown">↓ 否</div>
+    <div class="frow">
+      <div class="fnode fnode--judge"><b>J1 judge · 先理由后分</b>MATCH_POINTS → DIVERGENCE → FIDELITY</div>
+      <span class="fbranch">抓不到 ▸</span>
+      <div class="fnode fnode--red">parse_failed<br>绝不静默 0.5</div>
+      <span class="fbranch">临界 0.4–0.6 ▸</span>
+      <div class="fnode">best-of-3 取中位</div>
+    </div>
+    <div class="fdown">↓</div>
+    <div class="frow"><div class="fnode"><b>runs.jsonl 记账</b>git sha join key · rubric 版本 · 分桶均值/std</div></div>
+    <div class="fdown">↓</div>
+    <div class="frow">
+      <div class="fnode fnode--gate"><b>diff vs 基线 · 回归闸</b></div>
+      <span class="fbranch">约束维回退 ▸</span>
+      <div class="fnode fnode--stop">🚫 改动闸拦下</div>
+      <span class="fbranch">主指标涨/平 ▸</span>
+      <div class="fnode fnode--green">✅ 入册 · diff 进 commit</div>
+    </div>
+    <div class="fdown">↓</div>
+    <div class="frow">
+      <div class="fnode fnode--gate"><b>分数与人感不符?</b></div>
+      <span class="fbranch">是 ▸</span>
+      <div class="fnode fnode--judge">校准环：owner 批 rubric → meta-eval 重验 → 重跑</div>
+      <span class="fbranch">否 ▸</span>
+      <div class="fnode">下一改动假设</div>
+    </div>
+  </div>
+  <aside class="notes">这是追问「你这评测一次到底怎么跑」时按 A 翻的附录。一句话概括设计：便宜的确定性检查先跑，贵的 judge 最后跑，每一条红灯都配了「红了怎么办」。取一题、分身作答，先过五个 code grader——拒答契约、应答契约、溯源、防泄漏、卫生——都是确定性断言、零成本，红了直接按行动表定位是阈值、素材、链路 bug 还是泄漏。绿了看是不是拒答，boundary 桶该拒答的拒了就算对、直接记账；该答的才送 judge。judge 先理由后分、抓不到分数计 parse_failed 不静默、临界区 best-of-3。然后进 runs.jsonl，git sha 当 join key、只增不改。接着 diff 基线这道回归闸：约束维回退就拦下改动，主指标涨或平才入册、diff 进 commit。最后校准环——分数跟人感不符是尺子的问题，owner 改 rubric、过 meta-eval 重验再重跑，改尺子只许人批。整条链两个循环：手动环是人提改动假设跑整条，自动环是长跑 agent 把「下一改动假设」自动化，但只拿 train 集分数当反馈、碰不到 holdout。</aside>
+</section>
+<section class="slide slide--appendix">
+  <div class="kicker">附录 · 按 A 键 · METRICS SYSTEM</div>
+  <h2>指标体系：北极星牵引方向，护栏锁死底线</h2>
+  <div class="en-sub">One north star derived from the thesis &mdash; everything else is a lever or a guardrail</div>
+  <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:.8em;margin-top:.7em">
+    <div class="zone" style="border-style:solid;border-color:var(--slate-dark)">
+      <div class="zone-t">L1 北极星 · 唯一主指标</div>
+      <div style="font-size:clamp(1.1rem,2.2vw,1.7rem);font-weight:700">保真分 4.93<span style="color:var(--cloud-dark);font-size:.6em"> /5 · 原版 4.29</span></div>
+      <div class="store">对 holdout 真人真答的一致性
+reference-based · 缺真答抛异常
+<b>从论点推导：「像真冲突选真」→ 北极星必须度量「真」</b></div>
+    </div>
+    <div class="zone">
+      <div class="zone-t">L2 并行体验指标</div>
+      <div style="font-size:clamp(1.1rem,2.2vw,1.7rem);font-weight:700">流畅 4.71<span style="color:var(--cloud-dark);font-size:.6em"> /5 · 原版 4.36</span></div>
+      <div class="store">防「真而难听」· 与保真各看胜负
+<b>只并行，绝不加权合成总分</b>——合成分会互相掩护</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8em;margin-top:.8em">
+    <div class="zone"><div class="zone-t">L3 供给杠杆</div><div class="store">979 chunks（简历19+整站960）
+四桶断言 A/B/C/D
+<b>→ 牵引：采集与访谈排期</b></div></div>
+    <div class="zone"><div class="zone-t">L3 检索杠杆</div><div class="store">召回命中率
+E12：类目 floor 0.3 + BM25 字面臂
+<b>→ 牵引：阈值与索引调优</b></div></div>
+    <div class="zone"><div class="zone-t">L3 度量杠杆</div><div class="store">holdout 12 题 → 40（缺心智桶）
+owner 陪聊才落盘
+<b>→ 牵引：采题排期＝欠账清单</b></div></div>
+  </div>
+  <div style="display:flex;gap:.6em;justify-content:center;margin-top:.8em;flex-wrap:wrap">
+    <span style="font-family:var(--mono);font-size:clamp(.55rem,.85vw,.68rem);border:1.5px solid var(--clay);color:var(--clay);border-radius:100px;padding:.3em .9em">L4 护栏 · 编造 0/9 陷阱题＝红线</span>
+    <span style="font-family:var(--mono);font-size:clamp(.55rem,.85vw,.68rem);border:1.5px solid var(--clay);color:var(--clay);border-radius:100px;padding:.3em .9em">首句 2.17s &lt; 2.5s 闸</span>
+    <span style="font-family:var(--mono);font-size:clamp(.55rem,.85vw,.68rem);border:1.5px solid var(--clay);color:var(--clay);border-radius:100px;padding:.3em .9em">TTS 零改写</span>
+    <span style="font-family:var(--mono);font-size:clamp(.55rem,.85vw,.68rem);border:1.5px solid var(--clay);color:var(--clay);border-radius:100px;padding:.3em .9em">拒答率盯区间：过低=编造 · 过高=覆盖不足</span>
+  </div>
+  <div class="core-band">指标不挂墙上，挂在闸上：开工先挂指标（评估闸）· 失分归因生成访谈 backlog（驱动器）· 异动即信号——三个坑全是指标先叫的</div>
+  <div class="cap-strip">
+    <div class="cap"><b>12 题波动 ±0.3</b><br>分数当方向，不当单次信号</div>
+    <div class="cap"><b>需求侧（会话/回访）暂不建</b><br>规模未到，不立虚荣指标</div>
+    <div class="cap"><b>优化手只碰 SYSTEM_PROMPT_ANSWER</b><br>指标可信的架构前提</div>
+  </div>
+  <aside class="notes">被问「你怎么定指标 / 怎么衡量这个产品成功」时按 A 翻到这页。四层讲下来：第一，北极星不是从行业模板抄的，是从全场论点推导的——「像」和「真」冲突时我选真，所以北极星必须度量「真」，就是对 holdout 真人真答的保真分，reference-based，缺真答直接抛异常。第二，流畅是并行体验指标，防「真而难听」，但只并行、绝不加权合成一个总分——合成分会让两个维度互相掩护，北极星必须单一。第三层是输入杠杆，每个杠杆都挂着一个可动手的动作：供给杠杆牵引采集和访谈排期，检索杠杆牵引阈值和索引调优，度量杠杆本身也是指标——holdout 题量 12 到 40 的缺口就是我的欠账清单。第四层护栏单列：编造零是红线不是优化目标，红线只守不爬坡；拒答率特意不定单点目标、盯区间，因为压太低会诱导编造、放太高说明覆盖不足——这个指标定成单向优化就会教坏系统。底下三条是指标素养：样本 12 题波动正负零点三，分数当方向不当单次信号；会话数回访率这类需求侧指标规模未到暂不建，不立虚荣指标；所有分数可信的前提是优化手在架构上只碰得到作答 prompt。一句收口：指标不挂墙上，挂在闸上——开工前它是评估闸，失分后它生成访谈 backlog，异动时它是报警器，我那三个坑全是指标先叫的。</aside>
+</section>
+
+<!-- 附录C · OpenAI Presence 对照（07-22 发布，追问「大厂进场/竞品格局」弹药）🆕 -->
+<section class="slide slide--appendix">
+  <div class="kicker" style="color:var(--clay)">Appendix · 追问弹药（按 A 调出 / 方向键回主线）</div>
+  <h2>大厂进场一问：OpenAI Presence（昨日发布）<br>恰好验证了本项目的结构</h2>
+  <div class="en-sub">Presence (07-22): enterprise agents governed by policies / permissions / evaluation standards — same skeleton, different market</div>
+  <div style="display:grid;grid-template-columns:1fr .7fr 1.15fr;gap:1.2em;align-items:stretch;margin-top:1.1em">
+    <div class="card" style="background:#fff;border:1px solid var(--ivory-dark);border-radius:10px;padding:1.1em 1.2em">
+      <h4 style="margin:0 0 .5em">Presence · 企业客服 agent<span class="en-k">What it is</span></h4>
+      <p style="margin:0;font-size:.9em;line-height:1.7">· 场景：客服/销售/采购/IT/HR<br>· 治理三层：<b>policies / permissions / evaluation standards</b><br>· 越界 <b>escalate to human</b><br>· 交付：FDE + SI 白手套，<b>不自助</b></p>
+      <div class="ev" style="margin-top:.7em">押注企业工作流，<b>未碰个人人格分身</b></div>
+    </div>
+    <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;color:var(--slate-medium)">
+      <div style="font-size:1.8em;color:var(--clay);line-height:1">≅</div>
+      <div style="font-size:.82em;line-height:1.6;margin-top:.5em"><b style="color:var(--clay)">同一骨架</b><br>agent 的「真」<br>靠治理层不靠模型自觉<br><i>independently converged</i></div>
+    </div>
+    <div class="card" style="background:#fff;border:2px solid var(--clay);border-radius:10px;padding:1.1em 1.2em">
+      <h4 style="margin:0 0 .5em;color:var(--accent)">本项目对应物<span class="en-k">Already built</span></h4>
+      <p style="margin:0;font-size:.9em;line-height:1.65">· evaluation standards = <b>五道闸 + eval run flow</b>（附录B）<br>· permissions = <b>mind_members×桶白名单</b>（F39/ADR-0040，附录A）<br>· policies = 拒答契约/断言库（编造防线）<br>· escalate = <b>本尊接管</b>通道 → roadmap 缺口，面后新 F 候选</p>
+    </div>
+  </div>
+  <div style="margin-top:1.1em;font-size:.82em;color:var(--slate-light);line-height:1.6;border-top:1px solid var(--ivory-dark);padding-top:.7em">
+    <b>判断</b> · 分身赛道护城河=个人语料+人格权属，大厂暂未进场 · Presence 的 FDE/不自助交付印证：高价值专家分身更可能是 <b>studio/代运营</b> 生意而非纯自助 SaaS（Delphi 官方也设 studio）
+  </div>
+  <aside class="notes">这页正常放映不出现，被问「大厂进场怎么办／竞品格局怎么看／OpenAI 昨天发的 Presence 见了吗」时按 A 调出。主线三句：第一，Presence 是企业客服方向的 agent 平台，不是分身产品，它和我在不同市场收敛到了同一副骨架——agent 的「真」不靠模型自觉，靠治理层：它叫 policies、permissions、evaluation standards，我这里对应拒答契约与断言库、mind_members 乘桶白名单、五道闸加 eval run flow——这是独立收敛，昨天它发布反而替我的结构背了书。第二，它的 escalate to human 机制照出我路线图上一个真缺口：分身答不了或答错时的「本尊接管」通道——转真人、留言、本尊事后修正回灌训练——这是我面后要立的新 feature。第三，商业判断：OpenAI 押企业工作流、用 FDE 白手套交付不开自助，说明高可靠 agent 的交付天然重服务；映射到分身赛道，高价值专家分身更可能是 studio 代运营生意而不是纯自助 SaaS，Delphi 官方自己也设了 studio 服务，这与我对这个赛道商业模式的判断一致。收口：大厂进场对我是利好——它在验证治理层这条路线，而个人语料与人格权属这道护城河它还没碰。</aside>
+</section>
+
+</main>
+
+<div class="hud"><span id="cur">1</span> / <span id="total">?</span></div>
+<div class="progress" id="bar"></div>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide:not(.slide--appendix)')),i=0;
+  var appendices=[].slice.call(document.querySelectorAll('.slide--appendix')),appIdx=-1;
+  var cur=document.getElementById('cur'),total=document.getElementById('total'),bar=document.getElementById('bar');
+  total.textContent=slides.length;
+  function go(n){
+    appendices.forEach(function(s){s.classList.remove('active')});appIdx=-1;   // 回主线自动隐藏所有附录
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach(function(s,k){s.classList.toggle('active',k===i)});
+    cur.textContent=i+1;
+    bar.style.width=((i+1)/slides.length*100)+'%';
+    location.hash='#/'+(i+1);
+  }
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '||e.key==='PageDown') {e.preventDefault();go(i+1);}
+    else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp') {e.preventDefault();go(i-1);}
+    else if(e.key==='Home') go(0);
+    else if(e.key==='End') go(slides.length-1);
+    else if(e.key==='n'||e.key==='N') document.body.classList.toggle('show-notes');
+    else if(e.key==='a'||e.key==='A'){   // 追问弹药：A 键在多个附录间循环（不计入主线进度）
+      if(appendices.length){
+        slides.forEach(function(s){s.classList.remove('active')});
+        appendices.forEach(function(s){s.classList.remove('active')});
+        appIdx++;
+        if(appIdx>=appendices.length){appIdx=-1;go(i);}
+        else appendices[appIdx].classList.add('active');
+      }
+    }
+  });
+  document.addEventListener('click',function(e){
+    if(e.clientX>window.innerWidth*0.66) go(i+1);
+    else if(e.clientX<window.innerWidth*0.15) go(i-1);
+  });
+  function fromHash(){
+    var m=location.hash.match(/^#\/(\d+)/);
+    var n=m?parseInt(m[1],10)-1:0;
+    if(n!==i)go(n);else go(i);
+  }
+  window.addEventListener('hashchange',fromHash);
+  fromHash();
+})();
+</script>
+</body>
+</html>
