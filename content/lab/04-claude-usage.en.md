@@ -36,6 +36,10 @@ cd claude-usage && python3 usage.py
 
 No dependencies to install — runs out of the box.
 
+## My own usage
+
+This tool reads the logs on my own machine — [**open the author's Token usage dashboard →**](/usage/) (a data snapshot: daily usage, totals, per-model split; cost withheld).
+
 ## In one line
 
 The smallest, most practical one: a single command that turns your Claude Code bill from one number into an itemized breakdown.

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Claude Code Token 用量</title>
+<style>
+* { box-sizing: border-box; }
+.viz-root {
+  color-scheme: light;
+  --surface-1:#fcfcfb; --plane:#f9f9f7;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --seq:#256abf; --seq-soft:#9ec5f4;
+  font-family: system-ui,-apple-system,"Segoe UI",sans-serif;
+  background:var(--plane); color:var(--text-primary);
+  margin:0; padding:0; -webkit-font-smoothing:antialiased;
+}
+@media (prefers-color-scheme:dark){ :root:where(:not([data-theme="light"])) .viz-root{
+  color-scheme:dark; --surface-1:#1a1a19; --plane:#0d0d0d;
+  --text-primary:#fff; --text-secondary:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --seq:#3987e5; --seq-soft:#184f95; }}
+:root[data-theme="dark"] .viz-root{
+  color-scheme:dark; --surface-1:#1a1a19; --plane:#0d0d0d;
+  --text-primary:#fff; --text-secondary:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --seq:#3987e5; --seq-soft:#184f95; }
+.wrap{ max-width:1080px; margin:0 auto; padding:40px 28px 72px; }
+.head{ display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap; margin-bottom:8px; }
+h1{ font-size:26px; font-weight:680; letter-spacing:-.01em; margin:0 0 6px; }
+.sub{ color:var(--text-secondary); font-size:14px; line-height:1.5; }
+.sub b{ color:var(--text-primary); font-weight:620; font-variant-numeric:tabular-nums; }
+.tgl{ border:1px solid var(--border); background:var(--surface-1); color:var(--text-secondary);
+  border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; font-family:inherit; }
+.tgl:hover{ color:var(--text-primary); }
+.tiles{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin:26px 0 34px; }
+@media(max-width:860px){ .tiles{ grid-template-columns:repeat(3,1fr);} }
+@media(max-width:520px){ .tiles{ grid-template-columns:repeat(2,1fr);} }
+.tile{ background:var(--surface-1); border:1px solid var(--border); border-radius:12px; padding:16px 16px 14px; }
+.tile .k{ font-size:12px; color:var(--muted); margin-bottom:9px; font-weight:520; }
+.tile .v{ font-size:24px; font-weight:680; letter-spacing:-.02em; line-height:1; }
+.tile .u{ font-size:13px; color:var(--text-secondary); font-weight:560; margin-left:2px; }
+.tile .note{ font-size:11px; color:var(--muted); margin-top:7px; }
+.card{ background:var(--surface-1); border:1px solid var(--border); border-radius:14px; padding:22px 22px 16px; margin-bottom:22px; }
+.card h2{ font-size:16px; font-weight:640; margin:0 0 3px; }
+.card .desc{ font-size:13px; color:var(--text-secondary); margin:0 0 14px; }
+.legend{ display:flex; gap:18px; flex-wrap:wrap; margin:0 0 12px; font-size:12.5px; color:var(--text-secondary); }
+.legend span{ display:inline-flex; align-items:center; gap:6px; }
+.sw{ width:11px; height:11px; border-radius:3px; display:inline-block; }
+svg{ display:block; width:100%; overflow:visible; }
+.axtxt{ fill:var(--muted); font-size:11px; font-family:inherit; }
+.axtxt.tab{ font-variant-numeric:tabular-nums; }
+.gridln{ stroke:var(--grid); stroke-width:1; }
+.baseln{ stroke:var(--baseline); stroke-width:1; }
+.tip{ position:fixed; pointer-events:none; background:var(--surface-1); border:1px solid var(--border);
+  border-radius:9px; padding:9px 11px; font-size:12px; box-shadow:0 6px 22px rgba(0,0,0,.16);
+  opacity:0; transition:opacity .1s; z-index:50; min-width:150px; }
+.tip .tt{ font-weight:640; margin-bottom:6px; font-variant-numeric:tabular-nums; }
+.tip .row{ display:flex; justify-content:space-between; gap:16px; margin:3px 0; color:var(--text-secondary); }
+.tip .row .rv{ color:var(--text-primary); font-variant-numeric:tabular-nums; font-weight:560; }
+.tip .row .rk{ display:inline-flex; align-items:center; gap:6px; }
+details{ margin-top:8px; } summary{ cursor:pointer; font-size:13px; color:var(--text-secondary); padding:6px 0; }
+summary:hover{ color:var(--text-primary); }
+table{ border-collapse:collapse; width:100%; font-size:12.5px; margin-top:10px; }
+th,td{ text-align:right; padding:6px 10px; border-bottom:1px solid var(--grid); font-variant-numeric:tabular-nums; }
+th:first-child,td:first-child{ text-align:left; font-variant-numeric:normal; }
+th{ color:var(--muted); font-weight:560; }
+.foot{ color:var(--muted); font-size:12px; margin-top:24px; text-align:center; }
+.backlink{ display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--text-secondary);
+  text-decoration:none; margin-bottom:18px; }
+.backlink:hover{ color:var(--text-primary); }
+.foot a{ color:var(--text-secondary); text-decoration:none; border-bottom:1px solid var(--border); }
+.foot a:hover{ color:var(--text-primary); }
+.barlabel{ fill:var(--text-primary); font-size:12.5px; font-weight:560; font-family:inherit; }
+.barval{ fill:var(--text-secondary); font-size:12px; font-variant-numeric:tabular-nums; font-family:inherit; }
+</style></head>
+<body><div class="viz-root"><div class="wrap">
+<a class="backlink" href="../lab.html">&#8592; 橙研所 · 实验室</a>
+<div class="head">
+  <div>
+    <h1>Claude Code Token 用量</h1>
+    <div class="sub" id="subline"></div>
+  </div>
+  <button class="tgl" id="tgl">切换深浅色</button>
+</div>
+
+<div class="tiles" id="tiles"></div>
+
+<div class="card">
+  <h2>每日 Token 用量</h2>
+  <p class="desc">计费口径：输入 + 输出 + 缓存创建（缓存读取量级大得多，单列在下图）。堆叠面积，鼠标悬停看当日明细。</p>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--s2)"></i>输出</span>
+    <span><i class="sw" style="background:var(--s1)"></i>输入</span>
+    <span><i class="sw" style="background:var(--s3)"></i>缓存创建</span>
+  </div>
+  <div id="chart1"></div>
+</div>
+
+<div class="card">
+  <h2>每日缓存读取</h2>
+  <p class="desc">缓存命中（比输入 token 便宜约 90%），是总量的绝对主体——单独一轴才看得清趋势。</p>
+  <div id="chart2"></div>
+</div>
+
+<div class="card">
+  <h2>按模型的 Token 分布</h2>
+  <p class="desc">计费口径合计（输入 + 输出 + 缓存创建），按模型排名。</p>
+  <div id="chart3"></div>
+</div>
+
+<div class="card">
+  <details>
+    <summary>数据表（可访问性视图 · 逐日）</summary>
+    <div style="overflow-x:auto"><table id="tblDaily"></table></div>
+  </details>
+  <details>
+    <summary>数据表 · 逐模型</summary>
+    <div style="overflow-x:auto"><table id="tblModel"></table></div>
+  </details>
+</div>
+
+<div class="foot" id="foot"></div>
+</div></div>
+
+<div class="tip" id="tip"></div>
+
+<script>window.USAGE = {"daily": [{"d": "2026-05-12", "inp": 161, "outp": 59641, "cc": 315879, "cr": 5014932, "sess": 1, "turns": 73}, {"d": "2026-05-13", "inp": 3045, "outp": 486121, "cc": 1771465, "cr": 108674803, "sess": 2, "turns": 352}, {"d": "2026-05-14", "inp": 736, "outp": 320465, "cc": 2166168, "cr": 122751031, "sess": 4, "turns": 376}, {"d": "2026-05-15", "inp": 2682, "outp": 499910, "cc": 2549364, "cr": 311011661, "sess": 5, "turns": 713}, {"d": "2026-05-16", "inp": 787, "outp": 221845, "cc": 533343, "cr": 25500819, "sess": 2, "turns": 169}, {"d": "2026-05-17", "inp": 3186, "outp": 831703, "cc": 2571256, "cr": 126070704, "sess": 25, "turns": 865}, {"d": "2026-05-18", "inp": 2497, "outp": 549757, "cc": 2253494, "cr": 68138223, "sess": 3, "turns": 270}, {"d": "2026-05-19", "inp": 38815, "outp": 495256, "cc": 1809903, "cr": 39791746, "sess": 11, "turns": 369}, {"d": "2026-05-20", "inp": 43653, "outp": 679641, "cc": 2423627, "cr": 108411735, "sess": 9, "turns": 547}, {"d": "2026-05-21", "inp": 1511, "outp": 738017, "cc": 2535992, "cr": 112878329, "sess": 10, "turns": 771}, {"d": "2026-05-22", "inp": 25818, "outp": 511028, "cc": 2901862, "cr": 68561618, "sess": 12, "turns": 478}, {"d": "2026-05-23", "inp": 6300, "outp": 594199, "cc": 2805648, "cr": 49638980, "sess": 57, "turns": 626}, {"d": "2026-05-24", "inp": 53102, "outp": 808705, "cc": 5142956, "cr": 160461451, "sess": 144, "turns": 1414}, {"d": "2026-05-25", "inp": 6307, "outp": 453577, "cc": 1818417, "cr": 254596997, "sess": 9, "turns": 978}, {"d": "2026-05-26", "inp": 5472, "outp": 468323, "cc": 3012586, "cr": 219657117, "sess": 11, "turns": 1106}, {"d": "2026-05-27", "inp": 10403, "outp": 649596, "cc": 3471956, "cr": 138118455, "sess": 64, "turns": 993}, {"d": "2026-05-28", "inp": 2090, "outp": 1351035, "cc": 4916957, "cr": 173968983, "sess": 93, "turns": 799}, {"d": "2026-05-29", "inp": 303010, "outp": 1021285, "cc": 4469768, "cr": 65663196, "sess": 81, "turns": 504}, {"d": "2026-05-30", "inp": 206243, "outp": 1079802, "cc": 4069510, "cr": 67905735, "sess": 49, "turns": 418}, {"d": "2026-05-31", "inp": 191698, "outp": 592330, "cc": 2068685, "cr": 24949958, "sess": 47, "turns": 276}, {"d": "2026-06-01", "inp": 506343, "outp": 1524620, "cc": 5771606, "cr": 254477687, "sess": 76, "turns": 1274}, {"d": "2026-06-02", "inp": 294972, "outp": 1101392, "cc": 3740869, "cr": 94768875, "sess": 35, "turns": 637}, {"d": "2026-06-03", "inp": 354828, "outp": 1073274, "cc": 4402396, "cr": 145260314, "sess": 36, "turns": 848}, {"d": "2026-06-04", "inp": 319965, "outp": 795828, "cc": 3463346, "cr": 105885389, "sess": 20, "turns": 639}, {"d": "2026-06-05", "inp": 970061, "outp": 1382196, "cc": 6267581, "cr": 215996671, "sess": 26, "turns": 982}, {"d": "2026-06-06", "inp": 377623, "outp": 1101363, "cc": 4481210, "cr": 90112817, "sess": 18, "turns": 801}, {"d": "2026-06-07", "inp": 172386, "outp": 462933, "cc": 1524201, "cr": 28150332, "sess": 6, "turns": 229}, {"d": "2026-06-08", "inp": 341796, "outp": 1110749, "cc": 4913933, "cr": 67675812, "sess": 85, "turns": 679}, {"d": "2026-06-09", "inp": 232154, "outp": 576388, "cc": 2513500, "cr": 53046412, "sess": 10, "turns": 398}, {"d": "2026-06-10", "inp": 282871, "outp": 941507, "cc": 5653889, "cr": 140679603, "sess": 10, "turns": 954}, {"d": "2026-06-11", "inp": 388733, "outp": 1740558, "cc": 6340311, "cr": 118291051, "sess": 13, "turns": 992}, {"d": "2026-06-12", "inp": 627515, "outp": 2168497, "cc": 8448506, "cr": 130390038, "sess": 32, "turns": 1195}, {"d": "2026-06-13", "inp": 278239, "outp": 611528, "cc": 2959747, "cr": 50288068, "sess": 8, "turns": 346}, {"d": "2026-06-14", "inp": 418399, "outp": 788927, "cc": 2458827, "cr": 56036735, "sess": 12, "turns": 492}, {"d": "2026-06-15", "inp": 2500596, "outp": 1738087, "cc": 8335772, "cr": 161286308, "sess": 61, "turns": 1432}, {"d": "2026-06-16", "inp": 4233872, "outp": 2050115, "cc": 6765087, "cr": 238609373, "sess": 251, "turns": 1661}, {"d": "2026-06-17", "inp": 3355323, "outp": 2555071, "cc": 8011296, "cr": 218193735, "sess": 184, "turns": 1672}, {"d": "2026-06-18", "inp": 1400334, "outp": 2188128, "cc": 7524461, "cr": 164563146, "sess": 137, "turns": 1380}, {"d": "2026-06-19", "inp": 1193330, "outp": 1304126, "cc": 3582543, "cr": 118621379, "sess": 41, "turns": 773}, {"d": "2026-06-20", "inp": 734888, "outp": 1014476, "cc": 3958119, "cr": 117858902, "sess": 16, "turns": 906}, {"d": "2026-06-21", "inp": 398208, "outp": 735890, "cc": 2407202, "cr": 115855166, "sess": 9, "turns": 581}, {"d": "2026-06-22", "inp": 2427616, "outp": 1825968, "cc": 6674859, "cr": 152468340, "sess": 128, "turns": 1238}, {"d": "2026-06-23", "inp": 467292, "outp": 1369380, "cc": 6016741, "cr": 149623063, "sess": 12, "turns": 813}, {"d": "2026-06-24", "inp": 2850105, "outp": 1622281, "cc": 6975441, "cr": 252728347, "sess": 151, "turns": 1185}, {"d": "2026-06-25", "inp": 3946119, "outp": 2277530, "cc": 7636538, "cr": 248903976, "sess": 213, "turns": 1532}, {"d": "2026-06-26", "inp": 966943, "outp": 2053650, "cc": 5785827, "cr": 159699650, "sess": 32, "turns": 1379}, {"d": "2026-06-27", "inp": 479112, "outp": 1222940, "cc": 3000705, "cr": 48494541, "sess": 14, "turns": 553}, {"d": "2026-06-28", "inp": 536107, "outp": 1116605, "cc": 4195435, "cr": 113903085, "sess": 14, "turns": 764}, {"d": "2026-06-29", "inp": 5218532, "outp": 2600115, "cc": 15999069, "cr": 375388757, "sess": 111, "turns": 2480}, {"d": "2026-06-30", "inp": 2333802, "outp": 3104625, "cc": 16064716, "cr": 412305230, "sess": 37, "turns": 1809}, {"d": "2026-07-01", "inp": 4001609, "outp": 3312577, "cc": 15390971, "cr": 211886530, "sess": 49, "turns": 2177}, {"d": "2026-07-02", "inp": 1668462, "outp": 1316758, "cc": 6402885, "cr": 260873621, "sess": 70, "turns": 1299}, {"d": "2026-07-03", "inp": 945236, "outp": 1033696, "cc": 5462476, "cr": 192381963, "sess": 35, "turns": 1086}, {"d": "2026-07-04", "inp": 376674, "outp": 593485, "cc": 3332916, "cr": 87409098, "sess": 9, "turns": 507}, {"d": "2026-07-05", "inp": 197774, "outp": 172930, "cc": 882933, "cr": 10816963, "sess": 4, "turns": 143}, {"d": "2026-07-06", "inp": 1275367, "outp": 840884, "cc": 5480462, "cr": 114118444, "sess": 42, "turns": 803}, {"d": "2026-07-07", "inp": 1101994, "outp": 1365494, "cc": 6886564, "cr": 185419153, "sess": 36, "turns": 1045}, {"d": "2026-07-08", "inp": 932900, "outp": 1030301, "cc": 7091544, "cr": 132736556, "sess": 14, "turns": 795}, {"d": "2026-07-09", "inp": 702220, "outp": 1892209, "cc": 5226411, "cr": 143221208, "sess": 20, "turns": 876}, {"d": "2026-07-10", "inp": 2761515, "outp": 1280663, "cc": 9930276, "cr": 95944577, "sess": 18, "turns": 1286}, {"d": "2026-07-11", "inp": 126331, "outp": 349323, "cc": 1564482, "cr": 27517214, "sess": 6, "turns": 240}, {"d": "2026-07-12", "inp": 2453, "outp": 283069, "cc": 1407584, "cr": 27767492, "sess": 18, "turns": 225}, {"d": "2026-07-13", "inp": 19013, "outp": 1152257, "cc": 5747150, "cr": 166661642, "sess": 15, "turns": 876}, {"d": "2026-07-14", "inp": 6013, "outp": 187479, "cc": 796565, "cr": 17214226, "sess": 5, "turns": 186}, {"d": "2026-07-15", "inp": 9367, "outp": 615748, "cc": 2896536, "cr": 76321797, "sess": 13, "turns": 479}, {"d": "2026-07-16", "inp": 17128, "outp": 820184, "cc": 5180309, "cr": 92508499, "sess": 17, "turns": 765}, {"d": "2026-07-17", "inp": 572655, "outp": 1040343, "cc": 8492078, "cr": 107490901, "sess": 44, "turns": 1201}, {"d": "2026-07-20", "inp": 2357, "outp": 1204917, "cc": 5026527, "cr": 110314139, "sess": 12, "turns": 681}, {"d": "2026-07-21", "inp": 549721, "outp": 1461893, "cc": 7503387, "cr": 259594646, "sess": 52, "turns": 1439}, {"d": "2026-07-22", "inp": 827269, "outp": 1524695, "cc": 9737593, "cr": 147707654, "sess": 105, "turns": 1237}, {"d": "2026-07-23", "inp": 257001, "outp": 1137657, "cc": 6131157, "cr": 207224601, "sess": 30, "turns": 912}, {"d": "2026-07-24", "inp": 78, "outp": 51246, "cc": 577093, "cr": 3573648, "sess": 4, "turns": 42}], "models": [{"model": "claude-opus-4-8", "inp": 48942668, "outp": 54278126, "cc": 221304369, "cr": 5659029743, "sess": 1824, "label": "Opus 4.8", "billable": 324525163}, {"model": "claude-fable-5", "inp": 6329356, "outp": 11979535, "cc": 65904074, "cr": 1657161460, "sess": 203, "label": "Fable 5", "billable": 84212965}, {"model": "claude-opus-4-7", "inp": 193134, "outp": 8586189, "cc": 34991736, "cr": 2044587360, "sess": 145, "label": "Opus 4.7", "billable": 43771059}, {"model": "claude-haiku-4-5-20251001", "inp": 140911, "outp": 2859919, "cc": 18826006, "cr": 102792773, "sess": 567, "label": "Haiku 4.5", "billable": 21826836}, {"model": "claude-sonnet-4-6", "inp": 75937, "outp": 1486106, "cc": 8916652, "cr": 64395833, "sess": 410, "label": "Sonnet 4.6", "billable": 10478695}, {"model": "claude-sonnet-5", "inp": 186711, "outp": 48916, "cc": 687631, "cr": 2066678, "sess": 8, "label": "Sonnet 5", "billable": 923258}], "totals": {"inp": 55868717, "outp": 79238791, "cc": 350630468, "cr": 9530033847, "sess": 3024, "turns": 61021}, "avgOut30": 1267831.1333333333, "period": ["2026-05-12", "2026-07-24"], "days": 72, "genDay": "2026-07-24"};</script>
+<script>
+const D = window.USAGE, $ = s=>document.querySelector(s);
+const NS="http://www.w3.org/2000/svg";
+function el(t,a){ const e=document.createElementNS(NS,t); for(const k in(a||{}))e.setAttribute(k,a[k]); return e; }
+function fmt(n){ n=n||0; if(n>=1e9)return (n/1e9).toFixed(2)+"B"; if(n>=1e6)return (n/1e6).toFixed(n>=1e7?1:2)+"M";
+  if(n>=1e3)return (n/1e3).toFixed(1)+"K"; return String(n); }
+function fmtFull(n){ return (n||0).toLocaleString("en-US"); }
+const cssv = k=>getComputedStyle($(".viz-root")).getPropertyValue(k).trim();
+
+// 副标 + 页脚
+$("#subline").innerHTML = `${D.period[0]} — ${D.period[1]} · 共 <b>${D.days}</b> 个活跃日 · `+
+  `<b>${D.totals.sess.toLocaleString()}</b> 个会话 · <b>${fmt(D.totals.turns)}</b> 轮`;
+$("#foot").innerHTML = `数据快照（非实时）· 截至 ${D.genDay} · 来自作者本人 Claude Code 本地用量日志（<a href="https://github.com/libaoming/claude-usage" target="_blank" rel="noopener">claude-usage</a> 读取生成）`;
+
+// Hero tiles
+const billable = D.totals.inp + D.totals.outp + D.totals.cc;
+const totalAll = billable + D.totals.cr;
+const tiles = [
+  {k:"总 Tokens（含缓存）", v:fmt(totalAll), note:"输入+输出+缓存全部"},
+  {k:"输出 Tokens", v:fmt(D.totals.outp), note:"模型生成量"},
+  {k:"输入 Tokens", v:fmt(D.totals.inp), note:"原始 prompt"},
+  {k:"缓存创建", v:fmt(D.totals.cc), note:"写缓存（+25%）"},
+  {k:"缓存读取", v:fmt(D.totals.cr), note:"命中（−90%）"},
+  {k:"日均输出", v:fmt(D.avgOut30), note:"近 30 天"},
+];
+$("#tiles").innerHTML = tiles.map(t=>{
+  const m = t.v.match(/^([\d.]+)([A-Z]?)$/);
+  const val = m ? `${m[1]}<span class="u">${m[2]}</span>` : t.v;
+  return `<div class="tile"><div class="k">${t.k}</div><div class="v">${val}</div><div class="note">${t.note}</div></div>`;
+}).join("");
+
+// tooltip helpers
+const tip = $("#tip");
+function showTip(html,x,y){ tip.innerHTML=html; tip.style.opacity=1;
+  const w=tip.offsetWidth, h=tip.offsetHeight;
+  let nx=x+16, ny=y-h-12; if(nx+w>innerWidth-8)nx=x-w-16; if(ny<8)ny=y+18;
+  tip.style.left=nx+"px"; tip.style.top=ny+"px"; }
+function hideTip(){ tip.style.opacity=0; }
+
+// ---------- 图1：每日堆叠面积 ----------
+function drawStacked(){
+  const host=$("#chart1"); host.innerHTML="";
+  const W=host.clientWidth||900, H=300, m={t:12,r:14,b:34,l:52};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`, role:"img","aria-label":"每日 Token 用量堆叠面积图"});
+  const days=D.daily, n=days.length;
+  const X=i=> m.l + (n<=1?iw/2 : i/(n-1)*iw);
+  // 堆叠顺序（底→顶）：输出、输入、缓存创建
+  const stacks=[["outp","--s2","输出"],["inp","--s1","输入"],["cc","--s3","缓存创建"]];
+  let maxY=0; days.forEach(d=> maxY=Math.max(maxY,(d.outp||0)+(d.inp||0)+(d.cc||0)));
+  maxY=maxY*1.06||1;
+  const Y=v=> m.t + ih - v/maxY*ih;
+  // grid + y ticks
+  const ticks=4;
+  for(let t=0;t<=ticks;t++){ const val=maxY*t/ticks, y=Y(val);
+    svg.appendChild(el("line",{x1:m.l,y1:y,x2:m.l+iw,y2:y, class:t===0?"baseln":"gridln"}));
+    const tx=el("text",{x:m.l-8,y:y+4, class:"axtxt tab","text-anchor":"end"}); tx.textContent=fmt(val); svg.appendChild(tx);
+  }
+  // x ticks（稀疏，约每 12 天）
+  const step=Math.ceil(n/6);
+  for(let i=0;i<n;i+=step){ const tx=el("text",{x:X(i),y:H-12, class:"axtxt","text-anchor":"middle"});
+    tx.textContent=days[i].d.slice(5); svg.appendChild(tx); }
+  // 累积基线绘制面积（自顶向下累加）
+  let base=days.map(()=>0);
+  stacks.forEach(([key,cvar])=>{
+    const col=cssv(cvar);
+    let dTop="", dBot="";
+    days.forEach((d,i)=>{ const y0=Y(base[i]), y1=Y(base[i]+(d[key]||0));
+      dTop+=(i===0?"M":"L")+X(i)+" "+y1+" "; });
+    for(let i=n-1;i>=0;i--){ dBot+="L"+X(i)+" "+Y(base[i])+" "; }
+    svg.appendChild(el("path",{d:dTop+dBot+"Z", fill:col, "fill-opacity":0.9, stroke:col, "stroke-width":0}));
+    days.forEach((d,i)=> base[i]+=(d[key]||0));
+  });
+  // 2px 分隔线：顶部各层描边（surface gap 用 stroke=surface）
+  const sc=cssv("--surface-1");
+  let b2=days.map(()=>0);
+  stacks.forEach(([key,cvar],si)=>{
+    if(si<stacks.length){ let dl="";
+      days.forEach((d,i)=>{ const y1=Y(b2[i]+(d[key]||0)); dl+=(i===0?"M":"L")+X(i)+" "+y1+" "; });
+      svg.appendChild(el("path",{d:dl, fill:"none", stroke:sc, "stroke-width":2, "stroke-opacity":0.6})); }
+    days.forEach((d,i)=> b2[i]+=(d[key]||0));
+  });
+  // crosshair + hover
+  const cross=el("line",{x1:0,y1:m.t,x2:0,y2:m.t+ih, stroke:cssv("--muted"),"stroke-width":1,"stroke-dasharray":"3 3",opacity:0});
+  svg.appendChild(cross);
+  const dot=el("circle",{r:4, fill:cssv("--text-primary"), opacity:0}); svg.appendChild(dot);
+  const hit=el("rect",{x:m.l,y:m.t,width:iw,height:ih, fill:"transparent"}); svg.appendChild(hit);
+  hit.addEventListener("mousemove",ev=>{
+    const r=svg.getBoundingClientRect(), sx=(ev.clientX-r.left)/r.width*W;
+    let i=Math.round((sx-m.l)/iw*(n-1)); i=Math.max(0,Math.min(n-1,i));
+    const d=days[i], tx=X(i); cross.setAttribute("x1",tx); cross.setAttribute("x2",tx); cross.setAttribute("opacity",1);
+    const tot=(d.outp||0)+(d.inp||0)+(d.cc||0);
+    dot.setAttribute("cx",tx); dot.setAttribute("cy",Y(tot)); dot.setAttribute("opacity",1);
+    showTip(`<div class="tt">${d.d}</div>`+
+      `<div class="row"><span class="rk"><i class="sw" style="background:${cssv('--s2')}"></i>输出</span><span class="rv">${fmtFull(d.outp)}</span></div>`+
+      `<div class="row"><span class="rk"><i class="sw" style="background:${cssv('--s1')}"></i>输入</span><span class="rv">${fmtFull(d.inp)}</span></div>`+
+      `<div class="row"><span class="rk"><i class="sw" style="background:${cssv('--s3')}"></i>缓存创建</span><span class="rv">${fmtFull(d.cc)}</span></div>`+
+      `<div class="row" style="border-top:1px solid var(--grid);padding-top:5px;margin-top:5px"><span class="rk">合计</span><span class="rv">${fmtFull(tot)}</span></div>`+
+      `<div class="row"><span class="rk">会话 / 轮</span><span class="rv">${d.sess} / ${d.turns}</span></div>`,
+      ev.clientX, ev.clientY);
+  });
+  hit.addEventListener("mouseleave",()=>{ hideTip(); cross.setAttribute("opacity",0); dot.setAttribute("opacity",0); });
+  host.appendChild(svg);
+}
+
+// ---------- 图2：每日缓存读取 单系列面积 ----------
+function drawCache(){
+  const host=$("#chart2"); host.innerHTML="";
+  const W=host.clientWidth||900, H=210, m={t:12,r:14,b:34,l:52};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`, role:"img","aria-label":"每日缓存读取面积图"});
+  const days=D.daily, n=days.length;
+  const X=i=> m.l+(n<=1?iw/2:i/(n-1)*iw);
+  let maxY=0; days.forEach(d=>maxY=Math.max(maxY,d.cr||0)); maxY=maxY*1.08||1;
+  const Y=v=> m.t+ih - v/maxY*ih;
+  for(let t=0;t<=4;t++){ const val=maxY*t/4,y=Y(val);
+    svg.appendChild(el("line",{x1:m.l,y1:y,x2:m.l+iw,y2:y,class:t===0?"baseln":"gridln"}));
+    const tx=el("text",{x:m.l-8,y:y+4,class:"axtxt tab","text-anchor":"end"}); tx.textContent=fmt(val); svg.appendChild(tx); }
+  const step=Math.ceil(n/6);
+  for(let i=0;i<n;i+=step){ const tx=el("text",{x:X(i),y:H-12,class:"axtxt","text-anchor":"middle"}); tx.textContent=days[i].d.slice(5); svg.appendChild(tx); }
+  const col=cssv("--seq"), soft=cssv("--seq-soft");
+  let dTop="",dBot="";
+  days.forEach((d,i)=> dTop+=(i===0?"M":"L")+X(i)+" "+Y(d.cr||0)+" ");
+  for(let i=n-1;i>=0;i--) dBot+="L"+X(i)+" "+Y(0)+" ";
+  svg.appendChild(el("path",{d:dTop+dBot+"Z", fill:soft, "fill-opacity":0.55}));
+  svg.appendChild(el("path",{d:dTop, fill:"none", stroke:col, "stroke-width":2}));
+  const cross=el("line",{y1:m.t,y2:m.t+ih, stroke:cssv("--muted"),"stroke-width":1,"stroke-dasharray":"3 3",opacity:0}); svg.appendChild(cross);
+  const dot=el("circle",{r:4, fill:col, stroke:cssv("--surface-1"),"stroke-width":2, opacity:0}); svg.appendChild(dot);
+  const hit=el("rect",{x:m.l,y:m.t,width:iw,height:ih,fill:"transparent"}); svg.appendChild(hit);
+  hit.addEventListener("mousemove",ev=>{
+    const r=svg.getBoundingClientRect(), sx=(ev.clientX-r.left)/r.width*W;
+    let i=Math.round((sx-m.l)/iw*(n-1)); i=Math.max(0,Math.min(n-1,i));
+    const d=days[i], tx=X(i); cross.setAttribute("x1",tx); cross.setAttribute("x2",tx); cross.setAttribute("opacity",1);
+    dot.setAttribute("cx",tx); dot.setAttribute("cy",Y(d.cr||0)); dot.setAttribute("opacity",1);
+    showTip(`<div class="tt">${d.d}</div><div class="row"><span class="rk"><i class="sw" style="background:${col}"></i>缓存读取</span><span class="rv">${fmtFull(d.cr)}</span></div>`, ev.clientX, ev.clientY);
+  });
+  hit.addEventListener("mouseleave",()=>{ hideTip(); cross.setAttribute("opacity",0); dot.setAttribute("opacity",0); });
+  host.appendChild(svg);
+}
+
+// ---------- 图3：按模型横向条形 ----------
+function drawModels(){
+  const host=$("#chart3"); host.innerHTML="";
+  const ms=D.models, n=ms.length;
+  const W=host.clientWidth||900, rowH=44, m={t:8,r:96,b:8,l:96};
+  const H=m.t+m.b+n*rowH, iw=W-m.l-m.r;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`, role:"img","aria-label":"按模型 Token 分布条形图"});
+  const maxV=Math.max(...ms.map(x=>x.billable))||1;
+  const col=cssv("--seq");
+  ms.forEach((mm,i)=>{
+    const y=m.t+i*rowH+rowH/2, bw=Math.max(2, mm.billable/maxV*iw);
+    // 模型名（左，直接标签）
+    const lab=el("text",{x:m.l-12,y:y+4,class:"barlabel","text-anchor":"end"}); lab.textContent=mm.label; svg.appendChild(lab);
+    // 条（圆角数据端）
+    const bar=el("rect",{x:m.l,y:y-9,width:bw,height:18,rx:4,ry:4,fill:col,"fill-opacity":0.92});
+    svg.appendChild(bar);
+    // 值（右，直接标签）
+    const val=el("text",{x:m.l+bw+10,y:y+4,class:"barval","text-anchor":"start"}); val.textContent=fmt(mm.billable); svg.appendChild(val);
+    // hover
+    const hit=el("rect",{x:m.l,y:y-rowH/2,width:iw,height:rowH,fill:"transparent"}); svg.appendChild(hit);
+    hit.addEventListener("mousemove",ev=>{ bar.setAttribute("fill-opacity",1);
+      showTip(`<div class="tt">${mm.label}</div>`+
+        `<div class="row"><span class="rk">计费口径合计</span><span class="rv">${fmtFull(mm.billable)}</span></div>`+
+        `<div class="row"><span class="rk">输出</span><span class="rv">${fmtFull(mm.outp)}</span></div>`+
+        `<div class="row"><span class="rk">输入</span><span class="rv">${fmtFull(mm.inp)}</span></div>`+
+        `<div class="row"><span class="rk">缓存创建</span><span class="rv">${fmtFull(mm.cc)}</span></div>`+
+        `<div class="row"><span class="rk">缓存读取</span><span class="rv">${fmtFull(mm.cr)}</span></div>`+
+        `<div class="row"><span class="rk">会话</span><span class="rv">${mm.sess}</span></div>`, ev.clientX, ev.clientY); });
+    hit.addEventListener("mouseleave",()=>{ bar.setAttribute("fill-opacity",0.92); hideTip(); });
+  });
+  host.appendChild(svg);
+}
+
+// ---------- 表格 ----------
+function buildTables(){
+  const dh=["日期","输出","输入","缓存创建","缓存读取","会话","轮"];
+  let t1="<thead><tr>"+dh.map(h=>`<th>${h}</th>`).join("")+"</tr></thead><tbody>";
+  D.daily.slice().reverse().forEach(d=>{ t1+=`<tr><td>${d.d}</td><td>${fmtFull(d.outp)}</td><td>${fmtFull(d.inp)}</td><td>${fmtFull(d.cc)}</td><td>${fmtFull(d.cr)}</td><td>${d.sess}</td><td>${d.turns}</td></tr>`; });
+  $("#tblDaily").innerHTML=t1+"</tbody>";
+  const mh=["模型","计费合计","输出","输入","缓存创建","缓存读取","会话"];
+  let t2="<thead><tr>"+mh.map(h=>`<th>${h}</th>`).join("")+"</tr></thead><tbody>";
+  D.models.forEach(m=>{ t2+=`<tr><td>${m.label}</td><td>${fmtFull(m.billable)}</td><td>${fmtFull(m.outp)}</td><td>${fmtFull(m.inp)}</td><td>${fmtFull(m.cc)}</td><td>${fmtFull(m.cr)}</td><td>${m.sess}</td></tr>`; });
+  $("#tblModel").innerHTML=t2+"</tbody>";
+}
+
+function renderAll(){ drawStacked(); drawCache(); drawModels(); }
+buildTables(); renderAll();
+let rt; addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(renderAll,150); });
+$("#tgl").addEventListener("click",()=>{
+  const r=document.documentElement, cur=r.getAttribute("data-theme");
+  const sysDark=matchMedia("(prefers-color-scheme:dark)").matches;
+  const next = cur ? (cur==="dark"?"light":"dark") : (sysDark?"light":"dark");
+  r.setAttribute("data-theme",next); setTimeout(renderAll,30);
+});
+</script>
+</body></html>
