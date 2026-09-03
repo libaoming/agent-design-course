@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="店员与自动售货机 — Anthropic Commerce Agents 图解：agent 和传统开发的七处不同">
+<title>店员与自动售货机 · 橙研所</title>
+<style>
+:root {
+  --bg: #FAF9F5; --ink: #141413; --muted: #6E6C64; --line: #D8D5CC; --panel: #F1EFE8;
+  --clay: #D97757; --sky: #5B8DB8; --olive: #6F8A4E; --slate: #7C7A72;
+  --serif: Georgia, "Songti SC", "Noto Serif SC", "Times New Roman", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #141413; --ink: #F3F1EA; --muted: #A8A59B; --line: #3A3934; --panel: #1F1E1B; --clay: #E38A6B; --sky: #7FAAD1; --olive: #93AC6E; --slate: #8F8D85; }
+}
+:root[data-theme="dark"] { --bg: #141413; --ink: #F3F1EA; --muted: #A8A59B; --line: #3A3934; --panel: #1F1E1B; --clay: #E38A6B; --sky: #7FAAD1; --olive: #93AC6E; --slate: #8F8D85; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 17px; line-height: 1.7; }
+main { max-width: 760px; margin: 0 auto; padding: 48px 20px 96px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(34px, 6vw, 52px); line-height: 1.15; margin: 10px 0 14px; text-wrap: balance; letter-spacing: -0.01em; }
+.lede { font-size: 19px; max-width: 34em; margin: 0; }
+.lede b { color: var(--clay); font-weight: 500; }
+section { margin-top: 84px; }
+h2 { font-family: var(--serif); font-weight: 500; font-size: clamp(24px, 3.6vw, 32px); line-height: 1.3; margin: 0 0 6px; text-wrap: balance; }
+.sub { margin: 0 0 22px; color: var(--muted); max-width: 36em; }
+figure { margin: 0; }
+figure svg { display: block; width: 100%; height: auto; }
+figcaption { margin-top: 12px; font-size: 15px; color: var(--muted); max-width: 40em; }
+figcaption b { color: var(--ink); font-weight: 500; }
+.svgbox { overflow-x: auto; background: var(--panel); border-radius: 6px; padding: 18px 14px; }
+.svgbox svg { min-width: 560px; }
+.pin { display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: baseline; margin-top: 20px; max-width: 40em; }
+.pin .k { font-family: var(--mono); font-size: 12px; color: var(--clay); letter-spacing: 0.08em; white-space: nowrap; }
+.pin .v { margin: 0; }
+.big { font-family: var(--serif); font-size: clamp(22px, 3.4vw, 30px); line-height: 1.4; margin: 0; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.big em { font-style: normal; color: var(--clay); }
+table { width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 8px; }
+th, td { text-align: left; vertical-align: top; padding: 12px 10px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+td:first-child { color: var(--muted); white-space: nowrap; }
+td:nth-child(3) { color: var(--ink); }
+td:nth-child(3)::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--clay); margin-right: 8px; vertical-align: 2px; }
+.tablebox { overflow-x: auto; }
+.next { margin-top: 84px; padding: 26px 26px 22px; border: 1px solid var(--line); border-radius: 6px; }
+.next h2 { font-size: 22px; }
+.next ul { margin: 10px 0 0; padding-left: 1.2em; }
+.next li { margin: 6px 0; }
+.next code { font-family: var(--mono); font-size: 14px; }
+.next a { color: var(--clay); }
+svg text { font-family: var(--sans); font-size: 13px; fill: currentColor; }
+svg .m { font-family: var(--mono); font-size: 11px; }
+svg .t { font-size: 14px; font-weight: 500; }
+svg .s { font-size: 11.5px; fill: var(--muted); }
+svg .clay { fill: var(--clay); } svg .sky { fill: var(--sky); } svg .olive { fill: var(--olive); } svg .slate { fill: var(--slate); }
+svg .box { fill: var(--bg); stroke: currentColor; stroke-width: 1.4; }
+svg .soft { fill: var(--bg); stroke: var(--line); stroke-width: 1.4; }
+svg .ln { stroke: currentColor; stroke-width: 1.4; fill: none; }
+svg .lnc { stroke: var(--clay); stroke-width: 1.8; fill: none; }
+svg .lng { stroke: var(--slate); stroke-width: 1.4; fill: none; }
+svg .dash { stroke-dasharray: 5 4; }
+a:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<nav style="max-width:760px;margin:0 auto;padding:18px 20px 0;font-size:14px"><a href="https://chengyansuo.com/" style="color:var(--clay);text-decoration:none">&#8592; 橙研所</a><span style="color:var(--muted)"> · ELI5 图解</span></nav>
+<main>
+  <div class="eyebrow">ELI5 · anthropics/commerce-agents · 与传统开发的区别</div>
+  <h1>店员与自动售货机</h1>
+  <p class="lede">传统的购物软件是一台<b>自动售货机</b>：每个按钮后面是程序员提前铺好的一条路。这个仓库做的是一个<b>店员</b>：客人用嘴说，店员自己决定去按哪些按钮。六张图讲这一字之差改变了什么。</p>
+
+  <!-- 1 -->
+  <section>
+    <div class="eyebrow">01 · 谁决定下一步</div>
+    <h2>按钮后面的路是写死的，店员的路是当场想出来的</h2>
+    <p class="sub">同一个需求「给我爸挑个三百以内的帐篷」，两边走法完全不同。</p>
+    <figure class="svgbox">
+      <svg viewBox="0 0 720 300" role="img" aria-label="左：自动售货机，用户依次按搜索、筛选、加购三个按钮，每个按钮后面是程序员写死的一条路。右：店员听到一句话后自己决定并行查两次搜索、读一次偏好，再把结果摆出来；决定权在运行时的模型">
+        <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>
+        <marker id="a1c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--clay)"/></marker></defs>
+        <text x="170" y="24" text-anchor="middle" class="t slate">自动售货机（传统）</text>
+        <circle cx="50" cy="120" r="14" class="box"/><text x="50" y="158" text-anchor="middle" class="s">用户</text>
+        <rect x="100" y="50" width="80" height="34" rx="4" class="box"/><text x="140" y="72" text-anchor="middle">搜索</text>
+        <rect x="100" y="104" width="80" height="34" rx="4" class="box"/><text x="140" y="126" text-anchor="middle">筛价格</text>
+        <rect x="100" y="158" width="80" height="34" rx="4" class="box"/><text x="140" y="180" text-anchor="middle">加购</text>
+        <path d="M66 112 L98 70" class="ln" marker-end="url(#a1)"/>
+        <path d="M66 120 H98" class="ln" marker-end="url(#a1)"/>
+        <path d="M66 128 L98 172" class="ln" marker-end="url(#a1)"/>
+        <text x="82" y="212" text-anchor="middle" class="s">按三次</text>
+        <path d="M180 67 H238" class="lng" marker-end="url(#a1)"/><path d="M180 121 H238" class="lng" marker-end="url(#a1)"/><path d="M180 175 H238" class="lng" marker-end="url(#a1)"/>
+        <rect x="240" y="40" width="80" height="160" rx="4" class="soft"/>
+        <text x="280" y="70" text-anchor="middle" class="s">后面的路</text>
+        <text x="280" y="90" text-anchor="middle" class="s">程序员</text>
+        <text x="280" y="106" text-anchor="middle" class="s">半年前</text>
+        <text x="280" y="122" text-anchor="middle" class="s">写死的</text>
+        <text x="280" y="150" text-anchor="middle" class="m slate">if / else</text>
+        <text x="170" y="250" text-anchor="middle" class="s">用户自己把需求拆成三次点击</text>
+        <text x="170" y="268" text-anchor="middle" class="s">没有的按钮 = 做不到</text>
+        <path d="M350 30 V280" class="ln dash" style="stroke: var(--line)"/>
+        <text x="540" y="24" text-anchor="middle" class="t clay">店员（这个仓库）</text>
+        <circle cx="400" cy="120" r="14" class="box"/><text x="400" y="158" text-anchor="middle" class="s">客人</text>
+        <path d="M424 88 h104 l6 18 l-6 18 h-104 z" class="soft"/>
+        <text x="476" y="103" text-anchor="middle" class="s">「给我爸挑个</text>
+        <text x="476" y="119" text-anchor="middle" class="s">三百以内的帐篷」</text>
+        <rect x="560" y="80" width="110" height="80" rx="6" class="box" style="stroke: var(--clay); stroke-width: 2"/>
+        <text x="615" y="108" text-anchor="middle" class="t">店员</text>
+        <text x="615" y="128" text-anchor="middle" class="s">当场决定：</text>
+        <text x="615" y="146" text-anchor="middle" class="s">按哪些、按几次</text>
+        <path d="M530 106 H558" class="ln" marker-end="url(#a1)"/>
+        <rect x="440" y="190" width="70" height="28" rx="4" class="soft"/><text x="475" y="208" text-anchor="middle" class="s">搜帐篷</text>
+        <rect x="520" y="190" width="70" height="28" rx="4" class="soft"/><text x="555" y="208" text-anchor="middle" class="s">读偏好</text>
+        <rect x="600" y="190" width="70" height="28" rx="4" class="soft"/><text x="635" y="208" text-anchor="middle" class="s">搜礼品</text>
+        <path d="M590 160 L480 188" class="lnc" marker-end="url(#a1c)"/>
+        <path d="M605 160 L558 188" class="lnc" marker-end="url(#a1c)"/>
+        <path d="M625 160 L635 188" class="lnc" marker-end="url(#a1c)"/>
+        <text x="555" y="250" text-anchor="middle" class="s">三个一起按，按完自己决定要不要再按</text>
+        <text x="555" y="268" text-anchor="middle" class="s clay">拆需求的活从用户挪到了店员</text>
+      </svg>
+      <figcaption>传统开发里，「下一步做什么」在写代码时就定了。这里，<b>「下一步做什么」在客人说话之后才决定</b>，由模型决定。这是所有其他区别的源头。</figcaption>
+    </figure>
+    <div class="pin">
+      <span class="k">术语钉住</span><p class="v">店员能按的每个按钮 = 「工具」。店员 = 大模型。「当场决定按哪些」= agent 循环。</p>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <div class="eyebrow">02 · 路径</div>
+    <h2>流程图画得出来，循环画不出来</h2>
+    <p class="sub">传统程序的每条路都能提前画在纸上、逐条测过。店员的路是跑的时候长出来的。</p>
+    <figure class="svgbox">
+      <svg viewBox="0 0 720 240" role="img" aria-label="左：一张有限分支的流程图，从开始到结束每条路都固定。右：一个循环，客人一句话进入，模型思考、调工具、看结果，可能转一圈也可能转五圈，同一句话两次可以走不同的路">
+        <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+        <text x="170" y="24" text-anchor="middle" class="t slate">流程图</text>
+        <rect x="130" y="40" width="80" height="30" rx="15" class="box"/><text x="170" y="60" text-anchor="middle" class="s">开始</text>
+        <path d="M170 70 V88" class="ln" marker-end="url(#a2)"/>
+        <path d="M170 90 L210 115 L170 140 L130 115 Z" class="box"/><text x="170" y="119" text-anchor="middle" class="s">有货？</text>
+        <path d="M130 115 H80 V160" class="ln" marker-end="url(#a2)"/><text x="100" y="108" class="s">否</text>
+        <path d="M210 115 H260 V160" class="ln" marker-end="url(#a2)"/><text x="228" y="108" class="s">是</text>
+        <rect x="40" y="162" width="80" height="30" rx="4" class="box"/><text x="80" y="182" text-anchor="middle" class="s">显示缺货</text>
+        <rect x="220" y="162" width="80" height="30" rx="4" class="box"/><text x="260" y="182" text-anchor="middle" class="s">显示商品</text>
+        <text x="170" y="222" text-anchor="middle" class="s">每条路提前画好，每条都测过一遍</text>
+        <path d="M350 30 V230" class="ln dash" style="stroke: var(--line)"/>
+        <text x="540" y="24" text-anchor="middle" class="t clay">循环</text>
+        <path d="M400 130 H438" class="ln" marker-end="url(#a2)"/><text x="398" y="122" text-anchor="end" class="s">一句话</text>
+        <circle cx="540" cy="130" r="70" class="ln" style="stroke: var(--clay); stroke-width: 2"/>
+        <rect x="505" y="48" width="70" height="24" rx="4" class="box"/><text x="540" y="64" text-anchor="middle" class="s">想</text>
+        <rect x="592" y="118" width="70" height="24" rx="4" class="box"/><text x="627" y="134" text-anchor="middle" class="s">按按钮</text>
+        <rect x="505" y="188" width="70" height="24" rx="4" class="box"/><text x="540" y="204" text-anchor="middle" class="s">看结果</text>
+        <rect x="418" y="118" width="70" height="24" rx="4" class="box"/><text x="453" y="134" text-anchor="middle" class="s">够了？</text>
+        <path d="M453 118 V90 H500" class="lnc" marker-end="url(#a2)"/><text x="470" y="84" class="s clay">不够，再转</text>
+        <path d="M453 142 V190 H480" class="ln" marker-end="url(#a2)"/><text x="470" y="228" class="s">够了，摆卡片</text>
+        <text x="640" y="200" text-anchor="middle" class="s">转 1 圈或 5 圈</text>
+        <text x="640" y="218" text-anchor="middle" class="s">两次可能不一样</text>
+      </svg>
+      <figcaption>所以仓库给循环装了限位：<b>最多转 8 圈</b>，转满就强制只许说话不许再按按钮。传统程序不需要这条，因为流程图里没有「不停转」这一格。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <div class="eyebrow">03 · 原来的系统去哪了</div>
+    <h2>货架、仓库、收银台一个都没换，只是多了个人站在前面</h2>
+    <p class="sub">最容易误会的一点：不是推倒重来。</p>
+    <figure class="svgbox">
+      <svg viewBox="0 0 720 260" role="img" aria-label="三层：最上是客人看到的界面，中间是新加的店员和保安一层，最下是原有的搜索、库存、购物车、订单、定价系统，完全保留。店员只通过保安去调用下层">
+        <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+        <rect x="60" y="20" width="600" height="44" rx="4" class="soft"/>
+        <text x="80" y="47" class="t">界面</text><text x="640" y="47" text-anchor="end" class="s">原来是按钮和表单，现在多了对话框和商品卡片</text>
+        <rect x="60" y="84" width="600" height="70" rx="4" class="box" style="stroke: var(--clay); stroke-width: 2"/>
+        <text x="80" y="110" class="t clay">新加的一层</text>
+        <rect x="200" y="96" width="120" height="46" rx="4" class="box"/><text x="260" y="124" text-anchor="middle">店员</text>
+        <path d="M320 119 H358" class="ln" marker-end="url(#a3)"/>
+        <rect x="360" y="96" width="120" height="46" rx="4" class="box" style="stroke: var(--sky)"/><text x="420" y="124" text-anchor="middle" class="sky">保安</text>
+        <text x="500" y="114" class="s">胸牌 + 手册 + 秘书</text>
+        <text x="500" y="132" class="s">只有这一层是新写的</text>
+        <path d="M420 154 V182" class="ln" marker-end="url(#a3)"/>
+        <text x="440" y="172" class="s">按原来的接口调用</text>
+        <rect x="60" y="184" width="600" height="56" rx="4" class="soft"/>
+        <text x="80" y="217" class="t">原有系统</text>
+        <rect x="190" y="196" width="80" height="32" rx="3" class="soft"/><text x="230" y="217" text-anchor="middle" class="s">搜索排序</text>
+        <rect x="280" y="196" width="80" height="32" rx="3" class="soft"/><text x="320" y="217" text-anchor="middle" class="s">库存</text>
+        <rect x="370" y="196" width="80" height="32" rx="3" class="soft"/><text x="410" y="217" text-anchor="middle" class="s">购物车</text>
+        <rect x="460" y="196" width="80" height="32" rx="3" class="soft"/><text x="500" y="217" text-anchor="middle" class="s">订单</text>
+        <rect x="550" y="196" width="80" height="32" rx="3" class="soft"/><text x="590" y="217" text-anchor="middle" class="s">定价</text>
+      </svg>
+      <figcaption>搜索怎么排序、库存怎么算，还是原来那些调了多年的代码在做。店员只决定<b>「查哪个、显示几个、怎么摆」</b>。仓库里这一层叫 backend 接口，你把它接到自家系统上就行。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <div class="eyebrow">04 · 安全</div>
+    <h2>以前靠「没有那个按钮」，现在得靠「门口有保安」</h2>
+    <p class="sub">店员什么都可能想去做，所以安全的位置挪了。</p>
+    <figure class="svgbox">
+      <svg viewBox="0 0 770 250" role="img" aria-label="左：传统界面上根本没有改价按钮，所以用户做不了。右：店员可能提出任何请求，包括编造的商品编号或超量加购，保安在执行前逐条拦：编号不是本店签发的拒绝，数量超上限拒绝，而收银机根本不在店员的工具箱里">
+        <defs><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+        <text x="170" y="24" text-anchor="middle" class="t slate">传统：没有按钮就做不了</text>
+        <rect x="70" y="50" width="200" height="130" rx="6" class="soft"/>
+        <rect x="90" y="70" width="160" height="26" rx="3" class="box"/><text x="170" y="87" text-anchor="middle" class="s">搜索</text>
+        <rect x="90" y="106" width="160" height="26" rx="3" class="box"/><text x="170" y="123" text-anchor="middle" class="s">加入购物车</text>
+        <rect x="90" y="142" width="160" height="26" rx="3" class="ln dash"/><text x="170" y="159" text-anchor="middle" class="s">（改价：界面上没有）</text>
+        <text x="170" y="210" text-anchor="middle" class="s">安全 = 界面上不画那个按钮</text>
+        <path d="M350 30 V240" class="ln dash" style="stroke: var(--line)"/>
+        <text x="540" y="24" text-anchor="middle" class="t clay">店员：什么都可能提</text>
+        <rect x="380" y="50" width="90" height="120" rx="6" class="box"/><text x="425" y="115" text-anchor="middle">店员</text>
+        <path d="M470 70 H528" class="lnc" marker-end="url(#a4)"/><text x="499" y="62" text-anchor="middle" class="s">加 200 个</text>
+        <path d="M470 110 H528" class="lnc" marker-end="url(#a4)"/><text x="499" y="102" text-anchor="middle" class="s">加编号 X99</text>
+        <path d="M470 150 H528" class="lnc" marker-end="url(#a4)"/><text x="499" y="142" text-anchor="middle" class="s">扣款</text>
+        <rect x="530" y="50" width="70" height="120" rx="6" class="box" style="stroke: var(--sky); stroke-width: 2"/>
+        <text x="565" y="115" text-anchor="middle" class="sky">保安</text>
+        <text x="612" y="74" class="s">✗ 超上限，截到 24</text>
+        <text x="612" y="114" class="s">✗ 不是本店签发的编号</text>
+        <text x="612" y="154" class="s">✗ 工具箱里没这个按钮</text>
+        <text x="540" y="210" text-anchor="middle" class="s">安全 = 执行前逐条检查，写在代码里</text>
+        <text x="540" y="228" text-anchor="middle" class="s clay">而不是写在胸牌上叮嘱它</text>
+      </svg>
+      <figcaption>叮嘱写在胸牌上，一次注入或一次抽风就可能被跳过；<b>检查写在代码里，换哪个模型都成立。</b>仓库把 20 条这样的检查列成一张表，每条写明在哪个文件。</figcaption>
+    </figure>
+    <div class="pin">
+      <span class="k">术语钉住</span><p class="v">「不是本店签发的编号」= provenance。「截到 24」= cap。「工具箱里没这个按钮」= 接口上没有 charge 方法。</p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <div class="eyebrow">05 · 测试</div>
+    <h2>以前问「等不等于」，现在问「合不合规矩」</h2>
+    <p class="sub">传统单元测试：输入 A 必须得到 B。店员每次答的字都不一样，比不了「等于」。</p>
+    <figure class="svgbox">
+      <svg viewBox="0 0 720 230" role="img" aria-label="左：传统测试，输入固定得到固定输出，断言相等，跑一次就够。右：agent 测试，先摆好场景，问一句，检查结果是否满足一组规则，路径不看，每题配反题，要跑多次看比例">
+        <defs><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+        <text x="170" y="24" text-anchor="middle" class="t slate">传统</text>
+        <rect x="50" y="60" width="90" height="40" rx="4" class="box"/><text x="95" y="85" text-anchor="middle" class="s">输入 A</text>
+        <path d="M140 80 H198" class="ln" marker-end="url(#a5)"/>
+        <rect x="200" y="60" width="90" height="40" rx="4" class="box"/><text x="245" y="85" text-anchor="middle" class="s">输出 B</text>
+        <text x="170" y="136" text-anchor="middle" class="m">assert out == B</text>
+        <text x="170" y="170" text-anchor="middle" class="s">跑一次，绿了就绿了</text>
+        <path d="M350 30 V220" class="ln dash" style="stroke: var(--line)"/>
+        <text x="540" y="24" text-anchor="middle" class="t clay">店员</text>
+        <rect x="380" y="46" width="100" height="60" rx="4" class="box"/><text x="430" y="70" text-anchor="middle" class="s">摆好场景</text><text x="430" y="90" text-anchor="middle" class="s">篮子里已有 2 件</text>
+        <path d="M480 76 H518" class="ln" marker-end="url(#a5)"/>
+        <rect x="520" y="46" width="70" height="60" rx="4" class="box"/><text x="555" y="80" text-anchor="middle" class="s">问一句</text>
+        <path d="M590 76 H628" class="ln" marker-end="url(#a5)"/>
+        <rect x="630" y="46" width="70" height="60" rx="4" class="box" style="stroke: var(--olive); stroke-width: 2"/><text x="665" y="72" text-anchor="middle" class="s olive">结果</text><text x="665" y="92" text-anchor="middle" class="s">合规矩？</text>
+        <text x="540" y="136" text-anchor="middle" class="m">篮子 ≤ 24 · 编号本店签发 · 没放花生</text>
+        <text x="540" y="164" text-anchor="middle" class="s">怎么走到的不看 · 每题配一道反题</text>
+        <text x="540" y="184" text-anchor="middle" class="s">跑几次看通过率，不是跑一次</text>
+        <text x="540" y="210" text-anchor="middle" class="s clay">每个流程 50 到 100 道题起步</text>
+      </svg>
+      <figcaption>「相等」变成「判定」，这是测试最大的变化。好在店员没有记忆，<b>任何中间场景都能直接摆出来</b>，不用真的聊到那一步。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <div class="eyebrow">06 · 改需求 · 花钱</div>
+    <h2>改一句话就能改行为，但每一句都可能牵动别处；每次开口都要付钱</h2>
+    <p class="sub">最后两个日常差别。</p>
+    <figure class="svgbox">
+      <svg viewBox="0 0 720 230" role="img" aria-label="上：传统改需求是改代码、编译、发版，模块之间有边界。agent 改需求是改胸牌或手册的文字，所有文字共享同一个脑子，所以要过考题、灰度、留一个能关掉单本手册的开关。下：传统每次请求成本近乎为零且固定；agent 按字数计费、秒级延迟，所以要缓存前面不变的部分">
+        <text x="40" y="24" class="t">改需求</text>
+        <text x="40" y="52" class="s slate">传统</text>
+        <rect x="90" y="36" width="70" height="26" rx="3" class="soft"/><text x="125" y="53" text-anchor="middle" class="s">改代码</text>
+        <path d="M160 49 H178" class="ln"/><rect x="180" y="36" width="70" height="26" rx="3" class="soft"/><text x="215" y="53" text-anchor="middle" class="s">发版</text>
+        <text x="280" y="53" class="s">模块之间有墙，改这不动那</text>
+        <text x="40" y="92" class="s clay">店员</text>
+        <rect x="90" y="76" width="70" height="26" rx="3" class="box" style="stroke: var(--clay)"/><text x="125" y="93" text-anchor="middle" class="s">改一句话</text>
+        <path d="M160 89 H178" class="ln"/><rect x="180" y="76" width="70" height="26" rx="3" class="box"/><text x="215" y="93" text-anchor="middle" class="s">过考题</text>
+        <path d="M250 89 H268" class="ln"/><rect x="270" y="76" width="70" height="26" rx="3" class="box"/><text x="305" y="93" text-anchor="middle" class="s">灰度</text>
+        <path d="M340 89 H358" class="ln"/><rect x="360" y="76" width="110" height="26" rx="3" class="box"/><text x="415" y="93" text-anchor="middle" class="s">单本手册开关</text>
+        <text x="480" y="93" class="s">所有文字共用一个脑子</text>
+        <text x="480" y="110" class="s">定价改的话可能影响结账</text>
+        <path d="M40 132 H680" class="ln" style="stroke: var(--line)"/>
+        <text x="40" y="160" class="t">花钱</text>
+        <text x="40" y="188" class="s slate">传统</text>
+        <text x="90" y="188" class="s">一次请求 ≈ 0 元，毫秒级，每次一样</text>
+        <text x="40" y="216" class="s clay">店员</text>
+        <text x="90" y="216" class="s">按字数计费，秒级；所以前面不变的字要「读过就跳过」，目标 90% 以上都跳过</text>
+      </svg>
+      <figcaption>「改一句话就能改行为」是好处也是风险：仓库的做法是<b>每次改动自带考题</b>，只跑相关的题，夜里跑全套，旺季前冻结。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 7 summary -->
+  <section>
+    <div class="eyebrow">07 · 一张表</div>
+    <h2>一字之差，七处不同</h2>
+    <div class="tablebox">
+    <table>
+      <thead><tr><th>看什么</th><th>自动售货机（传统）</th><th>店员（这个仓库）</th></tr></thead>
+      <tbody>
+        <tr><td>谁决定下一步</td><td>程序员，写代码时</td><td>模型，客人说完话之后</td></tr>
+        <tr><td>路径</td><td>流程图，有限、可枚举</td><td>循环，运行时长出来，上限 8 圈</td></tr>
+        <tr><td>原有系统</td><td>就是它本身</td><td>原样保留，前面加一层店员和保安</td></tr>
+        <tr><td>安全靠什么</td><td>界面上不画那个按钮</td><td>执行前逐条检查，写在代码里</td></tr>
+        <tr><td>出错长什么样</td><td>可复现的 bug，修一处</td><td>概率性说错话；做错事被保安挡住</td></tr>
+        <tr><td>测试问什么</td><td>等不等于</td><td>合不合规矩，跑多次看比例</td></tr>
+        <tr><td>改需求</td><td>改代码发版</td><td>改一句话，但要过考题和灰度</td></tr>
+        <tr><td>每次请求</td><td>近乎免费，毫秒</td><td>按字计费，秒级，靠缓存压成本</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="big">传统开发把聪明写进代码，跑的时候只是执行。<br>这里把聪明留给运行时，<em>代码只负责画边界。</em></p>
+  </section>
+
+  <div class="next">
+    <h2>你现在可以理解的下一件事</h2>
+    <p class="sub" style="margin-bottom:0">这份解释故意省掉了三样东西。</p>
+    <ul>
+      <li><b>店员一圈里到底装了什么。</b>胸牌、抽屉手册、手背便签、秘书，上一页七张图：<a href="loop.html">一个店员，一个循环</a>。</li>
+      <li><b>「多个店员」在什么情况下反而对。</b>仓库允许一种例外：只读的分析助理，能查报表不能写。看 <code>commerce_common/delegation.py</code>，59 行。</li>
+      <li><b>20 条保安规则各在哪个文件。</b>一张表：<code>docs/safety.md</code>，86 行。</li>
+    </ul>
+  </div>
+</main>
+<footer style="max-width:760px;margin:0 auto;padding:0 20px 56px;font-size:14px;color:var(--muted);line-height:1.8"><p>材料：anthropics/commerce-agents（https://github.com/anthropics/commerce-agents）与 Anthropic 博客《A guide to the anatomy of effective commerce agents》（2026-09-02）。图解为作者本人理解，数字来自对仓库源码的直接统计。</p><p>橙研所 · 拆开 Agent，看清产品。</p></footer>
+
+
+</body>
+</html>
