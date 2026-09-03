@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="一家已经在卖货的老店怎么转成 agent：原系统不拆、换前台、接受循环、补保安、换考卷、改运营。图解 anthropics/commerce-agents。">
+<meta name="description" content="一家已经在卖货的老店怎么转成 agent：原系统不拆、换前台、接受循环、加记忆、补保安、换考卷、改运营。图解 anthropics/commerce-agents。">
 <title>老店转型：从自动售货机到店员 · 橙研所</title>
 <style>
 :root {
@@ -75,14 +75,15 @@ a:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
 <main>
   <div class="eyebrow">ELI5 · anthropics/commerce-agents · 传统业务的 agent 转型</div>
   <h1>老店转型：从自动售货机到店员</h1>
-  <p class="lede">这不是新开一家店，也不是让 AI 一键生成一个购物网站。这是<b>一家已经在卖货的店</b>：货架、仓库、收银台都在跑。转型只做一件事：把前台那台自动售货机，换成一个会听话、会想、会去查的<b>店员</b>。下面按转型的顺序，六步。</p>
+  <p class="lede">这不是新开一家店，也不是让 AI 一键生成一个购物网站。这是<b>一家已经在卖货的店</b>：货架、仓库、收银台都在跑。转型只做一件事：把前台那台自动售货机，换成一个会听话、会想、会去查、会记住客人的<b>店员</b>。下面按转型的顺序，七步。</p>
   <ol class="steps">
     <li><span class="n">第 1 步</span><span class="w">盘点：什么都不拆 <span>原有系统全部保留</span></span></li>
     <li><span class="n">第 2 步</span><span class="w">换前台：按钮变成店员 <span>决定权从代码挪到运行时</span></span></li>
     <li><span class="n">第 3 步</span><span class="w">接受后果：流程图变成循环 <span>给循环上限位</span></span></li>
-    <li><span class="n">第 4 步</span><span class="w">补保安：安全从界面挪到执行前 <span>写在代码里</span></span></li>
-    <li><span class="n">第 5 步</span><span class="w">换考卷：从「等不等于」到「合不合规矩」 <span></span></span></li>
-    <li><span class="n">第 6 步</span><span class="w">改运营：改一句话就能改行为，每次开口都要付钱 <span></span></span></li>
+    <li><span class="n">第 4 步</span><span class="w">加记忆：从「客人填表」到「秘书听话记笔记」 <span>存回你原来的数据库</span></span></li>
+    <li><span class="n">第 5 步</span><span class="w">补保安：安全从界面挪到执行前 <span>写在代码里</span></span></li>
+    <li><span class="n">第 6 步</span><span class="w">换考卷：从「等不等于」到「合不合规矩」 <span></span></span></li>
+    <li><span class="n">第 7 步</span><span class="w">改运营：改一句话就能改行为，每次开口都要付钱 <span></span></span></li>
   </ol>
 
   <!-- 1 -->
@@ -207,9 +208,60 @@ a:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
     </figure>
   </section>
 
-  <!-- 4 -->
+  <!-- 4 memory -->
   <section>
-    <div class="eyebrow">第 4 步 · 补保安</div>
+    <div class="eyebrow">第 4 步 · 加记忆</div>
+    <h2>老店只记客人填过的表，现在要记客人说过的话</h2>
+    <p class="sub">转型前的「记忆」是账号资料：地址、手机、订单历史，字段固定，客人自己填。店员上岗后，客人随口说的「我对花生过敏」也得记住，而且要记回你原来的数据库。</p>
+    <figure class="svgbox">
+      <svg viewBox="0 0 770 300" role="img" aria-label="左：转型前，客人填一张固定字段的表，存进账号资料表。右：转型后，客人和店员的对话在打烊后由秘书读取，秘书只读人说的话，不读货架标签，把事实写成小卡片存进同一个数据库新加的一张表；下次客人来时，店员分三层读：常带着、按需拿、要查才查；客人可以看改删，按地区可整体关闭">
+        <defs><marker id="a7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+        <text x="130" y="24" text-anchor="middle" class="t slate">转型前：客人填表</text>
+        <circle cx="50" cy="110" r="14" class="box"/><text x="50" y="148" text-anchor="middle" class="s">客人</text>
+        <path d="M66 110 H104" class="ln" marker-end="url(#a7)"/><text x="85" y="102" text-anchor="middle" class="s">填</text>
+        <rect x="106" y="60" width="130" height="100" rx="4" class="soft"/>
+        <text x="171" y="82" text-anchor="middle" class="s">账号资料表</text>
+        <text x="120" y="106" class="m">地址: ______</text>
+        <text x="120" y="126" class="m">手机: ______</text>
+        <text x="120" y="146" class="m">订单历史</text>
+        <text x="130" y="200" text-anchor="middle" class="s">字段是设计时定死的</text>
+        <text x="130" y="218" text-anchor="middle" class="s">「花生过敏」没地方写</text>
+        <path d="M270 30 V290" class="ln dash" style="stroke: var(--line)"/>
+        <text x="520" y="24" text-anchor="middle" class="t clay">转型后：秘书听话记笔记</text>
+        <rect x="290" y="44" width="130" height="24" rx="12" class="soft"/><text x="355" y="60" text-anchor="middle" class="s">客人：我对花生过敏</text>
+        <rect x="290" y="74" width="130" height="24" rx="12" class="soft"/><text x="355" y="90" text-anchor="middle" class="s">店员：好，避开这几款</text>
+        <rect x="284" y="104" width="142" height="24" rx="4" class="soft"/><text x="355" y="120" text-anchor="middle" class="s">货架标签：本品最受欢迎</text>
+        <path d="M288 116 L422 116" class="lnc"/>
+        <text x="355" y="146" text-anchor="middle" class="s clay">货架上写的不算客人的事</text>
+        <path d="M420 80 H458" class="ln" marker-end="url(#a7)"/><text x="439" y="72" text-anchor="middle" class="s">打烊后</text>
+        <rect x="460" y="50" width="80" height="60" rx="6" class="box"/><text x="500" y="76" text-anchor="middle" class="t">秘书</text><text x="500" y="96" text-anchor="middle" class="s">另一个人</text>
+        <path d="M540 80 H578" class="ln" marker-end="url(#a7)"/>
+        <rect x="580" y="36" width="170" height="130" rx="4" class="box" style="stroke: var(--clay); stroke-width: 2"/>
+        <text x="665" y="58" text-anchor="middle" class="s">还是原来那个数据库</text>
+        <rect x="592" y="68" width="146" height="22" class="soft"/><text x="665" y="83" text-anchor="middle" class="m slate">账号资料表（原有）</text>
+        <rect x="592" y="98" width="146" height="56" class="soft" style="stroke: var(--clay)"/>
+        <text x="665" y="114" text-anchor="middle" class="m clay">客人事实表（新加）</text>
+        <text x="600" y="132" class="m">过敏: 花生</text><text x="680" y="132" class="m">鞋码: 42</text>
+        <text x="600" y="148" class="m">常去店: 朝阳</text>
+        <text x="665" y="186" text-anchor="middle" class="s">客人可以看、改、删；有保留期</text>
+        <text x="665" y="204" text-anchor="middle" class="s">管不了的地区可以整体关掉</text>
+        <text x="290" y="200" class="s">下次来，店员分三层读：</text>
+        <text x="290" y="224" class="s"><tspan class="olive">常带着</tspan> 常去店、取货偏好</text>
+        <text x="290" y="246" class="s"><tspan class="olive">按需拿</tspan> 搜鞋时才拉鞋码</text>
+        <text x="290" y="268" class="s"><tspan class="olive">要查才查</tspan> 其余放查询工具后面</text>
+        <text x="500" y="246" text-anchor="middle" class="s">秘书在店员之外工作</text>
+        <text x="500" y="264" text-anchor="middle" class="s">客人不用等它写完</text>
+      </svg>
+      <figcaption>两条转型决定：<b>记忆存回你原来的数据库</b>，不存在店员脑子里，于是能查、能删、能接进账号注销流程；<b>记笔记的是秘书不是店员</b>，秘书只读人说的话、不读货架标签，商品描述变不成客人的事实。仓库里秘书是一个独立进程，每轮结束后跑，不拖慢对话。</figcaption>
+    </figure>
+    <div class="pin">
+      <span class="k">术语钉住</span><p class="v">秘书 = 异步记忆抽取。客人事实表 = 类型化 key/value 记录。三层读 = 常驻上下文 / 按轮预取 / 查询工具。</p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <div class="eyebrow">第 5 步 · 补保安</div>
     <h2>以前靠「没有那个按钮」，现在得靠「门口有保安」</h2>
     <p class="sub">转型前安全是免费的：界面上不画那个按钮就行。店员什么都可能想去做，所以安全得挪个位置。</p>
     <figure class="svgbox">
@@ -244,7 +296,7 @@ a:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
 
   <!-- 5 -->
   <section>
-    <div class="eyebrow">第 5 步 · 换考卷</div>
+    <div class="eyebrow">第 6 步 · 换考卷</div>
     <h2>以前问「等不等于」，现在问「合不合规矩」</h2>
     <p class="sub">转型前的单元测试：输入 A 必须得到 B。店员每次答的字都不一样，比不了「等于」，考卷要重写。</p>
     <figure class="svgbox">
@@ -274,7 +326,7 @@ a:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
 
   <!-- 6 -->
   <section>
-    <div class="eyebrow">第 6 步 · 改运营</div>
+    <div class="eyebrow">第 7 步 · 改运营</div>
     <h2>改一句话就能改行为，但每一句都可能牵动别处；每次开口都要付钱</h2>
     <p class="sub">转型后日常运营的两个新习惯。</p>
     <figure class="svgbox">
@@ -305,7 +357,7 @@ a:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
   <!-- 7 summary -->
   <section>
     <div class="eyebrow">收口 · 一张表</div>
-    <h2>转型前后，七处不同</h2>
+    <h2>转型前后，八处不同</h2>
     <div class="tablebox">
     <table>
       <thead><tr><th>看什么</th><th>转型前：自动售货机</th><th>转型后：店员</th></tr></thead>
@@ -313,6 +365,7 @@ a:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
         <tr><td>原有系统</td><td>就是它本身</td><td>原样保留，前面加一层店员和保安</td></tr>
         <tr><td>谁决定下一步</td><td>程序员，写代码时</td><td>模型，客人说完话之后</td></tr>
         <tr><td>路径</td><td>流程图，有限、可枚举</td><td>循环，运行时长出来，上限 8 圈</td></tr>
+        <tr><td>记忆</td><td>账号资料表，固定字段，客人自己填</td><td>秘书从对话里抽事实，存回同一个数据库，三层读，可查改删</td></tr>
         <tr><td>安全靠什么</td><td>界面上不画那个按钮</td><td>执行前逐条检查，写在代码里</td></tr>
         <tr><td>出错长什么样</td><td>可复现的 bug，修一处</td><td>概率性说错话；做错事被保安挡住</td></tr>
         <tr><td>测试问什么</td><td>等不等于</td><td>合不合规矩，跑多次看比例</td></tr>
