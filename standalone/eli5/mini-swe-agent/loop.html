@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="mini-swe-agent 内部怎么转：一本只能往后写的笔记本、每条命令都重开的终端、靠贴便签来停的循环，附 2026-09-03 实跑的两次轨迹对照。">
+<title>一本笔记本，一个终端 · 橙研所</title>
+<style>
+  :root {
+    --bg: #F1F3F6;
+    --grid: rgba(43, 62, 99, 0.08);
+    --paper: #FFFFFF;
+    --ink: #1A2237;
+    --muted: #5C6A85;
+    --line: #C9D1DE;
+    --accent: #2456E6;
+    --accent-soft: rgba(36, 86, 230, 0.10);
+    --sticky: #F6CF4A;
+    --sticky-ink: #3B2E00;
+    --bad: #D6453D;
+    --bad-soft: rgba(214, 69, 61, 0.12);
+    --ok: #1F9D6B;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131824;
+      --grid: rgba(180, 196, 230, 0.07);
+      --paper: #1B2232;
+      --ink: #E8ECF5;
+      --muted: #97A3BC;
+      --line: #35405A;
+      --accent: #7B95FF;
+      --accent-soft: rgba(123, 149, 255, 0.16);
+      --sticky: #E8C44A;
+      --sticky-ink: #2A2000;
+      --bad: #F0685F;
+      --bad-soft: rgba(240, 104, 95, 0.18);
+      --ok: #3FC48C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #131824;
+    --grid: rgba(180, 196, 230, 0.07);
+    --paper: #1B2232;
+    --ink: #E8ECF5;
+    --muted: #97A3BC;
+    --line: #35405A;
+    --accent: #7B95FF;
+    --accent-soft: rgba(123, 149, 255, 0.16);
+    --sticky: #E8C44A;
+    --sticky-ink: #2A2000;
+    --bad: #F0685F;
+    --bad-soft: rgba(240, 104, 95, 0.18);
+    --ok: #3FC48C;
+  }
+
+  body {
+    margin: 0;
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
+      var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    font-size: 17px;
+    line-height: 1.7;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 56px 20px 96px; }
+
+  header { margin-bottom: 72px; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", monospace;
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 14px;
+  }
+  h1 {
+    font-family: "Songti SC", "Noto Serif SC", "STSong", Georgia, serif;
+    font-weight: 400; font-size: clamp(38px, 7vw, 60px); line-height: 1.15;
+    margin: 0 0 18px; text-wrap: balance;
+  }
+  .lede { font-size: 20px; color: var(--muted); margin: 0; max-width: 34em; text-wrap: balance; }
+
+  section { margin: 0 0 88px; }
+  h2 {
+    font-family: "Songti SC", "Noto Serif SC", "STSong", Georgia, serif;
+    font-weight: 400; font-size: clamp(28px, 4.6vw, 38px); line-height: 1.25;
+    margin: 0 0 8px; text-wrap: balance;
+  }
+  .claim { margin: 0 0 26px; color: var(--muted); font-size: 18px; max-width: 34em; }
+
+  figure { margin: 0; }
+  figure svg { display: block; width: 100%; height: auto; color: var(--ink); }
+  .plate {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    padding: 22px 18px 14px;
+  }
+  figcaption { margin: 14px 2px 0; font-size: 15px; color: var(--muted); max-width: 40em; }
+  figcaption b { color: var(--ink); font-weight: 500; }
+
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", monospace; }
+  pre {
+    font-family: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", monospace;
+    font-size: 13.5px; line-height: 1.6; margin: 0;
+    background: var(--paper); border: 1px solid var(--line);
+    padding: 16px 18px; overflow-x: auto; color: var(--ink);
+  }
+  pre .hl { color: var(--accent); font-weight: 600; }
+  pre .dim { color: var(--muted); }
+
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+  .stat { background: var(--paper); border: 1px solid var(--line); padding: 14px 16px; }
+  .stat .n {
+    font-family: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", monospace; font-size: 26px; font-weight: 600;
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .stat .l { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  @media (max-width: 560px) { .stat-row { grid-template-columns: 1fr; } }
+
+  .next {
+    background: var(--sticky); color: var(--sticky-ink);
+    padding: 26px 28px; transform: rotate(-0.6deg);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+  }
+  .next h2 { color: var(--sticky-ink); font-size: 28px; margin-bottom: 12px; }
+  .next p { margin: 0 0 10px; line-height: 1.6; }
+  .next ul { margin: 0; padding-left: 1.2em; }
+  .next li { margin-bottom: 6px; }
+  .next .mono { font-size: 14px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .next { transition: transform 200ms ease; }
+    .next:hover { transform: rotate(0deg); }
+  }
+  .next a { color: var(--sticky-ink); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+</head>
+<body>
+
+<nav style="max-width:760px;margin:0 auto;padding:18px 20px 0;font-size:14px"><a href="https://chengyansuo.com/" style="color:var(--accent);text-decoration:none">&#8592; 橙研所</a><span style="color:var(--muted)"> · ELI5 图解</span></nav>
+
+<main>
+<header>
+  <p class="eyebrow">ELI5 · 一本笔记本，一个终端</p>
+  <h1>mini-swe-agent 是什么</h1>
+  <p class="lede">一个只会做一件事的机器人：说一句话，敲一条命令，把结果抄进笔记本，再来一遍。整个机器人的代码只有 190 行。</p>
+</header>
+
+<!-- 1. 循环 -->
+<section>
+  <h2>它一辈子只做一个动作，重复做</h2>
+  <p class="claim">想一下，敲一条命令，看结果。然后再想一下。就这样，直到它自己说「做完了」。</p>
+  <figure>
+    <div class="plate">
+    <svg viewBox="0 0 680 250" role="img" aria-label="三个步骤首尾相接成一个圈：想并说一句话，敲一条 bash 命令，把结果抄进笔记本，然后回到第一步">
+      <defs>
+        <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+        </marker>
+        <marker id="arwA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#2456E6"/>
+        </marker>
+      </defs>
+      <g font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="15" fill="currentColor">
+        <!-- box 1 -->
+        <rect x="20" y="70" width="180" height="84" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="110" y="104" text-anchor="middle" font-weight="700">想一下</text>
+        <text x="110" y="130" text-anchor="middle" font-size="13" opacity="0.7">「我要先看看目录」</text>
+        <!-- box 2 -->
+        <rect x="250" y="70" width="180" height="84" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="340" y="104" text-anchor="middle" font-weight="700">敲一条命令</text>
+        <text x="340" y="130" text-anchor="middle" font-size="13" font-family="ui-monospace, SF Mono, Menlo, monospace">ls -la</text>
+        <!-- box 3 -->
+        <rect x="480" y="70" width="180" height="84" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="570" y="104" text-anchor="middle" font-weight="700">抄下结果</text>
+        <text x="570" y="130" text-anchor="middle" font-size="13" opacity="0.7">贴进笔记本</text>
+        <!-- arrows -->
+        <line x1="200" y1="112" x2="248" y2="112" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"/>
+        <line x1="430" y1="112" x2="478" y2="112" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"/>
+        <path d="M570 154 L570 205 L110 205 L110 156" fill="none" stroke="#2456E6" stroke-width="2" marker-end="url(#arwA)"/>
+        <text x="340" y="228" text-anchor="middle" font-size="13" fill="#2456E6">带着更满的笔记本，再想一下</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>「想一下」是让大模型看一遍笔记本，说出下一句话。它说的那句话里必须带一条命令，否则会被打回。</figcaption>
+  </figure>
+</section>
+
+<!-- 2. 笔记本 -->
+<section>
+  <h2>它唯一的记忆，是一本只能往后写的笔记本</h2>
+  <p class="claim">没有别的存档。每一轮发生的每件事，按顺序写在同一本本子上，不撕页，不改字。</p>
+  <figure>
+    <div class="plate">
+    <svg viewBox="0 0 680 350" role="img" aria-label="一本笔记本的六条记录，从上到下：任务说明、任务、机器人的命令、终端的结果、机器人说做完了、一张退出便签">
+      <g font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="14" fill="currentColor">
+        <!-- spine -->
+        <line x1="120" y1="20" x2="120" y2="330" stroke="currentColor" stroke-width="1" stroke-dasharray="3 5" opacity="0.5"/>
+        <!-- rows -->
+        <g>
+          <text x="104" y="48" text-anchor="end" font-size="12" opacity="0.65" font-family="ui-monospace, SF Mono, Menlo, monospace">system</text>
+          <rect x="136" y="30" width="520" height="30" rx="4" fill="none" stroke="currentColor" opacity="0.5"/>
+          <text x="150" y="50">规矩：你是个能敲命令的助手，每次给我一条命令。</text>
+        </g>
+        <g>
+          <text x="104" y="96" text-anchor="end" font-size="12" opacity="0.65" font-family="ui-monospace, SF Mono, Menlo, monospace">user</text>
+          <rect x="136" y="78" width="520" height="30" rx="4" fill="none" stroke="currentColor" opacity="0.5"/>
+          <text x="150" y="98">任务：新建 greeting.txt，写一行字，再用 cat 读出来。</text>
+        </g>
+        <g>
+          <text x="104" y="144" text-anchor="end" font-size="12" opacity="0.65" font-family="ui-monospace, SF Mono, Menlo, monospace">assistant</text>
+          <rect x="136" y="126" width="520" height="30" rx="4" fill="#2456E6" fill-opacity="0.10" stroke="#2456E6"/>
+          <text x="150" y="146" font-family="ui-monospace, SF Mono, Menlo, monospace" font-size="13">echo 'hello from mini' &gt; greeting.txt &amp;&amp; cat greeting.txt</text>
+        </g>
+        <g>
+          <text x="104" y="192" text-anchor="end" font-size="12" opacity="0.65" font-family="ui-monospace, SF Mono, Menlo, monospace">tool</text>
+          <rect x="136" y="174" width="520" height="30" rx="4" fill="none" stroke="currentColor" opacity="0.5"/>
+          <text x="150" y="194" font-family="ui-monospace, SF Mono, Menlo, monospace" font-size="13">&lt;returncode&gt;0&lt;/returncode&gt;  hello from mini</text>
+        </g>
+        <g>
+          <text x="104" y="240" text-anchor="end" font-size="12" opacity="0.65" font-family="ui-monospace, SF Mono, Menlo, monospace">assistant</text>
+          <rect x="136" y="222" width="520" height="30" rx="4" fill="#2456E6" fill-opacity="0.10" stroke="#2456E6"/>
+          <text x="150" y="242" font-family="ui-monospace, SF Mono, Menlo, monospace" font-size="13">echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT</text>
+        </g>
+        <g transform="rotate(-1.2 400 295)">
+          <text x="104" y="298" text-anchor="end" font-size="12" opacity="0.65" font-family="ui-monospace, SF Mono, Menlo, monospace">exit</text>
+          <rect x="136" y="272" width="300" height="44" fill="#F6CF4A"/>
+          <text x="152" y="299" fill="#3B2E00" font-weight="700">便签：做完了，可以停。</text>
+        </g>
+      </g>
+    </svg>
+    </div>
+    <figcaption>这是实跑出来的一次记录，一共 6 条。<b>发给大模型的内容和存在硬盘上的记录是同一份东西</b>，所以想知道它当时看到了什么，打开文件就是全部。</figcaption>
+  </figure>
+</section>
+
+<!-- 3. 无状态 -->
+<section>
+  <h2>每条命令都在一个全新的终端里跑</h2>
+  <p class="claim">跑完就关。下一条命令再开一个新的。它甚至记不住自己上一条 cd 到了哪。</p>
+  <figure>
+    <div class="plate">
+    <svg viewBox="0 0 680 320" role="img" aria-label="上半部分：别人的做法，一个常开的终端窗口里连续执行命令，中间一条命令卡住后面全堵住；下半部分：mini 的做法，每条命令开一个新终端，跑完关掉，互不影响">
+      <g font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="14" fill="currentColor">
+        <!-- top: persistent shell -->
+        <text x="20" y="34" font-weight="700">别人的做法：一个常开的终端</text>
+        <rect x="20" y="50" width="640" height="70" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <g font-family="ui-monospace, SF Mono, Menlo, monospace" font-size="13">
+          <text x="40" y="92">cd src</text>
+          <text x="130" y="92">ls</text>
+          <text x="200" y="92">pip install</text>
+          <text x="330" y="92" fill="#D6453D" font-weight="600">python server.py</text>
+          <text x="500" y="92" opacity="0.35">cat log</text>
+          <text x="580" y="92" opacity="0.35">grep …</text>
+        </g>
+        <rect x="325" y="72" width="150" height="30" rx="4" fill="#D6453D" fill-opacity="0.12" stroke="#D6453D"/>
+        <text x="400" y="140" text-anchor="middle" font-size="13" fill="#D6453D">这条不结束，后面全卡住。它结束了没？没人知道。</text>
+
+        <!-- bottom: fresh subprocess -->
+        <text x="20" y="196" font-weight="700">mini 的做法：一条命令，一个新终端</text>
+        <g font-family="ui-monospace, SF Mono, Menlo, monospace" font-size="13">
+          <rect x="20" y="212" width="145" height="60" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="92" y="238" text-anchor="middle">cd src &amp;&amp; ls</text>
+          <text x="92" y="260" text-anchor="middle" font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="12" opacity="0.65">开 → 跑 → 关</text>
+
+          <rect x="185" y="212" width="145" height="60" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="257" y="238" text-anchor="middle">cd src &amp;&amp; pip …</text>
+          <text x="257" y="260" text-anchor="middle" font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="12" opacity="0.65">开 → 跑 → 关</text>
+
+          <rect x="350" y="212" width="145" height="60" rx="6" fill="#D6453D" fill-opacity="0.10" stroke="#D6453D" stroke-width="1.5"/>
+          <text x="422" y="238" text-anchor="middle">python server.py</text>
+          <text x="422" y="260" text-anchor="middle" font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="12" fill="#D6453D">30 秒到，强制杀掉</text>
+
+          <rect x="515" y="212" width="145" height="60" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="587" y="238" text-anchor="middle">cat log</text>
+          <text x="587" y="260" text-anchor="middle" font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="12" opacity="0.65">照常开 → 跑 → 关</text>
+        </g>
+        <text x="340" y="304" text-anchor="middle" font-size="13" fill="#2456E6">每个格子结束的那一刻，就是「命令结束」。不用猜。</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>代价是机器人得自己在每条命令前面补 <span class="mono">cd</span>。它的说明书里直接告诉它这么干。换来的是三种老毛病一起消失：不知道命令何时结束、一条坏命令搞死整个终端、中断一次污染后面所有输出。</figcaption>
+  </figure>
+</section>
+
+<!-- 4. 异常即控制流 -->
+<section>
+  <h2>怎么停？靠贴便签</h2>
+  <p class="claim">不管因为什么要停，都是往笔记本最后贴一张黄便签。循环每转一圈只看一眼：最后一页是便签吗？</p>
+  <figure>
+    <div class="plate">
+    <svg viewBox="0 0 680 330" role="img" aria-label="四种意外，做完了、钱花完了、格式不对、人打断，每种都变成一张便签贴到笔记本最后。循环每圈检查最后一页是不是退出便签，是则停，否则继续转">
+      <defs>
+        <marker id="arw4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+        <marker id="arwA4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2456E6"/></marker>
+      </defs>
+      <g font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="14" fill="currentColor">
+        <!-- four sources -->
+        <g font-size="13">
+          <rect x="20" y="30" width="140" height="52" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="90" y="52" text-anchor="middle" font-weight="700">终端说</text>
+          <text x="90" y="71" text-anchor="middle" opacity="0.7">「看到暗号，做完了」</text>
+
+          <rect x="180" y="30" width="140" height="52" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="250" y="52" text-anchor="middle" font-weight="700">账本说</text>
+          <text x="250" y="71" text-anchor="middle" opacity="0.7">「钱或步数用完了」</text>
+
+          <rect x="340" y="30" width="140" height="52" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="410" y="52" text-anchor="middle" font-weight="700">解析器说</text>
+          <text x="410" y="71" text-anchor="middle" opacity="0.7">「这回答没带命令」</text>
+
+          <rect x="500" y="30" width="160" height="52" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="580" y="52" text-anchor="middle" font-weight="700">人说</text>
+          <text x="580" y="71" text-anchor="middle" opacity="0.7">「等等，我插一句」</text>
+        </g>
+        <!-- converge lines -->
+        <path d="M90 82 L90 118 L340 118" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M250 82 L250 118" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M410 82 L410 118" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M580 82 L580 118 L340 118" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <line x1="340" y1="118" x2="340" y2="146" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw4)"/>
+        <!-- sticky -->
+        <g transform="rotate(-1.5 340 175)">
+          <rect x="230" y="150" width="220" height="50" fill="#F6CF4A"/>
+          <text x="340" y="181" text-anchor="middle" fill="#3B2E00" font-weight="700">写一张便签，贴到笔记本最后</text>
+        </g>
+        <!-- decision -->
+        <line x1="340" y1="200" x2="340" y2="232" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw4)"/>
+        <path d="M340 236 L440 268 L340 300 L240 268 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="340" y="273" text-anchor="middle" font-size="13">最后一页是「退出」便签？</text>
+        <line x1="440" y1="268" x2="540" y2="268" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw4)"/>
+        <text x="490" y="260" text-anchor="middle" font-size="12">是</text>
+        <text x="600" y="273" text-anchor="middle" font-weight="700">停</text>
+        <path d="M240 268 L140 268 L140 20 L60 20" fill="none" stroke="#2456E6" stroke-width="2" marker-end="url(#arwA4)"/>
+        <text x="190" y="260" text-anchor="middle" font-size="12" fill="#2456E6">不是，继续转</text>
+        <text x="30" y="14" font-size="12" fill="#2456E6">回到「想一下」</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>四种意外里只有「做完了」和「钱用完了」的便签写着「退出」。「格式不对」和「人插话」的便签只是一条新记录，机器人下一圈读到它，接着干。<b>所以整个循环只需要一个判断，不需要一堆开关。</b></figcaption>
+  </figure>
+</section>
+
+<!-- 5. 插头 -->
+<section>
+  <h2>换个地方跑，只换一个插头</h2>
+  <p class="claim">因为每条命令都是「开一个新终端跑一下」，所以在哪开这个终端，随便换。</p>
+  <figure>
+    <div class="plate">
+    <svg viewBox="0 0 680 230" role="img" aria-label="左边是不变的机器人，右边是可以互换的三种插头：本机终端、Docker 容器、其他沙箱。机器人和插头之间只有一根线，标着执行一条命令，返回输出和返回码">
+      <defs>
+        <marker id="arw5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+        <marker id="arwA5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2456E6"/></marker>
+      </defs>
+      <g font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="14" fill="currentColor">
+        <rect x="20" y="60" width="220" height="110" rx="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="130" y="100" text-anchor="middle" font-weight="700" font-size="16">机器人</text>
+        <text x="130" y="124" text-anchor="middle" font-size="13" opacity="0.7">笔记本 + 循环</text>
+        <text x="130" y="144" text-anchor="middle" font-size="13" opacity="0.7">一行都不用改</text>
+
+        <line x1="240" y1="115" x2="372" y2="115" stroke="#2456E6" stroke-width="2" marker-end="url(#arwA5)"/>
+        <text x="306" y="102" text-anchor="middle" font-size="12" fill="#2456E6">执行这条命令</text>
+        <text x="306" y="136" text-anchor="middle" font-size="12" fill="#2456E6">回我输出 + 返回码</text>
+
+        <g font-size="13">
+          <rect x="380" y="30" width="280" height="46" rx="6" fill="#2456E6" fill-opacity="0.10" stroke="#2456E6" stroke-width="1.5"/>
+          <text x="396" y="58" font-weight="700">本机</text>
+          <text x="460" y="58" font-family="ui-monospace, SF Mono, Menlo, monospace" font-size="12">subprocess.run(cmd)</text>
+
+          <rect x="380" y="92" width="280" height="46" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="396" y="120" font-weight="700">Docker</text>
+          <text x="460" y="120" font-family="ui-monospace, SF Mono, Menlo, monospace" font-size="12">docker exec … bash -lc cmd</text>
+
+          <rect x="380" y="154" width="280" height="46" rx="6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <text x="396" y="182" font-weight="700">别的沙箱</text>
+          <text x="500" y="182" opacity="0.7">singularity / bubblewrap / 云端</text>
+        </g>
+      </g>
+    </svg>
+    </div>
+    <figcaption>本机版和 Docker 版的代码，除了「怎么开终端」那一行，几乎逐字相同。这就是它能一口气支持六种沙箱的原因。</figcaption>
+  </figure>
+</section>
+
+<!-- 6. 实跑 -->
+<section>
+  <h2>2026-09-03 在作者电脑上真跑了两遍</h2>
+  <p class="claim">同一个任务，同一个模型，只换了说明书。一遍走了 9 条记录，一遍走了 6 条。</p>
+  <figure>
+    <div class="plate">
+    <svg viewBox="0 0 680 210" role="img" aria-label="两行方块，每个方块是一条笔记本记录。上面一行 9 格，其中 3 格标红，是被打回的回答。下面一行 6 格，没有红格">
+      <g font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="13" fill="currentColor">
+        <text x="20" y="30" font-weight="700">用官方 hello_world 的说明书</text>
+        <text x="660" y="30" text-anchor="end" font-family="ui-monospace, SF Mono, Menlo, monospace" font-size="12" opacity="0.7">5 次模型调用</text>
+        <g transform="translate(20 42)">
+          <rect x="0"   y="0" width="62" height="40" rx="4" fill="none" stroke="currentColor" opacity="0.6"/>
+          <rect x="70"  y="0" width="62" height="40" rx="4" fill="none" stroke="currentColor" opacity="0.6"/>
+          <rect x="140" y="0" width="62" height="40" rx="4" fill="#D6453D" fill-opacity="0.15" stroke="#D6453D"/>
+          <rect x="210" y="0" width="62" height="40" rx="4" fill="#D6453D" fill-opacity="0.15" stroke="#D6453D"/>
+          <rect x="280" y="0" width="62" height="40" rx="4" fill="#2456E6" fill-opacity="0.12" stroke="#2456E6"/>
+          <rect x="350" y="0" width="62" height="40" rx="4" fill="none" stroke="currentColor" opacity="0.6"/>
+          <rect x="420" y="0" width="62" height="40" rx="4" fill="#D6453D" fill-opacity="0.15" stroke="#D6453D"/>
+          <rect x="490" y="0" width="62" height="40" rx="4" fill="#2456E6" fill-opacity="0.12" stroke="#2456E6"/>
+          <rect x="560" y="0" width="62" height="40" fill="#F6CF4A"/>
+          <g font-size="11" text-anchor="middle">
+            <text x="31" y="25" opacity="0.7">规矩</text>
+            <text x="101" y="25" opacity="0.7">任务</text>
+            <text x="171" y="25" fill="#D6453D">打回</text>
+            <text x="241" y="25" fill="#D6453D">打回</text>
+            <text x="311" y="25" fill="#2456E6">命令</text>
+            <text x="381" y="25" opacity="0.7">结果</text>
+            <text x="451" y="25" fill="#D6453D">打回</text>
+            <text x="521" y="25" fill="#2456E6">交卷</text>
+            <text x="591" y="25" fill="#3B2E00">便签</text>
+          </g>
+        </g>
+
+        <text x="20" y="130" font-weight="700">用 mini 命令行的说明书</text>
+        <text x="660" y="130" text-anchor="end" font-family="ui-monospace, SF Mono, Menlo, monospace" font-size="12" opacity="0.7">2 次模型调用</text>
+        <g transform="translate(20 142)">
+          <rect x="0"   y="0" width="62" height="40" rx="4" fill="none" stroke="currentColor" opacity="0.6"/>
+          <rect x="70"  y="0" width="62" height="40" rx="4" fill="none" stroke="currentColor" opacity="0.6"/>
+          <rect x="140" y="0" width="62" height="40" rx="4" fill="#2456E6" fill-opacity="0.12" stroke="#2456E6"/>
+          <rect x="210" y="0" width="62" height="40" rx="4" fill="none" stroke="currentColor" opacity="0.6"/>
+          <rect x="280" y="0" width="62" height="40" rx="4" fill="#2456E6" fill-opacity="0.12" stroke="#2456E6"/>
+          <rect x="350" y="0" width="62" height="40" fill="#F6CF4A"/>
+          <g font-size="11" text-anchor="middle">
+            <text x="31" y="25" opacity="0.7">规矩</text>
+            <text x="101" y="25" opacity="0.7">任务</text>
+            <text x="171" y="25" fill="#2456E6">命令</text>
+            <text x="241" y="25" opacity="0.7">结果</text>
+            <text x="311" y="25" fill="#2456E6">交卷</text>
+            <text x="381" y="25" fill="#3B2E00">便签</text>
+          </g>
+        </g>
+      </g>
+    </svg>
+    </div>
+    <figcaption>红格是被打回的回答。官方示例的说明书还在教模型「把命令写在代码块里」，可新版机器人只认「工具调用」这种格式。模型乖乖照说明书写，结果连吃三次「你没带命令」。<b>说明书和读说明书的人对不上，这是上游仓库自己的错位。</b></figcaption>
+  </figure>
+  <div class="stat-row">
+    <div class="stat"><div class="n">190</div><div class="l">机器人核心代码行数</div></div>
+    <div class="stat"><div class="n">6</div><div class="l">干净一次跑完的记录条数</div></div>
+    <div class="stat"><div class="n">$0.001</div><div class="l">两次实跑合计花费，不到一分钱</div></div>
+  </div>
+</section>
+
+<!-- 7. 轨迹文件 -->
+<section>
+  <h2>存在硬盘上的文件，就是那本笔记本</h2>
+  <p class="claim">加了一个封面页记花费和配置，其余全是笔记本原文。每条记录多一个口袋，放模型看不到的元数据。</p>
+  <pre><span class="dim">trajectory.json</span>
+├── trajectory_format   <span class="dim">"mini-swe-agent-1.1"</span>
+├── info                <span class="dim">封面页</span>
+│   ├── model_stats     <span class="dim">{ 花了多少钱, 调了几次模型 }</span>
+│   ├── config          <span class="dim">{ 说明书原文, 用的哪个模型, 在哪跑 }</span>
+│   ├── exit_status     <span class="dim">"Submitted"</span>
+│   └── submission      <span class="dim">""</span>
+└── messages[]          <span class="hl">笔记本本身，发给模型的就是这个</span>
+      └── 每条多一个 extra 口袋  <span class="dim">{ 这次花费, 原始响应, 返回码, 时间戳 }</span></pre>
+  <p class="claim" style="margin-top:18px">发 API 前把口袋摘掉，剩下的和模型看到的一字不差。所以「它当时看到了什么」这个问题，永远有确定答案。</p>
+</section>
+
+<!-- 8. 尺子 -->
+<section>
+  <h2>一把可以量别的机器人的尺子</h2>
+  <p class="claim">一个机器人有多复杂，就看它在笔记本之外还记了几样东西。mini 记零样。</p>
+  <figure>
+    <div class="plate">
+    <svg viewBox="0 0 680 170" role="img" aria-label="一条从左到右的刻度尺，标着笔记本之外还记了几样东西。mini-swe-agent 在 0，pi 在 2，Claude Code 在 4 以上">
+      <defs>
+        <marker id="arw7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+        <marker id="arwA7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2456E6"/></marker>
+      </defs>
+      <g font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="13" fill="currentColor">
+        <line x1="40" y1="100" x2="640" y2="100" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw7)"/>
+        <g stroke="currentColor" stroke-width="1.5">
+          <line x1="60" y1="92" x2="60" y2="108"/>
+          <line x1="200" y1="92" x2="200" y2="108"/>
+          <line x1="340" y1="92" x2="340" y2="108"/>
+          <line x1="480" y1="92" x2="480" y2="108"/>
+        </g>
+        <g text-anchor="middle" font-family="ui-monospace, SF Mono, Menlo, monospace" font-size="12" opacity="0.7">
+          <text x="60" y="128">0</text>
+          <text x="200" y="128">1</text>
+          <text x="340" y="128">2</text>
+          <text x="480" y="128">4+</text>
+        </g>
+        <text x="640" y="128" text-anchor="end" font-size="12" opacity="0.7">笔记本之外还记了几样</text>
+
+        <circle cx="60" cy="100" r="7" fill="#2456E6"/>
+        <text x="60" y="66" text-anchor="middle" font-weight="700">mini-swe-agent</text>
+        <text x="60" y="48" text-anchor="middle" font-size="12" opacity="0.7">只有笔记本</text>
+
+        <circle cx="340" cy="100" r="6" fill="currentColor"/>
+        <text x="340" y="66" text-anchor="middle" font-weight="700">pi</text>
+        <text x="340" y="48" text-anchor="middle" font-size="12" opacity="0.7">工具表、agent 状态</text>
+
+        <circle cx="540" cy="100" r="6" fill="currentColor"/>
+        <text x="540" y="66" text-anchor="middle" font-weight="700">Claude Code</text>
+        <text x="540" y="48" text-anchor="middle" font-size="12" opacity="0.7">待办、权限、压缩、子 agent</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>往右每加一样，就多一个问题要答：<b>它和笔记本不同步的时候，听谁的？</b> mini 把自己钉在零，换来的是可以换沙箱、可以直接拿记录去训练模型、可以 190 行读懂。</figcaption>
+  </figure>
+</section>
+
+<!-- 9. next -->
+<section>
+  <div class="next">
+    <h2>你现在可以理解的下一件事</h2>
+    <p>这份解释故意跳过了三块：</p>
+    <ul>
+      <li><b>它是谁做的、拿来干什么、怎么上手。</b>看另一页：<a href="index.html">一个只带着一个终端窗口去修 bug 的机器人</a>。</li>
+      <li><b>笔记本写满了怎么办。</b>mini 不处理，任由它撞上上下文上限。别的机器人在这里加「压缩」，那正是尺子上多出来的一样东西。</li>
+      <li><b>「工具调用」到底是什么格式。</b>模型不是在文字里写命令，而是在回答旁边附一个结构化的小卡片。想看真身，去读 <span class="mono">src/minisweagent/models/utils/actions_toolcall.py</span>，113 行。</li>
+      <li><b>它凭什么拿到 SWE-bench 七成多的分数。</b>这份页面只讲了它怎么转，没讲它和评测题的关系。那是仓库自报的数字，我没有复跑。</li>
+    </ul>
+  </div>
+</section>
+</main>
+<footer style="max-width:760px;margin:0 auto;padding:0 20px 56px;font-size:14px;color:var(--muted);line-height:1.8"><p>材料：swe-agent/mini-swe-agent（https://github.com/swe-agent/mini-swe-agent，v2 系列，MIT）。行数、消息条数与费用来自作者 2026-09-03 在本机用 DeepSeek 实跑并读源码统计；SWE-bench 分数为仓库自报，未复跑。图解为作者本人理解。</p><p>橙研所 · 拆开 Agent，看清产品。</p></footer>
+
+</body>
+</html>

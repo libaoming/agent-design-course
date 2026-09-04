@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="mini-swe-agent 介绍：Princeton/Stanford SWE-bench 团队做的 190 行 AI 编程 agent，只有一个 bash 工具。谁做的、拿来干什么、五分钟上手、明确不做的四件事。">
+<title>一个只带着一个终端窗口去修 bug 的机器人 · 橙研所</title>
+<style>
+  :root {
+    --bg: #EEF1EC;
+    --paper: #FFFFFF;
+    --ink: #17201B;
+    --muted: #5B6B62;
+    --line: #C8D2CB;
+    --accent: #0F766E;
+    --accent-ink: #FFFFFF;
+    --accent-soft: rgba(15, 118, 110, 0.10);
+    --warn: #B4531B;
+    --warn-soft: rgba(180, 83, 27, 0.10);
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121815;
+      --paper: #1A2320;
+      --ink: #E7EEE9;
+      --muted: #98A99F;
+      --line: #33423B;
+      --accent: #3FBFB2;
+      --accent-ink: #072522;
+      --accent-soft: rgba(63, 191, 178, 0.14);
+      --warn: #E8874F;
+      --warn-soft: rgba(232, 135, 79, 0.16);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121815;
+    --paper: #1A2320;
+    --ink: #E7EEE9;
+    --muted: #98A99F;
+    --line: #33423B;
+    --accent: #3FBFB2;
+    --accent-ink: #072522;
+    --accent-soft: rgba(63, 191, 178, 0.14);
+    --warn: #E8874F;
+    --warn-soft: rgba(232, 135, 79, 0.16);
+  }
+
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    font-size: 17px; line-height: 1.7;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 56px 20px 96px; }
+
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", monospace;
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px;
+  }
+  h1 {
+    font-family: "Songti SC", "Noto Serif SC", "STSong", Georgia, serif; font-weight: 900;
+    font-size: clamp(40px, 7.5vw, 66px); line-height: 1.1; margin: 0 0 20px; text-wrap: balance;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .lede { font-size: 21px; color: var(--muted); margin: 0; max-width: 30em; text-wrap: balance; }
+  header { margin-bottom: 64px; padding-bottom: 28px; border-bottom: 2px solid var(--ink); }
+
+  section { margin: 0 0 84px; }
+  h2 {
+    font-family: "Songti SC", "Noto Serif SC", "STSong", Georgia, serif; font-weight: 700;
+    font-size: clamp(27px, 4.4vw, 36px); line-height: 1.25; margin: 0 0 8px; text-wrap: balance;
+  }
+  .claim { margin: 0 0 24px; color: var(--muted); font-size: 18px; max-width: 34em; }
+
+  figure { margin: 0; }
+  figure svg { display: block; width: 100%; height: auto; color: var(--ink); }
+  .plate { background: var(--paper); border: 1px solid var(--line); padding: 20px 18px 12px; }
+  figcaption { margin: 14px 2px 0; font-size: 15px; color: var(--muted); max-width: 40em; }
+  figcaption b, .cards b { color: var(--ink); font-weight: 500; }
+
+  .cards { display: grid; gap: 14px; }
+  .cards.three { grid-template-columns: repeat(3, 1fr); }
+  .cards.four { grid-template-columns: repeat(2, 1fr); }
+  .card { background: var(--paper); border: 1px solid var(--line); padding: 18px 18px 16px; }
+  .card .k {
+    font-family: "Songti SC", "Noto Serif SC", "STSong", Georgia, serif; font-weight: 700; font-size: 22px; line-height: 1.3; margin: 0 0 8px;
+  }
+  .card p { margin: 0; font-size: 15px; color: var(--muted); line-height: 1.6; }
+  .card.no { border-left: 4px solid var(--warn); }
+  .card.no .k { color: var(--warn); }
+  @media (max-width: 600px) { .cards.three, .cards.four { grid-template-columns: 1fr; } }
+
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", monospace; font-size: 0.92em; }
+  pre {
+    font-family: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", monospace; font-size: 14px; line-height: 1.7; margin: 0;
+    background: var(--paper); border: 1px solid var(--line); padding: 16px 18px; overflow-x: auto; color: var(--ink);
+  }
+  pre .c { color: var(--muted); }
+  pre .p { color: var(--accent); font-weight: 600; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .stat { background: var(--paper); border: 1px solid var(--line); padding: 14px 16px; }
+  .stat .n {
+    font-family: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", monospace; font-size: 26px; font-weight: 600;
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .stat .l { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  @media (max-width: 600px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+  .next { background: var(--accent); color: var(--accent-ink); padding: 26px 28px; }
+  .next h2 { color: var(--accent-ink); font-size: 28px; margin-bottom: 12px; }
+  .next p { margin: 0 0 10px; }
+  .next ul { margin: 0; padding-left: 1.2em; }
+  .next li { margin-bottom: 8px; }
+  .next a { color: var(--accent-ink); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+</head>
+<body>
+
+<nav style="max-width:760px;margin:0 auto;padding:18px 20px 0;font-size:14px"><a href="https://chengyansuo.com/" style="color:var(--accent);text-decoration:none">&#8592; 橙研所</a><span style="color:var(--muted)"> · ELI5 图解</span></nav>
+
+<main>
+<header>
+  <p class="eyebrow">介绍 · 给没接触过 AI 编程工具的人</p>
+  <h1>一个只带着<em>一个终端窗口</em>去修 bug 的机器人</h1>
+  <p class="lede">它叫 mini-swe-agent。给它一个软件问题，它自己读代码、改代码、验证、交卷。全部核心代码 190 行。</p>
+</header>
+
+<!-- 1. 谁做的 -->
+<section>
+  <h2>做它的人，先做了那把考试用的尺子</h2>
+  <p class="claim">Princeton 和 Stanford 的一支团队。他们先做了衡量「AI 修 bug 修得好不好」的考卷，再做了第一个考生，最后问：考生能不能砍到只剩百分之一？</p>
+  <figure>
+    <div class="plate">
+    <svg viewBox="0 0 680 190" role="img" aria-label="时间线：2024 年 SWE-bench 考卷问世，2024 年 SWE-agent 第一个考生，2025 年 6 月 mini-swe-agent 只剩百分之一的考生，2026 年 v2 改用工具调用">
+      <defs>
+        <marker id="tl-arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+      </defs>
+      <g font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="14" fill="currentColor">
+        <line x1="30" y1="110" x2="655" y2="110" stroke="currentColor" stroke-width="1.5" marker-end="url(#tl-arw)"/>
+        <g stroke="currentColor" stroke-width="1.5">
+          <line x1="90" y1="102" x2="90" y2="118"/>
+          <line x1="260" y1="102" x2="260" y2="118"/>
+          <line x1="430" y1="102" x2="430" y2="118"/>
+          <line x1="590" y1="102" x2="590" y2="118"/>
+        </g>
+        <g text-anchor="middle" font-family="ui-monospace, SF Mono, Menlo, monospace" font-size="12" opacity="0.7">
+          <text x="90" y="140">2024</text>
+          <text x="260" y="140">2024</text>
+          <text x="430" y="140">2025-06</text>
+          <text x="590" y="140">2026</text>
+        </g>
+        <g text-anchor="middle">
+          <text x="90" y="52" font-weight="700">SWE-bench</text>
+          <text x="90" y="74" font-size="12" opacity="0.7">考卷：几千道真 bug</text>
+          <text x="260" y="52" font-weight="700">SWE-agent</text>
+          <text x="260" y="74" font-size="12" opacity="0.7">第一个考生，工具很多</text>
+          <text x="430" y="52" font-weight="700" fill="#0F766E">mini-swe-agent</text>
+          <text x="430" y="74" font-size="12" fill="#0F766E">工具砍到只剩一个</text>
+          <text x="590" y="52" font-weight="700">v2</text>
+          <text x="590" y="74" font-size="12" opacity="0.7">改用「工具调用」格式</text>
+        </g>
+        <circle cx="430" cy="110" r="7" fill="#0F766E"/>
+        <text x="340" y="176" text-anchor="middle" font-size="13" opacity="0.8">同一拨人，三年，从出题到做题再到把题做薄</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>「考卷」是 SWE-bench：从真实开源项目里挑出来的几千个已修复的 bug，把修复藏起来，看 AI 能不能自己修出来。</figcaption>
+  </figure>
+</section>
+
+<!-- 2. 它做什么 -->
+<section>
+  <h2>丢给它一个 bug，它按这五步走</h2>
+  <p class="claim">这五步不是我总结的，是写在它说明书里的原话。它每一步都靠敲命令完成。</p>
+  <figure>
+    <div class="plate">
+    <svg viewBox="0 0 680 230" role="img" aria-label="五个步骤从左到右：读代码，写一个能复现问题的脚本，改代码，再跑脚本验证，试边界情况；第四步不过就回到第三步；最后交卷">
+      <defs>
+        <marker id="wf-arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+        <marker id="wf-arwA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#0F766E"/></marker>
+      </defs>
+      <g font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="13" fill="currentColor">
+        <g>
+          <rect x="16"  y="60" width="112" height="70" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="152" y="60" width="112" height="70" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="288" y="60" width="112" height="70" rx="6" fill="#0F766E" fill-opacity="0.10" stroke="#0F766E" stroke-width="1.5"/>
+          <rect x="424" y="60" width="112" height="70" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="560" y="60" width="104" height="70" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        </g>
+        <g text-anchor="middle" font-weight="700">
+          <text x="72"  y="90">读代码</text>
+          <text x="208" y="90">写复现脚本</text>
+          <text x="344" y="90" fill="#0F766E">改代码</text>
+          <text x="480" y="90">再跑脚本</text>
+          <text x="612" y="90">试边界</text>
+        </g>
+        <g text-anchor="middle" font-size="11" opacity="0.7" font-family="ui-monospace, SF Mono, Menlo, monospace">
+          <text x="72"  y="112">cat / grep</text>
+          <text x="208" y="112">python repro.py</text>
+          <text x="344" y="112" fill="#0F766E">sed / cat &gt; file</text>
+          <text x="480" y="112">python repro.py</text>
+          <text x="612" y="112">pytest</text>
+        </g>
+        <g stroke="currentColor" stroke-width="1.5">
+          <line x1="128" y1="95" x2="150" y2="95" marker-end="url(#wf-arw)"/>
+          <line x1="264" y1="95" x2="286" y2="95" marker-end="url(#wf-arw)"/>
+          <line x1="400" y1="95" x2="422" y2="95" marker-end="url(#wf-arw)"/>
+          <line x1="536" y1="95" x2="558" y2="95" marker-end="url(#wf-arw)"/>
+        </g>
+        <path d="M480 130 L480 168 L344 168 L344 132" fill="none" stroke="#0F766E" stroke-width="2" marker-end="url(#wf-arwA)"/>
+        <text x="412" y="186" text-anchor="middle" font-size="12" fill="#0F766E">没修好？回去再改</text>
+        <path d="M612 130 L612 200 L400 200" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="392" y="205" text-anchor="end" font-size="12" font-family="ui-monospace, SF Mono, Menlo, monospace">echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT</text>
+        <text x="180" y="222" text-anchor="end" font-size="12" opacity="0.7">交卷暗号 →</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>交卷也是一条命令：打印一句固定暗号。终端一看到这句暗号，就知道它做完了。<b>它从头到尾只会一件事，就是敲命令。</b></figcaption>
+  </figure>
+</section>
+
+<!-- 3. 对比 -->
+<section>
+  <h2>别的 AI 编程工具背着一整箱工具，它只带一把</h2>
+  <p class="claim">Claude Code、Cursor 这类产品，给 AI 准备了几十种专用动作：读文件、改文件、搜索、跑测试、开浏览器。mini 一样都不给。</p>
+  <figure>
+    <div class="plate">
+    <svg viewBox="0 0 680 250" role="img" aria-label="左边一个大工具箱装着十几个专用工具，右边一个小盒子只装一把 bash；两者都指向同一个目标：修好这个 bug">
+      <g font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="13" fill="currentColor">
+        <text x="170" y="30" text-anchor="middle" font-weight="700">常见做法</text>
+        <rect x="20" y="44" width="300" height="150" rx="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <g font-size="11" text-anchor="middle">
+          <rect x="34" y="58" width="82" height="26" rx="4" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.5"/><text x="75" y="75">读文件</text>
+          <rect x="128" y="58" width="82" height="26" rx="4" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.5"/><text x="169" y="75">改文件</text>
+          <rect x="222" y="58" width="82" height="26" rx="4" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.5"/><text x="263" y="75">搜索</text>
+          <rect x="34" y="94" width="82" height="26" rx="4" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.5"/><text x="75" y="111">跑测试</text>
+          <rect x="128" y="94" width="82" height="26" rx="4" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.5"/><text x="169" y="111">开浏览器</text>
+          <rect x="222" y="94" width="82" height="26" rx="4" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.5"/><text x="263" y="111">待办清单</text>
+          <rect x="34" y="130" width="82" height="26" rx="4" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.5"/><text x="75" y="147">子助手</text>
+          <rect x="128" y="130" width="82" height="26" rx="4" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.5"/><text x="169" y="147">权限确认</text>
+          <rect x="222" y="130" width="82" height="26" rx="4" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.5"/><text x="263" y="147">…还有更多</text>
+        </g>
+        <text x="170" y="182" text-anchor="middle" font-size="12" opacity="0.7">每种工具都要有人写、有人维护、有人教 AI 用</text>
+
+        <text x="520" y="30" text-anchor="middle" font-weight="700" fill="#0F766E">mini 的做法</text>
+        <rect x="400" y="44" width="240" height="150" rx="8" fill="#0F766E" fill-opacity="0.08" stroke="#0F766E" stroke-width="1.5"/>
+        <rect x="450" y="90" width="140" height="48" rx="6" fill="#0F766E"/>
+        <text x="520" y="120" text-anchor="middle" font-size="20" font-weight="700" fill="#FFFFFF" font-family="ui-monospace, SF Mono, Menlo, monospace">bash</text>
+        <text x="520" y="182" text-anchor="middle" font-size="12" fill="#0F766E">读、改、搜、测，全靠自己拼命令</text>
+
+        <text x="340" y="232" text-anchor="middle" font-size="13" opacity="0.8">两边的目标一样：把这个 bug 修好</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>bash 就是那个黑底白字的终端窗口，程序员每天在里面敲命令的地方。<b>能在终端里做的事，理论上就都能做。</b>读文件用 cat，改文件用 sed，搜索用 grep。</figcaption>
+  </figure>
+</section>
+
+<!-- 4. 为什么行 -->
+<section>
+  <h2>工具少，反而换来三个「不用操心」</h2>
+  <p class="claim">它的赌注是：2025 年之后的大模型已经足够会用终端了，替它准备工具是多余的。省下来的不是代码，是三种迁移成本。</p>
+  <div class="cards three">
+    <div class="card">
+      <p class="k">换模型不用改</p>
+      <p>只要模型会敲终端命令，随便换。GPT、Claude、DeepSeek、本地开源模型，改一个名字。</p>
+    </div>
+    <div class="card">
+      <p class="k">换运行环境不用改</p>
+      <p>本机、Docker 容器、云端沙箱，只换「在哪开终端」那一行。里面什么都不用装，有 bash 就行。</p>
+    </div>
+    <div class="card">
+      <p class="k">运行记录直接当教材</p>
+      <p>它每一步的记录就是发给模型的原文，一字不差。想拿这些记录去训练自己的模型，不用清洗。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 谁在用 -->
+<section>
+  <h2>三种人在用它，用法不一样</h2>
+  <p class="claim">README 上列的使用者有 Meta、NVIDIA、IBM 和几所大学。但他们要的不是同一样东西。</p>
+  <div class="cards three">
+    <div class="card">
+      <p class="k">当命令行小助手</p>
+      <p>装好以后在终端里敲 <span class="mono">mini</span>，说一句「帮我把这个脚本改成支持中文」，它就开始干。每条命令执行前会先问你。</p>
+    </div>
+    <div class="card">
+      <p class="k">当考试的标准考生</p>
+      <p>想比较两个模型谁修 bug 更强，就得让它们用同一个「身体」。mini 因为几乎没有自己的想法，正好当这个身体。</p>
+    </div>
+    <div class="card">
+      <p class="k">当训练数据采集器</p>
+      <p>做模型训练的团队用它批量跑几千道题，收集运行记录，再拿记录教模型。工具越少，记录越干净。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 上手 -->
+<section>
+  <h2>五分钟用起来</h2>
+  <p class="claim">三条命令。第二条会问你用哪家模型、钥匙是什么，填一次就记住。</p>
+  <pre><span class="p">$</span> pip install mini-swe-agent
+<span class="p">$</span> mini-extra config setup      <span class="c"># 选模型、填 API key</span>
+<span class="p">$</span> mini                         <span class="c"># 开始对话，或 mini -t "任务"</span></pre>
+  <figure style="margin-top:18px">
+    <div class="plate">
+    <svg viewBox="0 0 680 150" role="img" aria-label="三档模式从谨慎到放手：human 模式你敲命令它旁观，confirm 模式它提议每条命令你按回车放行，yolo 模式它自己跑不再问">
+      <g font-family="-apple-system, PingFang SC, Noto Sans SC, sans-serif" font-size="13" fill="currentColor">
+        <line x1="60" y1="60" x2="620" y2="60" stroke="currentColor" stroke-width="1.5"/>
+        <g stroke="currentColor" stroke-width="1.5">
+          <line x1="110" y1="52" x2="110" y2="68"/>
+          <line x1="340" y1="52" x2="340" y2="68"/>
+          <line x1="570" y1="52" x2="570" y2="68"/>
+        </g>
+        <circle cx="340" cy="60" r="8" fill="#0F766E"/>
+        <g text-anchor="middle" font-family="ui-monospace, SF Mono, Menlo, monospace" font-weight="600">
+          <text x="110" y="36">/u  human</text>
+          <text x="340" y="36" fill="#0F766E">/c  confirm</text>
+          <text x="570" y="36">/y  yolo</text>
+        </g>
+        <g text-anchor="middle" font-size="12" opacity="0.75">
+          <text x="110" y="92">你敲命令，它旁观</text>
+          <text x="340" y="92">它提议，你按回车放行</text>
+          <text x="570" y="92">它自己跑，不再问</text>
+        </g>
+        <text x="340" y="128" text-anchor="middle" font-size="12" opacity="0.7">默认停在中间档。随时敲斜杠命令切换。</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>它在你自己的电脑上执行真实命令，所以默认每一条都先给你看。<b>觉得它靠谱了，再往右拨。</b></figcaption>
+  </figure>
+</section>
+
+<!-- 7. 做不到 -->
+<section>
+  <h2>它明确不做的四件事</h2>
+  <p class="claim">这些不是漏做，是作者主动放弃的。每一条放弃都换回了上面某个「不用操心」。</p>
+  <div class="cards four">
+    <div class="card no">
+      <p class="k">不记得自己在哪个目录</p>
+      <p>每条命令都在新终端里跑，跑完就关。要进某个目录，每次自己写 cd。</p>
+    </div>
+    <div class="card no">
+      <p class="k">不给 bash 以外的任何工具</p>
+      <p>想开浏览器、想调 API？自己在命令里想办法。作者的原话是「告诉模型让它自己搞定」。</p>
+    </div>
+    <div class="card no">
+      <p class="k">不整理记录</p>
+      <p>记录只增不减。任务太长把模型的记忆撑满了，它不会替你压缩，直接报错停下。</p>
+    </div>
+    <div class="card no">
+      <p class="k">不做花哨界面</p>
+      <p>纯终端。有一个只读的记录浏览器，仅此而已。作者说别的产品是「界面怪兽」。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 仪表 -->
+<section>
+  <h2>几个数字</h2>
+  <p class="claim">前三个来自仓库页面和源码，第四个是作者自报，我没有复跑考卷。</p>
+  <div class="stats">
+    <div class="stat"><div class="n">190</div><div class="l">核心代码行数</div></div>
+    <div class="stat"><div class="n">6935</div><div class="l">GitHub 星标</div></div>
+    <div class="stat"><div class="n">MIT</div><div class="l">开源协议，可商用</div></div>
+    <div class="stat"><div class="n">&gt;74%</div><div class="l">SWE-bench 自报得分</div></div>
+  </div>
+</section>
+
+<!-- 9. next -->
+<section>
+  <div class="next">
+    <h2>你现在可以理解的下一件事</h2>
+    <p>这篇介绍讲了它是什么、拿来干什么，故意没讲它内部怎么转。</p>
+    <ul>
+      <li><b>想看它一圈一圈是怎么转的</b>，去这页：<a href="loop.html">一本笔记本，一个终端</a>。那里有真跑出来的记录，和一个上游仓库自己的小错位。</li>
+      <li><b>想知道「考卷」长什么样</b>，搜 SWE-bench verified：五百道人工核对过的题，每道题都是某个开源项目里真发生过的 bug。</li>
+      <li><b>想看它砍掉之前的样子</b>，同一个团队的 SWE-agent 仓库还在，工具箱是满的。对照着看，才知道砍掉的每一样原本是干什么的。</li>
+    </ul>
+  </div>
+</section>
+</main>
+<footer style="max-width:760px;margin:0 auto;padding:0 20px 56px;font-size:14px;color:var(--muted);line-height:1.8"><p>材料：swe-agent/mini-swe-agent（https://github.com/swe-agent/mini-swe-agent，v2 系列，MIT）。行数、消息条数与费用来自作者 2026-09-03 在本机用 DeepSeek 实跑并读源码统计；SWE-bench 分数为仓库自报，未复跑。图解为作者本人理解。</p><p>橙研所 · 拆开 Agent，看清产品。</p></footer>
+
+</body>
+</html>

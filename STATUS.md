@@ -96,3 +96,5 @@
 
 ## 🖼️ 2026-09-03 新增独立板块 `eli5/`（ELI5 图解线）
 `standalone/eli5/commerce-agents/` → chengyansuo.com/eli5/commerce-agents/（index=「老店转型：从自动售货机到店员」：传统业务转 agent 七步（含记忆层）；loop.html=「一个店员，一个循环」：购物 agent 每轮机制）。源自本会话两份 Claude artifact，落站时：去 Google Fonts 改系统衬线栈、补 doctype/viewport、顶部「← 橙研所」返回链 + 页脚材料说明、站内互链改相对路径。inline SVG 图共 13 张，headless 截图肉眼核查通过。后续 ELI5 图解同法追加到 `standalone/eli5/<slug>/`。
+
+**2026-09-04 追加 `eli5/mini-swe-agent/`** → chengyansuo.com/eli5/mini-swe-agent/（index=「一个只带着一个终端窗口去修 bug 的机器人」：介绍篇，谁做的/五步流程/满工具箱 vs 一把 bash/三种用法/上手/不做的四件事；loop.html=「一本笔记本，一个终端」：机制篇，线性 messages/无状态 subprocess/异常即便签/换沙箱只换插头/09-03 本机 DeepSeek 实跑两次轨迹对照）。源自两份 Claude artifact，转换脚本同法（去 Google Fonts→系统栈、doctype、返回链、页脚材料、互链改相对路径），SVG 共 12 张，headless 截图核查通过。⚠️介绍篇保留自己的鼠尾草绿/深青配色、机制篇保留方格纸/钴蓝配色，未改成站内 clay 系。
